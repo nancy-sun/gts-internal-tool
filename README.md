@@ -27,8 +27,17 @@ Implemented:
 - Operation logging for full quotation uploads
 - Request-list upload, matching preview, manual candidate selection, and immediate Excel download
 - Operation logging for generated quotations
+- Manual local backup script and backup instructions
 
-The remaining work is Phase 5 polish and backup documentation/scripts.
+Phase 1 through Phase 5 MVP work is implemented.
+
+## Staff Instructions
+
+See [STAFF_USAGE.md](STAFF_USAGE.md).
+
+## Backup
+
+See [BACKUP.md](BACKUP.md).
 
 ## Run Locally
 

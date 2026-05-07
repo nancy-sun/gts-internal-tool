@@ -2,7 +2,7 @@
 
 ## Office Computer Setup
 
-1. Install Python 3.11 or newer.
+1. Install Python 3.10 or newer.
 2. Open a terminal in this project folder.
 3. Create the local environment file:
 
@@ -90,3 +90,13 @@ If you change `APP_PORT` to `8000`, start with:
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+## Backup Setup
+
+Manual backup:
+
+```bash
+python3 scripts/backup.py
+```
+
+Daily scheduled backup instructions are in `BACKUP.md`.
