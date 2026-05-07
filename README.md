@@ -24,8 +24,10 @@ Implemented:
 - Database search page
 - Operation logs page
 - Full quotation upload parsing, preview, confirmation, and import
+- Full quotation import detects the header row from `No.` in column A and ignores the Photo column
 - Operation logging for full quotation uploads
 - Request-list upload, matching preview, manual candidate selection, and immediate Excel download
+- Generated quotation Excel includes a blank Photo column
 - Operation logging for generated quotations
 - Manual local backup script and backup instructions
 

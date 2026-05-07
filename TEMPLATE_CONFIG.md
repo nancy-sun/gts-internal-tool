@@ -5,8 +5,8 @@ Excel parsing uses JSON files in `config/`.
 The MVP assumes:
 
 - First worksheet
-- Header row: row 3
-- Data starts: row 4
+- Header row is detected by finding `No.` in column A
+- Data starts on the row immediately after the detected header
 - Maximum parsed data rows: 300
 
 ## Full Quotation Template
@@ -24,24 +24,27 @@ A No.
 B GTS No.
 C Description
 D OEM
-E Factory
-F Chinese Description
-G Quantity
-H Unit
-I Unit Price
-J Total Price
-K Item/Package
-L Packages
-M Weight / Package
-N G.W.
-O Length
-P Width
-Q Height
-R Measurements / Volume
-S Packaging
-T Expected Delivery
-U Comment
+E Photo
+F Factory
+G Chinese Description
+H Quantity
+I Unit
+J Unit Price
+K Total Price
+L Item/Package
+M Packages
+N Weight / Package
+O G.W.
+P Length
+Q Width
+R Height
+S Measurements / Volume
+T Packaging
+U Expected Delivery
+V Comment
 ```
+
+The Photo column is ignored during import. It is present only so the workbook layout matches real office quotation sheets.
 
 ## Request Template
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
+from openpyxl.utils.cell import column_index_from_string
 
 from app.config import BASE_DIR
 from app.services.normalization import normalize_gts_no, normalize_oem
@@ -63,7 +64,7 @@ def parse_full_quotation_workbook(
     try:
         sheet_name = template.get("sheet_name")
         worksheet = workbook[sheet_name] if sheet_name else workbook.worksheets[0]
-        start_row = int(template["start_row"])
+        start_row = resolve_start_row(worksheet, template)
         max_rows = int(template.get("max_rows", 300))
         columns = template["columns"]
 
@@ -102,6 +103,30 @@ def parse_full_quotation_workbook(
         return parsed_rows
     finally:
         workbook.close()
+
+
+def resolve_start_row(worksheet, template: dict[str, Any]) -> int:
+    detect_column = template.get("detect_header_from_column")
+    header_label = template.get("header_label")
+    if not detect_column or not header_label:
+        return int(template["start_row"])
+
+    column_index = column_index_from_string(detect_column)
+    wanted = normalize_header_label(header_label)
+    max_header_scan_rows = int(template.get("header_scan_rows", 100))
+    max_row = worksheet.max_row or max_header_scan_rows
+    scan_limit = min(max_row, max_header_scan_rows)
+    for row in range(1, scan_limit + 1):
+        value = worksheet.cell(row=row, column=column_index).value
+        if normalize_header_label(value) == wanted:
+            return row + 1
+    return int(template["start_row"])
+
+
+def normalize_header_label(value: Any) -> str:
+    if value is None:
+        return ""
+    return "".join(character for character in str(value).upper() if character.isalnum())
 
 
 def _clean_cell_value(value: Any) -> Any:

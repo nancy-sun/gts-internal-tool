@@ -16,6 +16,7 @@ GENERATED_COLUMNS = [
     ("gts_no", "GTS No."),
     ("description", "Description"),
     ("oem", "OEM"),
+    ("photo", "Photo"),
     ("factory", "Factory"),
     ("chinese_description", "Chinese Description"),
     ("quantity", "Quantity"),
@@ -175,6 +176,7 @@ def create_generated_workbook(
 
 def build_output_row(candidate: Row, request_quantity: float | None) -> dict[str, Any]:
     output = {field: candidate[field] for field, _ in GENERATED_COLUMNS if field in candidate.keys()}
+    output["photo"] = None
     output["quantity"] = request_quantity if request_quantity is not None else None
     if request_quantity is not None and candidate["unit_price"] is not None:
         output["total_price"] = float(request_quantity) * float(candidate["unit_price"])

@@ -14,6 +14,7 @@ def test_generated_columns_include_required_updated_fields():
     labels = [label for _, label in GENERATED_COLUMNS]
     assert labels[-2:] == ["Updated By", "Updated At"]
     assert "Total Price" in labels
+    assert labels[4] == "Photo"
 
 
 def test_build_output_row_recalculates_total_price():
