@@ -11,9 +11,9 @@ Version 1 is intentionally small:
 - Local LAN access
 - No CRM, ERP, individual accounts, roles, delete function, or public deployment
 
-## Phase 1 Status
+## Current Status
 
-Implemented foundation:
+Implemented:
 
 - FastAPI app
 - SQLite database initialization
@@ -21,8 +21,12 @@ Implemented foundation:
 - Shared access code login
 - Home page
 - Template config files for quotation and request Excel layouts
+- Database search page
+- Operation logs page
+- Full quotation upload parsing, preview, confirmation, and import
+- Operation logging for full quotation uploads
 
-Feature pages for upload, generate, search, and logs are placeholders until later phases.
+The generate quotation page is still a placeholder until Phase 4.
 
 ## Run Locally
 

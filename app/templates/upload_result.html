@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Result - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>Upload Result</h1>
+    <p>{{ file_name }}</p>
+  </section>
+
+  <div class="summary-grid">
+    <div>
+      <strong>{{ result.inserted_items }}</strong>
+      <span>quotation rows inserted</span>
+    </div>
+    <div>
+      <strong>{{ result.created_products }}</strong>
+      <span>products created</span>
+    </div>
+    <div>
+      <strong>{{ result.updated_products }}</strong>
+      <span>products updated</span>
+    </div>
+    <div>
+      <strong>{{ result.failed_rows }}</strong>
+      <span>rows failed</span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <a class="text-link" href="/upload">Upload another file</a>
+    <a class="text-link" href="/logs">View operation logs</a>
+  </div>
+{% endblock %}

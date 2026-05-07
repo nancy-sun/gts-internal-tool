@@ -4,7 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import BASE_DIR, ensure_local_directories, get_settings
 from app.database import initialize_database
-from app.routes import auth, home, logs, search
+from app.routes import auth, home, logs, search, upload
 
 
 def create_app() -> FastAPI:
@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
     )
     app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
     app.include_router(auth.router)
+    app.include_router(upload.router)
     app.include_router(search.router)
     app.include_router(logs.router)
     app.include_router(home.router)

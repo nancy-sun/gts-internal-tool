@@ -113,6 +113,16 @@ input {
   font: inherit;
 }
 
+input[type="file"] {
+  padding: 10px;
+  background: #ffffff;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  min-height: 0;
+}
+
 select {
   width: 100%;
   min-height: 44px;
@@ -153,6 +163,57 @@ button:focus {
 .error {
   color: var(--danger);
   font-weight: 700;
+}
+
+.small-warning {
+  margin-bottom: 6px;
+  color: #7a5200;
+  font-size: 13px;
+}
+
+.checkbox-line {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.text-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summary-grid div {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.summary-grid strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 28px;
+}
+
+.summary-grid span {
+  color: var(--muted);
 }
 
 .search-form {
@@ -226,6 +287,10 @@ tr:last-child td {
   }
 
   .search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
     grid-template-columns: 1fr;
   }
 }

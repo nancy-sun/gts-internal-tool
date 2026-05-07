@@ -18,21 +18,6 @@ def home(request: Request):
     return templates.TemplateResponse("home.html", {"request": request})
 
 
-@router.get("/upload")
-def upload_placeholder(request: Request):
-    redirect = require_auth(request)
-    if redirect:
-        return redirect
-    return templates.TemplateResponse(
-        "placeholder.html",
-        {
-            "request": request,
-            "title": "Upload Full Quotation List",
-            "message": "This page will be implemented in Phase 3.",
-        },
-    )
-
-
 @router.get("/generate")
 def generate_placeholder(request: Request):
     redirect = require_auth(request)
@@ -46,4 +31,3 @@ def generate_placeholder(request: Request):
             "message": "This page will be implemented in Phase 4.",
         },
     )
-

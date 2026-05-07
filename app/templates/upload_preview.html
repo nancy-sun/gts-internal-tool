@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Preview - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>Upload Preview</h1>
+    <p>{{ file_name }} uploaded by {{ operator_name }}</p>
+  </section>
+
+  <form method="post" action="/upload/confirm">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Row</th>
+            <th>Status</th>
+            <th>GTS No.</th>
+            <th>OEM</th>
+            <th>Description</th>
+            <th>Factory</th>
+            <th>Unit Price</th>
+            <th>Review</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.row_number }}</td>
+              <td>{{ "Failed" if row.errors else "Ready" }}</td>
+              <td>{{ row["values"]["gts_no"] or "" }}</td>
+              <td>{{ row["values"]["oem"] or "" }}</td>
+              <td>{{ row["values"]["description"] or "" }}</td>
+              <td>{{ row["values"]["factory"] or "" }}</td>
+              <td>{{ row["values"]["unit_price"] or "" }}</td>
+              <td>
+                {% for error in row.errors %}
+                  <p class="error">{{ error }}</p>
+                {% endfor %}
+                {% for warning in row.warnings %}
+                  <p class="small-warning">{{ warning }}</p>
+                {% endfor %}
+                {% if row.factory_warning %}
+                  <p class="small-warning">{{ row.factory_warning }}</p>
+                {% endif %}
+                {% for change in row.product_changes %}
+                  <label class="checkbox-line">
+                    <input
+                      type="checkbox"
+                      name="update_product__{{ row.row_number }}__{{ change.field }}"
+                    >
+                    Update {{ change.field }} from "{{ change.existing }}" to "{{ change.incoming }}"
+                  </label>
+                {% endfor %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="form-actions">
+      <a class="text-link" href="/upload">Cancel</a>
+      <button type="submit">Confirm Import</button>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Full Quotation List - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>Upload Full Quotation List</h1>
+  </section>
+
+  <section class="narrow-panel">
+    <form method="post" action="/upload/preview" enctype="multipart/form-data" class="form-stack">
+      <label for="operator_name">Operator name</label>
+      <input id="operator_name" name="operator_name" required autocomplete="name">
+
+      <label for="excel_file">Excel file</label>
+      <input id="excel_file" name="excel_file" type="file" accept=".xlsx" required>
+
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+
+      <button type="submit">Parse File</button>
+    </form>
+  </section>
+{% endblock %}
