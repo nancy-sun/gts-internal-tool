@@ -179,6 +179,14 @@ button:focus {
   font-weight: 400;
 }
 
+.candidate-line {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

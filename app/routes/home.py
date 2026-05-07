@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.auth import require_auth
@@ -16,18 +15,3 @@ def home(request: Request):
     if redirect:
         return redirect
     return templates.TemplateResponse("home.html", {"request": request})
-
-
-@router.get("/generate")
-def generate_placeholder(request: Request):
-    redirect = require_auth(request)
-    if redirect:
-        return redirect
-    return templates.TemplateResponse(
-        "placeholder.html",
-        {
-            "request": request,
-            "title": "Generate Quotation",
-            "message": "This page will be implemented in Phase 4.",
-        },
-    )

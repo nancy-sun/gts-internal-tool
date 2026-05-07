@@ -25,8 +25,10 @@ Implemented:
 - Operation logs page
 - Full quotation upload parsing, preview, confirmation, and import
 - Operation logging for full quotation uploads
+- Request-list upload, matching preview, manual candidate selection, and immediate Excel download
+- Operation logging for generated quotations
 
-The generate quotation page is still a placeholder until Phase 4.
+The remaining work is Phase 5 polish and backup documentation/scripts.
 
 ## Run Locally
 

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Quotation - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>Generate Quotation</h1>
+  </section>
+
+  <section class="narrow-panel">
+    <form method="post" action="/generate/preview" enctype="multipart/form-data" class="form-stack">
+      <label for="operator_name">Operator name</label>
+      <input id="operator_name" name="operator_name" required autocomplete="name">
+
+      <label for="request_file">Request Excel file</label>
+      <input id="request_file" name="request_file" type="file" accept=".xlsx" required>
+
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+
+      <button type="submit">Parse Request</button>
+    </form>
+  </section>
+{% endblock %}
