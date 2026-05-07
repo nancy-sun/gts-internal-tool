@@ -47,32 +47,3 @@ def generate_placeholder(request: Request):
         },
     )
 
-
-@router.get("/search")
-def search_placeholder(request: Request):
-    redirect = require_auth(request)
-    if redirect:
-        return redirect
-    return templates.TemplateResponse(
-        "placeholder.html",
-        {
-            "request": request,
-            "title": "Search Database",
-            "message": "This page will be implemented in Phase 2.",
-        },
-    )
-
-
-@router.get("/logs")
-def logs_placeholder(request: Request):
-    redirect = require_auth(request)
-    if redirect:
-        return redirect
-    return templates.TemplateResponse(
-        "placeholder.html",
-        {
-            "request": request,
-            "title": "Operation Logs",
-            "message": "This page will be implemented in Phase 5.",
-        },
-    )

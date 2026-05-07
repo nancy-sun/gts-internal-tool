@@ -113,6 +113,16 @@ input {
   font: inherit;
 }
 
+select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+  font: inherit;
+}
+
 button {
   min-height: 42px;
   padding: 0 16px;
@@ -145,12 +155,77 @@ button:focus {
   font-weight: 700;
 }
 
+.search-form {
+  display: grid;
+  grid-template-columns: 160px minmax(180px, 1fr) 120px;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.search-form label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.notice {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  background: #fff8e1;
+  border: 1px solid #e7c766;
+  border-radius: 8px;
+}
+
+.table-section h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+th,
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+th {
+  background: #eef2f5;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
 @media (max-width: 720px) {
   .topbar {
     padding: 0 16px;
   }
 
   .action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-form {
     grid-template-columns: 1fr;
   }
 }

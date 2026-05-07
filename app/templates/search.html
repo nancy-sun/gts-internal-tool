@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Search Database - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>Search Database</h1>
+  </section>
+
+  <form method="get" action="/search" class="search-form">
+    <label for="field">Search by</label>
+    <select id="field" name="field">
+      <option value="gts_no" {% if field == "gts_no" %}selected{% endif %}>GTS No.</option>
+      <option value="oem" {% if field == "oem" %}selected{% endif %}>OEM</option>
+      <option value="description" {% if field == "description" %}selected{% endif %}>Description</option>
+      <option value="chinese_description" {% if field == "chinese_description" %}selected{% endif %}>Chinese Description</option>
+      <option value="factory" {% if field == "factory" %}selected{% endif %}>Factory</option>
+    </select>
+    <label for="q">Keyword</label>
+    <input id="q" name="q" value="{{ query }}" autocomplete="off">
+    <button type="submit">Search</button>
+  </form>
+
+  {% if warnings %}
+    <div class="notice">
+      {% for warning in warnings %}
+        <p>{{ warning }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if query %}
+    <section class="table-section">
+      <h2>Results</h2>
+      {% if rows %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>GTS No.</th>
+                <th>OEM</th>
+                <th>Description</th>
+                <th>Chinese Description</th>
+                <th>Factory</th>
+                <th>Unit Price</th>
+                <th>Packaging</th>
+                <th>Expected Delivery</th>
+                <th>Comment</th>
+                <th>Updated By</th>
+                <th>Updated At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td>{{ row.product_gts_no or "" }}</td>
+                  <td>{{ row.product_oem or "" }}</td>
+                  <td>{{ row.product_description or "" }}</td>
+                  <td>{{ row.product_chinese_description or "" }}</td>
+                  <td>{{ row.factory or "" }}</td>
+                  <td>{{ row.unit_price or "" }}</td>
+                  <td>{{ row.packaging or "" }}</td>
+                  <td>{{ row.expected_delivery or "" }}</td>
+                  <td>{{ row.comment or "" }}</td>
+                  <td>{{ row.updated_by or "" }}</td>
+                  <td>{{ row.updated_at or "" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p>No matching records found.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}
