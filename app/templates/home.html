@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Home - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>GTS Internal Tool</h1>
+  </section>
+
+  <nav class="action-grid" aria-label="Main actions">
+    <a class="action-card" href="/upload">
+      <span>Upload Full Quotation List</span>
+    </a>
+    <a class="action-card" href="/generate">
+      <span>Generate Quotation from GTS/OEM List</span>
+    </a>
+    <a class="action-card" href="/search">
+      <span>Search Database</span>
+    </a>
+    <a class="action-card" href="/logs">
+      <span>Operation Logs</span>
+    </a>
+  </nav>
+{% endblock %}

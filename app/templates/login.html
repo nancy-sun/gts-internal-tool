@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Login - GTS Internal Tool{% endblock %}
+
+{% block content %}
+  <section class="narrow-panel">
+    <h1>Office Access</h1>
+    <form method="post" action="/login" class="form-stack">
+      <label for="access_code">Shared access code</label>
+      <input id="access_code" name="access_code" type="password" autocomplete="current-password" required autofocus>
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+      <button type="submit">Enter</button>
+    </form>
+  </section>
+{% endblock %}

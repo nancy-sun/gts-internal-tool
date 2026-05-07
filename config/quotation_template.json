@@ -1,0 +1,29 @@
+{
+  "sheet_name": null,
+  "header_row": 3,
+  "start_row": 4,
+  "max_rows": 300,
+  "columns": {
+    "no": "A",
+    "gts_no": "B",
+    "description": "C",
+    "oem": "D",
+    "factory": "E",
+    "chinese_description": "F",
+    "quantity": "G",
+    "unit": "H",
+    "unit_price": "I",
+    "total_price": "J",
+    "item_per_package": "K",
+    "packages": "L",
+    "weight_per_package": "M",
+    "gross_weight": "N",
+    "length": "O",
+    "width": "P",
+    "height": "Q",
+    "measurements_volume": "R",
+    "packaging": "S",
+    "expected_delivery": "T",
+    "comment": "U"
+  }
+}
