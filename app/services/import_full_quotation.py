@@ -106,30 +106,19 @@ def detect_quotation_change_warnings(
     if not latest:
         return []
 
-    gts_no = _text(values.get("gts_no")) or _text(latest["gts_no"]) or "this product"
     warnings = []
-    for field, label in (("factory", "Factory"), ("unit", "Unit")):
+    for field in ("factory", "unit"):
         incoming_value = _text(values.get(field))
         existing_value = _text(latest[field])
         if incoming_value and existing_value and incoming_value != existing_value:
-            warnings.append(
-                (
-                    f"{label} review: this upload adds a new {label.lower()} for {gts_no}: "
-                    f"{existing_value} -> {incoming_value}. Please double-check before importing."
-                )
-            )
+            warnings.append(f"{existing_value} => {incoming_value}")
 
     incoming_price = values.get("unit_price")
     if incoming_price is not None and latest["unit_price"] is not None:
         existing_price = float(latest["unit_price"])
         new_price = float(incoming_price)
         if existing_price != new_price:
-            warnings.append(
-                (
-                    f"Price review: this upload adds a new price for {gts_no}: "
-                    f"¥{existing_price:.2f} -> ¥{new_price:.2f}. Please double-check before importing."
-                )
-            )
+            warnings.append(f"¥{existing_price:.2f} => ¥{new_price:.2f}")
     return warnings
 
 

@@ -50,9 +50,9 @@ def test_build_import_preview_adds_warnings_for_changed_latest_factory_unit_and_
     preview = build_import_preview(connection, [parsed_row])
 
     assert preview[0]["quotation_warnings"] == [
-        "Factory review: this upload adds a new factory for GTS0001: Factory A -> Factory B. Please double-check before importing.",
-        "Unit review: this upload adds a new unit for GTS0001: PCS -> SET. Please double-check before importing.",
-        "Price review: this upload adds a new price for GTS0001: ¥10.00 -> ¥12.50. Please double-check before importing."
+        "Factory A => Factory B",
+        "PCS => SET",
+        "¥10.00 => ¥12.50",
     ]
     assert preview_has_warnings(preview) is True
     assert preview_has_errors(preview) is False
