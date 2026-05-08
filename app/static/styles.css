@@ -167,16 +167,32 @@ button:focus {
 
 .small-warning {
   margin-bottom: 6px;
-  color: #7a5200;
+  color: var(--danger);
   font-size: 13px;
+  font-weight: 700;
 }
 
 .checkbox-line {
   display: block;
   margin-top: 6px;
-  color: var(--text);
+  color: var(--danger);
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 700;
+}
+
+.warning-heading,
+.warning-cell {
+  color: var(--danger);
+}
+
+.status-ready {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.status-warning {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .candidate-line {

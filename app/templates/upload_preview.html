@@ -18,46 +18,59 @@
             <th>Status</th>
             <th>GTS No.</th>
             <th>OEM</th>
-            <th>Description</th>
+            <th>Chinese Description</th>
             <th>Factory</th>
             <th>Unit</th>
             <th>Unit Price</th>
             <th>Expected Delivery</th>
-            <th>Review</th>
+            {% if has_warnings %}
+              <th class="warning-heading">Warnings</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              <td>{{ "Failed" if row.errors else "Ready" }}</td>
+              {% set row_has_warning = row.errors or row.warnings or row.factory_warning or row.product_changes %}
+              <td>
+                {% if row.errors %}
+                  <span class="status-warning">Failed</span>
+                {% elif row_has_warning %}
+                  <span class="status-warning">Not Ready</span>
+                {% else %}
+                  <span class="status-ready">Ready</span>
+                {% endif %}
+              </td>
               <td>{{ row["values"]["gts_no"] or "" }}</td>
               <td>{{ row["values"]["oem"] or "" }}</td>
-              <td>{{ row["values"]["description"] or "" }}</td>
+              <td>{{ row["values"]["chinese_description"] or "" }}</td>
               <td>{{ row["values"]["factory"] or "" }}</td>
               <td>{{ row["values"]["unit"] or "" }}</td>
               <td>{{ row["values"]["unit_price"] or "" }}</td>
               <td>{{ row["values"]["expected_delivery"] or "" }}</td>
-              <td>
-                {% for error in row.errors %}
-                  <p class="error">{{ error }}</p>
-                {% endfor %}
-                {% for warning in row.warnings %}
-                  <p class="small-warning">{{ warning }}</p>
-                {% endfor %}
-                {% if row.factory_warning %}
-                  <p class="small-warning">{{ row.factory_warning }}</p>
-                {% endif %}
-                {% for change in row.product_changes %}
-                  <label class="checkbox-line">
-                    <input
-                      type="checkbox"
-                      name="update_product__{{ row.row_number }}__{{ change.field }}"
-                    >
-                    Update {{ change.field }} from "{{ change.existing }}" to "{{ change.incoming }}"
-                  </label>
-                {% endfor %}
-              </td>
+              {% if has_warnings %}
+                <td class="{% if row_has_warning %}warning-cell{% endif %}">
+                  {% for error in row.errors %}
+                    <p class="error">{{ error }}</p>
+                  {% endfor %}
+                  {% for warning in row.warnings %}
+                    <p class="small-warning">{{ warning }}</p>
+                  {% endfor %}
+                  {% if row.factory_warning %}
+                    <p class="small-warning">{{ row.factory_warning }}</p>
+                  {% endif %}
+                  {% for change in row.product_changes %}
+                    <label class="checkbox-line">
+                      <input
+                        type="checkbox"
+                        name="update_product__{{ row.row_number }}__{{ change.field }}"
+                      >
+                      Update {{ change.field }} from "{{ change.existing }}" to "{{ change.incoming }}"
+                    </label>
+                  {% endfor %}
+                </td>
+              {% endif %}
             </tr>
           {% endfor %}
         </tbody>

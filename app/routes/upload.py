@@ -87,6 +87,7 @@ async def upload_preview(
             "operator_name": operator_name.strip(),
             "file_name": safe_name,
             "rows": preview_rows,
+            "has_warnings": preview_has_warnings(preview_rows),
         },
     )
 
@@ -146,3 +147,13 @@ def parse_selected_updates(form_items) -> set[tuple[int, str]]:
         _, row_number, field = key.split("__", 2)
         selected.add((int(row_number), field))
     return selected
+
+
+def preview_has_warnings(rows: list[dict]) -> bool:
+    return any(
+        row.get("errors")
+        or row.get("warnings")
+        or row.get("factory_warning")
+        or row.get("product_changes")
+        for row in rows
+    )
