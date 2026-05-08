@@ -5,6 +5,7 @@
   "detect_header_from_column": "A",
   "header_label": "No.",
   "header_scan_rows": 100,
+  "header_scan_columns": 80,
   "max_rows": 300,
   "columns": {
     "no": "A",

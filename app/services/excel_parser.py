@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
-from openpyxl.utils.cell import column_index_from_string
+from openpyxl.utils.cell import column_index_from_string, get_column_letter
 
 from app.config import BASE_DIR
 from app.services.normalization import normalize_gts_no, normalize_oem
@@ -36,6 +36,35 @@ QUOTATION_FIELDS = [
 
 NUMERIC_FIELDS = {"quantity", "unit_price", "total_price"}
 
+HEADER_ALIASES = {
+    "no": ["No.", "No", "Item No."],
+    "gts_no": ["GTS No.", "GTS No", "GTS"],
+    "description": ["Description", "Desc"],
+    "oem": ["OEM", "OEM No.", "OEM No", "OEM Number"],
+    "factory": ["Factory"],
+    "chinese_description": ["Chinese Description", "Chinese Desc", "中文描述"],
+    "quantity": ["Quantity", "Qty"],
+    "unit": ["Unit"],
+    "unit_price": ["Unit Price", "Price"],
+    "total_price": ["Total Price", "Total"],
+    "item_per_package": ["Item/Package", "Item Per Package", "Items/Package"],
+    "packages": ["Packages", "Package Count"],
+    "weight_per_package": ["Weight / Package", "Weight Per Package", "Weight/Package"],
+    "gross_weight": ["G.W.", "G.W", "Gross Weight", "GW"],
+    "length": ["Length", "L"],
+    "width": ["Width", "W"],
+    "height": ["Height", "H"],
+    "measurements_volume": [
+        "Measurements / Volume",
+        "Measurements (Volume)",
+        "Measurement / Volume",
+        "Volume",
+    ],
+    "packaging": ["Packaging", "Packing"],
+    "expected_delivery": ["Expected Delivery", "Delivery", "Lead Time"],
+    "comment": ["Comment", "Comments", "Remark", "Remarks"],
+}
+
 
 @dataclass
 class ParsedQuotationRow:
@@ -64,9 +93,10 @@ def parse_full_quotation_workbook(
     try:
         sheet_name = template.get("sheet_name")
         worksheet = workbook[sheet_name] if sheet_name else workbook.worksheets[0]
-        start_row = resolve_start_row(worksheet, template)
+        header_row = resolve_header_row(worksheet, template)
+        start_row = header_row + 1
         max_rows = int(template.get("max_rows", 300))
-        columns = template["columns"]
+        columns = resolve_columns(worksheet, header_row, template)
 
         parsed_rows: list[ParsedQuotationRow] = []
         for row_number in range(start_row, start_row + max_rows):
@@ -105,11 +135,11 @@ def parse_full_quotation_workbook(
         workbook.close()
 
 
-def resolve_start_row(worksheet, template: dict[str, Any]) -> int:
+def resolve_header_row(worksheet, template: dict[str, Any]) -> int:
     detect_column = template.get("detect_header_from_column")
     header_label = template.get("header_label")
     if not detect_column or not header_label:
-        return int(template["start_row"])
+        return int(template["header_row"])
 
     column_index = column_index_from_string(detect_column)
     wanted = normalize_header_label(header_label)
@@ -119,8 +149,27 @@ def resolve_start_row(worksheet, template: dict[str, Any]) -> int:
     for row in range(1, scan_limit + 1):
         value = worksheet.cell(row=row, column=column_index).value
         if normalize_header_label(value) == wanted:
-            return row + 1
-    return int(template["start_row"])
+            return row
+    return int(template["header_row"])
+
+
+def resolve_columns(worksheet, header_row: int, template: dict[str, Any]) -> dict[str, str]:
+    detected_headers: dict[str, str] = {}
+    max_scan_columns = int(template.get("header_scan_columns", 80))
+    for column_index in range(1, max_scan_columns + 1):
+        header_value = worksheet.cell(row=header_row, column=column_index).value
+        normalized_header = normalize_header_label(header_value)
+        if not normalized_header:
+            continue
+        for field, aliases in HEADER_ALIASES.items():
+            if normalized_header in {normalize_header_label(alias) for alias in aliases}:
+                detected_headers.setdefault(field, get_column_letter(column_index))
+
+    fallback_columns = template.get("columns", {})
+    return {
+        field: detected_headers.get(field, fallback_columns[field])
+        for field in QUOTATION_FIELDS
+    }
 
 
 def normalize_header_label(value: Any) -> str:

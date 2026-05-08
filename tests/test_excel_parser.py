@@ -30,3 +30,88 @@ def test_parse_full_quotation_workbook_detects_header_row_and_skips_photo_column
     assert rows[0].values["factory"] == "Factory A"
     assert rows[0].values["quantity"] == 2
     assert rows[0].values["unit_price"] == 10.5
+
+
+def test_parse_full_quotation_workbook_ignores_inserted_extra_columns(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    headers = [
+        "No.",
+        "GTS No.",
+        "Description",
+        "OEM",
+        "Extra Column",
+        "Photo",
+        "Factory",
+        "Chinese Description",
+        "Quantity",
+        "Unit",
+        "Unit Price",
+        "Total Price",
+        "Another Extra",
+        "Item/Package",
+        "Packages",
+        "Weight / Package",
+        "G.W.",
+        "Length",
+        "Width",
+        "Height",
+        "Measurements (Volume)",
+        "Packaging",
+        "Expected Delivery",
+        "Comment",
+    ]
+    for index, header in enumerate(headers, start=1):
+        sheet.cell(row=3, column=index, value=header)
+
+    sheet["A4"] = 1
+    sheet["B4"] = "GTS-00999"
+    sheet["C4"] = "Filter"
+    sheet["D4"] = "OEM-00999"
+    sheet["E4"] = "ignored extra"
+    sheet["F4"] = "ignored photo"
+    sheet["G4"] = "Factory Extra"
+    sheet["I4"] = 3
+    sheet["K4"] = 6.5
+    sheet["L4"] = 19.5
+    sheet["X4"] = "ok"
+    path = tmp_path / "quotation_extra_columns.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["gts_no_normalized"] == "GTS00999"
+    assert rows[0].values["factory"] == "Factory Extra"
+    assert rows[0].values["quantity"] == 3
+    assert rows[0].values["unit_price"] == 6.5
+    assert rows[0].values["total_price"] == 19.5
+    assert rows[0].values["comment"] == "ok"
+
+
+def test_parse_full_quotation_workbook_supports_common_header_aliases(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["A2"] = "No"
+    sheet["B2"] = "GTS"
+    sheet["C2"] = "Desc"
+    sheet["D2"] = "OEM No"
+    sheet["E2"] = "Qty"
+    sheet["F2"] = "Price"
+    sheet["A3"] = 1
+    sheet["B3"] = "GTS-ABC"
+    sheet["C3"] = "Alias Product"
+    sheet["D3"] = "OEM-ABC"
+    sheet["E3"] = 8
+    sheet["F3"] = 2.25
+    path = tmp_path / "quotation_aliases.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["gts_no_normalized"] == "GTSABC"
+    assert rows[0].values["description"] == "Alias Product"
+    assert rows[0].values["oem_normalized"] == "OEMABC"
+    assert rows[0].values["quantity"] == 8
+    assert rows[0].values["unit_price"] == 2.25

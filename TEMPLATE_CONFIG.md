@@ -7,6 +7,7 @@ The MVP assumes:
 - First worksheet
 - Header row is detected by finding `No.` in column A
 - Data starts on the row immediately after the detected header
+- Upload parsing detects known columns by header name, so extra inserted columns are ignored
 - Maximum parsed data rows: 300
 
 ## Full Quotation Template
@@ -45,6 +46,8 @@ V Comment
 ```
 
 The Photo column is ignored during import. It is present only so the workbook layout matches real office quotation sheets.
+
+If staff insert extra columns, the import can still work as long as the important headers keep recognizable names such as `GTS No.`, `OEM`, `Factory`, `Quantity`, and `Unit Price`.
 
 ## Request Template
 
