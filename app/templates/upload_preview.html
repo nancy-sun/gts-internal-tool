@@ -20,7 +20,9 @@
             <th>OEM</th>
             <th>Description</th>
             <th>Factory</th>
+            <th>Unit</th>
             <th>Unit Price</th>
+            <th>Expected Delivery</th>
             <th>Review</th>
           </tr>
         </thead>
@@ -33,7 +35,9 @@
               <td>{{ row["values"]["oem"] or "" }}</td>
               <td>{{ row["values"]["description"] or "" }}</td>
               <td>{{ row["values"]["factory"] or "" }}</td>
+              <td>{{ row["values"]["unit"] or "" }}</td>
               <td>{{ row["values"]["unit_price"] or "" }}</td>
+              <td>{{ row["values"]["expected_delivery"] or "" }}</td>
               <td>
                 {% for error in row.errors %}
                   <p class="error">{{ error }}</p>
