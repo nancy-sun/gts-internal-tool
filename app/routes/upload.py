@@ -3,13 +3,13 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
-from app.services.excel_parser import parse_full_quotation_workbook
+from app.services.excel_parser import iter_full_quotation_workbook_rows
 from app.services.import_full_quotation import build_import_preview, import_preview_rows
 
 
@@ -64,15 +64,11 @@ async def upload_preview(
     workbook_path = UPLOAD_DIR / f"{token}_{safe_name}"
     workbook_path.write_bytes(contents)
 
-    parsed_rows = parse_full_quotation_workbook(workbook_path)
-    with get_connection() as connection:
-        preview_rows = build_import_preview(connection, parsed_rows)
-
     preview_payload = {
         "operator_name": operator_name.strip(),
         "file_name": safe_name,
         "workbook_path": str(workbook_path),
-        "rows": preview_rows,
+        "rows": [],
     }
     preview_path(token).write_text(
         json.dumps(preview_payload, ensure_ascii=False, default=str),
@@ -80,16 +76,57 @@ async def upload_preview(
     )
 
     return templates.TemplateResponse(
-        "upload_preview.html",
+        "upload_preview_loading.html",
         {
             "request": request,
             "token": token,
             "operator_name": operator_name.strip(),
             "file_name": safe_name,
-            "rows": preview_rows,
-            "has_warnings": preview_has_warnings(preview_rows),
         },
     )
+
+
+@router.get("/upload/preview/stream/{token}")
+def upload_preview_stream(request: Request, token: str):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+
+    path = preview_path(token)
+    if not path.exists():
+        return StreamingResponse(
+            iter([sse_event("preview_error", {"message": "Preview file was not found."})]),
+            media_type="text/event-stream",
+        )
+
+    def event_stream():
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        preview_rows = []
+        workbook_path = Path(payload["workbook_path"])
+        try:
+            with get_connection() as connection:
+                for parsed_row in iter_full_quotation_workbook_rows(workbook_path):
+                    yield sse_event("loading", {"row_number": parsed_row.row_number})
+                    preview_row = build_import_preview(connection, [parsed_row])[0]
+                    preview_rows.append(preview_row)
+                    yield sse_event("row", preview_row)
+
+            payload["rows"] = preview_rows
+            path.write_text(
+                json.dumps(payload, ensure_ascii=False, default=str),
+                encoding="utf-8",
+            )
+            yield sse_event(
+                "complete",
+                {
+                    "row_count": len(preview_rows),
+                    "has_warnings": preview_has_warnings(preview_rows),
+                },
+            )
+        except Exception as exc:
+            yield sse_event("preview_error", {"message": str(exc)})
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @router.post("/upload/confirm")
@@ -157,3 +194,7 @@ def preview_has_warnings(rows: list[dict]) -> bool:
         or row.get("product_changes")
         for row in rows
     )
+
+
+def sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"

@@ -117,6 +117,13 @@ def parse_full_quotation_workbook(
     workbook_path: Path,
     config: dict[str, Any] | None = None,
 ) -> list[ParsedQuotationRow]:
+    return list(iter_full_quotation_workbook_rows(workbook_path, config))
+
+
+def iter_full_quotation_workbook_rows(
+    workbook_path: Path,
+    config: dict[str, Any] | None = None,
+):
     template = config or load_template_config()
     workbook = load_workbook(workbook_path, data_only=True, read_only=True)
     try:
@@ -130,7 +137,6 @@ def parse_full_quotation_workbook(
             field for field in IMPORTANT_UPLOAD_FIELDS if field not in columns
         ]
 
-        parsed_rows: list[ParsedQuotationRow] = []
         for row_number in range(start_row, start_row + max_rows):
             values = {
                 field: _clean_cell_value(worksheet[f"{columns[field]}{row_number}"].value)
@@ -160,15 +166,12 @@ def parse_full_quotation_workbook(
             if not gts_no_normalized and not oem_normalized:
                 errors.append("Row must contain GTS No. or OEM.")
 
-            parsed_rows.append(
-                ParsedQuotationRow(
-                    row_number=row_number,
-                    values=values,
-                    warnings=warnings,
-                    errors=errors,
-                )
+            yield ParsedQuotationRow(
+                row_number=row_number,
+                values=values,
+                warnings=warnings,
+                errors=errors,
             )
-        return parsed_rows
     finally:
         workbook.close()
 

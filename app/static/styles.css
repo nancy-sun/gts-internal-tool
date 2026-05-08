@@ -195,6 +195,36 @@ button:focus {
   font-weight: 700;
 }
 
+.preview-progress {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.loading-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  border: 2px solid #c9d1dc;
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  vertical-align: -2px;
+  animation: spin 0.8s linear infinite;
+}
+
+button:disabled {
+  background: #aab5c0;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .candidate-line {
   display: block;
   margin-bottom: 8px;
