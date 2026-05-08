@@ -115,3 +115,85 @@ def test_parse_full_quotation_workbook_supports_common_header_aliases(tmp_path: 
     assert rows[0].values["oem_normalized"] == "OEMABC"
     assert rows[0].values["quantity"] == 8
     assert rows[0].values["unit_price"] == 2.25
+
+
+def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliases(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    headers = [
+        "no",
+        "gts",
+        "desc.",
+        "oem.",
+        "工厂",
+        "产品描述",
+        "qty",
+        "单位",
+        "prix",
+        "amount",
+        "item/pkg",
+        "pkg.",
+        "w./pkg",
+        "毛重",
+        "l.",
+        "w.",
+        "h.",
+        "vol.",
+        "包装",
+        "delivery date",
+        "备注",
+    ]
+    for index, header in enumerate(headers, start=1):
+        sheet.cell(row=5, column=index, value=header)
+
+    values = [
+        1,
+        "gts-lower",
+        "Lowercase Alias Product",
+        "oem-lower",
+        "工厂A",
+        "中文产品",
+        6,
+        "PCS",
+        3.5,
+        21,
+        "12/CTN",
+        2,
+        "5 kg",
+        "10 kg",
+        10,
+        20,
+        30,
+        "0.06 CBM",
+        "纸箱",
+        "45 days",
+        "测试备注",
+    ]
+    for index, value in enumerate(values, start=1):
+        sheet.cell(row=6, column=index, value=value)
+    path = tmp_path / "quotation_extended_aliases.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["gts_no_normalized"] == "GTSLOWER"
+    assert rows[0].values["description"] == "Lowercase Alias Product"
+    assert rows[0].values["oem_normalized"] == "OEMLOWER"
+    assert rows[0].values["factory"] == "工厂A"
+    assert rows[0].values["chinese_description"] == "中文产品"
+    assert rows[0].values["quantity"] == 6
+    assert rows[0].values["unit"] == "PCS"
+    assert rows[0].values["unit_price"] == 3.5
+    assert rows[0].values["total_price"] == 21
+    assert rows[0].values["item_per_package"] == "12/CTN"
+    assert rows[0].values["packages"] == 2
+    assert rows[0].values["weight_per_package"] == "5 kg"
+    assert rows[0].values["gross_weight"] == "10 kg"
+    assert rows[0].values["length"] == 10
+    assert rows[0].values["width"] == 20
+    assert rows[0].values["height"] == 30
+    assert rows[0].values["measurements_volume"] == "0.06 CBM"
+    assert rows[0].values["packaging"] == "纸箱"
+    assert rows[0].values["expected_delivery"] == "45 days"
+    assert rows[0].values["comment"] == "测试备注"
