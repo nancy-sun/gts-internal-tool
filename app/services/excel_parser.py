@@ -35,6 +35,7 @@ QUOTATION_FIELDS = [
 ]
 
 NUMERIC_FIELDS = {"quantity", "unit_price", "total_price"}
+IMPORTANT_UPLOAD_FIELDS = {"factory", "unit", "unit_price"}
 
 HEADER_ALIASES = {
     "no": ["No.", "No", "Item No."],
@@ -125,11 +126,16 @@ def parse_full_quotation_workbook(
         start_row = header_row + 1
         max_rows = int(template.get("max_rows", 300))
         columns = resolve_columns(worksheet, header_row, template)
+        missing_important_headers = [
+            field for field in IMPORTANT_UPLOAD_FIELDS if field not in columns
+        ]
 
         parsed_rows: list[ParsedQuotationRow] = []
         for row_number in range(start_row, start_row + max_rows):
             values = {
                 field: _clean_cell_value(worksheet[f"{columns[field]}{row_number}"].value)
+                if field in columns
+                else ""
                 for field in QUOTATION_FIELDS
             }
             if all(value in ("", None) for value in values.values()):
@@ -137,6 +143,10 @@ def parse_full_quotation_workbook(
 
             warnings: list[str] = []
             errors: list[str] = []
+            warnings.extend(
+                f"{field_label(field)} column was not found; value will be blank."
+                for field in missing_important_headers
+            )
             gts_no_normalized, gts_warnings = normalize_gts_no(values["gts_no"])
             oem_normalized, oem_warnings = normalize_oem(values["oem"])
             values["gts_no_normalized"] = gts_no_normalized
@@ -195,9 +205,22 @@ def resolve_columns(worksheet, header_row: int, template: dict[str, Any]) -> dic
 
     fallback_columns = template.get("columns", {})
     return {
-        field: detected_headers.get(field, fallback_columns[field])
+        field: detected_headers[field]
         for field in QUOTATION_FIELDS
+        if field in detected_headers
+    } or {
+        field: fallback_columns[field]
+        for field in QUOTATION_FIELDS
+        if field in fallback_columns
     }
+
+
+def field_label(field: str) -> str:
+    return {
+        "factory": "Factory",
+        "unit": "Unit",
+        "unit_price": "Unit Price",
+    }.get(field, field)
 
 
 def normalize_header_label(value: Any) -> str:

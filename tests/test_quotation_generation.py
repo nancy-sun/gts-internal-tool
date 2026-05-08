@@ -4,6 +4,7 @@ from app.database import initialize_database
 from app.services.operation_logging import utc_now_text
 from app.services.quotation_generation import (
     GENERATED_COLUMNS,
+    apply_generated_workbook_formatting,
     build_generation_preview,
     build_output_row,
 )
@@ -38,6 +39,55 @@ def test_build_output_row_recalculates_total_price():
 
     assert output["quantity"] == 4
     assert output["total_price"] == 50
+
+
+def test_build_output_row_preserves_uploaded_request_description():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            id, product_id, description, chinese_description, updated_by, updated_at,
+            created_by, created_at
+        )
+        VALUES (1, 1, 'Historical Description', '历史描述', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
+
+    output = build_output_row(candidate, None, "Uploaded Request Description")
+
+    assert output["description"] == "Uploaded Request Description"
+    assert output["chinese_description"] == "历史描述"
+
+
+def test_apply_generated_workbook_formatting_sets_requested_number_formats():
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    for index, (_, label) in enumerate(GENERATED_COLUMNS, start=1):
+        worksheet.cell(row=2, column=index, value=label)
+    worksheet["H3"] = 4
+    worksheet["J3"] = 12.5
+    worksheet["K3"] = 50
+    worksheet["P3"] = 1.234
+    worksheet["Q3"] = 2.345
+    worksheet["R3"] = 3.456
+    worksheet["S3"] = 0.789
+
+    apply_generated_workbook_formatting(worksheet)
+
+    assert worksheet["H3"].number_format == "0"
+    assert worksheet["J3"].number_format == '"¥"#,##0.00'
+    assert worksheet["K3"].number_format == '"¥"#,##0.00'
+    assert worksheet["P3"].number_format == "0.00"
+    assert worksheet["Q3"].number_format == "0.00"
+    assert worksheet["R3"].number_format == "0.00"
+    assert worksheet["S3"].number_format == "0.00"
 
 
 def test_build_generation_preview_marks_multiple_candidates():

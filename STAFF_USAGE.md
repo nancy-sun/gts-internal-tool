@@ -22,11 +22,13 @@ The system keeps old quotation rows and inserts new quotation rows. It does not 
 1. Click `Generate Quotation from GTS/OEM List`.
 2. Enter your name.
 3. Upload a `.xlsx` request list.
-4. Review matched, unmatched, conflict, and multiple-candidate rows.
-5. For rows with multiple quotation candidates, select the quotation row to use.
-6. Click `Generate Excel`.
+4. The request list may contain only `GTS No.`, or `GTS No.` with `Description`, or GTS/OEM/quantity/comment columns.
+5. Review matched, unmatched, conflict, and multiple-candidate rows.
+6. For rows with multiple quotation candidates, select the quotation row to use.
+7. Click `Generate Excel`.
 
 The generated file is created for immediate download. It is not permanently stored in `generated/` in the MVP.
+If the request list includes `Description`, the generated sheet keeps that uploaded description and fills Chinese Description from the selected historical quotation row.
 
 ## Search Database
 

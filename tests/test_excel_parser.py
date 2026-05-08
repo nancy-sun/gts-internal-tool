@@ -10,7 +10,12 @@ def test_parse_full_quotation_workbook_detects_header_row_and_skips_photo_column
     sheet = workbook.active
     sheet["A6"] = "No."
     sheet["B6"] = "GTS No."
+    sheet["C6"] = "Description"
+    sheet["D6"] = "OEM"
     sheet["E6"] = "Photo"
+    sheet["F6"] = "Factory"
+    sheet["H6"] = "Quantity"
+    sheet["J6"] = "Unit Price"
     sheet["A7"] = 1
     sheet["B7"] = "GTS-00123"
     sheet["C7"] = "Brake Pad"
@@ -197,3 +202,21 @@ def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliase
     assert rows[0].values["packaging"] == "纸箱"
     assert rows[0].values["expected_delivery"] == "45 days"
     assert rows[0].values["comment"] == "测试备注"
+
+
+def test_parse_full_quotation_workbook_warns_when_important_columns_missing(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["A1"] = "No."
+    sheet["B1"] = "GTS No."
+    sheet["A2"] = 1
+    sheet["B2"] = "GTS-300"
+    path = tmp_path / "quotation_missing_columns.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert "Factory column was not found; value will be blank." in rows[0].warnings
+    assert "Unit column was not found; value will be blank." in rows[0].warnings
+    assert "Unit Price column was not found; value will be blank." in rows[0].warnings

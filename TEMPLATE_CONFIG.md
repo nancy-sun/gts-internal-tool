@@ -57,10 +57,13 @@ File:
 config/request_template.json
 ```
 
-The default request parser reads GTS/OEM/quantity/comment from the same columns as the full quotation sheet:
+The request parser detects known columns by header name. A request sheet can contain only `GTS No.`, or `GTS No.` plus `Description`, or the fuller request layout.
+
+The fallback request columns are:
 
 ```text
 B GTS No.
+C Description
 D OEM
 G Quantity
 U Comment

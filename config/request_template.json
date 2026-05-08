@@ -2,9 +2,12 @@
   "sheet_name": null,
   "header_row": 3,
   "start_row": 4,
+  "header_scan_rows": 100,
+  "header_scan_columns": 40,
   "max_rows": 300,
   "columns": {
     "gts_no": "B",
+    "description": "C",
     "oem": "D",
     "quantity": "G",
     "comment": "U"

@@ -4,13 +4,23 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
+from openpyxl.utils.cell import get_column_letter
 
 from app.config import BASE_DIR
-from app.services.excel_parser import _clean_cell_value, _parse_number
+from app.services.excel_parser import (
+    HEADER_ALIASES,
+    _clean_cell_value,
+    _parse_number,
+    normalize_header_label,
+)
 from app.services.normalization import normalize_gts_no, normalize_oem
 
 
-REQUEST_FIELDS = ["gts_no", "oem", "quantity", "comment"]
+REQUEST_FIELDS = ["gts_no", "description", "oem", "quantity", "comment"]
+REQUEST_HEADER_ALIASES = {
+    field: HEADER_ALIASES[field]
+    for field in ("gts_no", "description", "oem", "quantity", "comment")
+}
 
 
 @dataclass
@@ -40,14 +50,17 @@ def parse_request_workbook(
     try:
         sheet_name = template.get("sheet_name")
         worksheet = workbook[sheet_name] if sheet_name else workbook.worksheets[0]
-        start_row = int(template["start_row"])
+        header_row = resolve_request_header_row(worksheet, template)
+        start_row = header_row + 1
         max_rows = int(template.get("max_rows", 300))
-        columns = template["columns"]
+        columns = resolve_request_columns(worksheet, header_row, template)
 
         parsed_rows: list[ParsedRequestRow] = []
         for row_number in range(start_row, start_row + max_rows):
             values = {
                 field: _clean_cell_value(worksheet[f"{columns[field]}{row_number}"].value)
+                if field in columns
+                else ""
                 for field in REQUEST_FIELDS
             }
             if all(value in ("", None) for value in values.values()):
@@ -77,3 +90,47 @@ def parse_request_workbook(
         return parsed_rows
     finally:
         workbook.close()
+
+
+def resolve_request_header_row(worksheet, template: dict[str, Any]) -> int:
+    max_header_scan_rows = int(template.get("header_scan_rows", 100))
+    max_header_scan_columns = int(template.get("header_scan_columns", 40))
+    max_row = worksheet.max_row or max_header_scan_rows
+    scan_row_limit = min(max_row, max_header_scan_rows)
+    alias_lookup = {
+        normalize_header_label(alias)
+        for aliases in REQUEST_HEADER_ALIASES.values()
+        for alias in aliases
+    }
+
+    for row in range(1, scan_row_limit + 1):
+        for column in range(1, max_header_scan_columns + 1):
+            header = normalize_header_label(worksheet.cell(row=row, column=column).value)
+            if header in alias_lookup:
+                return row
+    return int(template.get("header_row", 1))
+
+
+def resolve_request_columns(worksheet, header_row: int, template: dict[str, Any]) -> dict[str, str]:
+    max_header_scan_columns = int(template.get("header_scan_columns", 40))
+    detected_headers: dict[str, str] = {}
+    for column_index in range(1, max_header_scan_columns + 1):
+        normalized_header = normalize_header_label(
+            worksheet.cell(row=header_row, column=column_index).value
+        )
+        if not normalized_header:
+            continue
+        for field, aliases in REQUEST_HEADER_ALIASES.items():
+            if normalized_header in {normalize_header_label(alias) for alias in aliases}:
+                detected_headers.setdefault(field, get_column_letter(column_index))
+
+    fallback_columns = template.get("columns", {})
+    return {
+        field: detected_headers[field]
+        for field in REQUEST_FIELDS
+        if field in detected_headers
+    } or {
+        field: fallback_columns[field]
+        for field in REQUEST_FIELDS
+        if field in fallback_columns
+    }
