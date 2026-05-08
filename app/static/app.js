@@ -109,6 +109,7 @@
 
   function renderLoadingRow(rowNumber) {
     var tr = document.createElement("tr");
+    tr.className = "preview-loading-row";
     appendCell(tr, rowNumber);
     var statusCell = appendCell(tr, "");
     var spinner = document.createElement("span");
@@ -128,6 +129,7 @@
   function renderPreviewRow(row) {
     var values = row.values || {};
     var tr = document.createElement("tr");
+    tr.className = "preview-data-row";
     var hasWarnings = rowHasWarnings(row);
     appendCell(tr, row.row_number);
     var statusCell = appendCell(tr, "");
@@ -154,7 +156,7 @@
     }
     warningsVisible = true;
     var th = document.createElement("th");
-    th.className = "warning-heading";
+    th.className = "warning-heading preview-warning-heading";
     th.textContent = "Warnings";
     headerRow.appendChild(th);
     Object.keys(rowElements).forEach(function (rowNumber) {

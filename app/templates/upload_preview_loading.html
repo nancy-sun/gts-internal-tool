@@ -11,10 +11,10 @@
   <form method="post" action="/upload/confirm" data-upload-preview-form>
     <input type="hidden" name="token" value="{{ token }}">
     <div
-      class="table-wrap"
+      class="table-wrap upload-preview-wrap"
       data-upload-preview-stream="{{ url_for('upload_preview_stream', token=token) }}"
     >
-      <table>
+      <table class="upload-preview-table">
         <thead>
           <tr data-upload-preview-header>
             <th>Row</th>

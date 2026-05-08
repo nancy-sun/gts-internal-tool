@@ -306,10 +306,68 @@ button:disabled {
   border-radius: 8px;
 }
 
+.upload-preview-wrap {
+  max-height: min(66vh, 720px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   min-width: 980px;
+}
+
+.upload-preview-table {
+  table-layout: fixed;
+  min-width: 1180px;
+}
+
+.upload-preview-table th:nth-child(1),
+.upload-preview-table td:nth-child(1) {
+  width: 64px;
+}
+
+.upload-preview-table th:nth-child(2),
+.upload-preview-table td:nth-child(2) {
+  width: 104px;
+}
+
+.upload-preview-table th:nth-child(3),
+.upload-preview-table td:nth-child(3),
+.upload-preview-table th:nth-child(4),
+.upload-preview-table td:nth-child(4) {
+  width: 140px;
+}
+
+.upload-preview-table th:nth-child(5),
+.upload-preview-table td:nth-child(5) {
+  width: 180px;
+}
+
+.upload-preview-table th:nth-child(6),
+.upload-preview-table td:nth-child(6) {
+  width: 140px;
+}
+
+.upload-preview-table th:nth-child(7),
+.upload-preview-table td:nth-child(7) {
+  width: 86px;
+}
+
+.upload-preview-table th:nth-child(8),
+.upload-preview-table td:nth-child(8) {
+  width: 120px;
+}
+
+.upload-preview-table th:nth-child(9),
+.upload-preview-table td:nth-child(9) {
+  width: 150px;
+}
+
+.upload-preview-table th:nth-child(10),
+.upload-preview-table td:nth-child(10) {
+  width: 260px;
 }
 
 th,
@@ -325,6 +383,21 @@ th {
   background: #eef2f5;
   color: var(--muted);
   font-weight: 700;
+}
+
+.upload-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.preview-loading-row,
+.preview-data-row {
+  height: 44px;
+}
+
+.upload-preview-table td {
+  overflow-wrap: anywhere;
 }
 
 tr:last-child td {
