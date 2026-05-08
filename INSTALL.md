@@ -15,7 +15,7 @@ cp .env.example .env
 ```text
 SHARED_ACCESS_CODE=your-office-code
 SESSION_SECRET_KEY=use-a-long-random-secret
-APP_PORT=3000
+APP_PORT=8080
 ```
 
 5. Install dependencies:
@@ -27,19 +27,19 @@ python -m pip install -r requirements.txt
 6. Start the app:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 3000
+uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 7. Open the app from the office computer:
 
 ```text
-http://localhost:3000
+http://localhost:8080
 ```
 
 8. Open the app from another LAN computer:
 
 ```text
-http://192.168.x.x:3000
+http://192.168.x.x:8080
 ```
 
 Replace `192.168.x.x` with the office computer's LAN IP address.
@@ -60,14 +60,14 @@ SHARED_ACCESS_CODE=your-new-office-code
 5. Start the app again:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 3000
+uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 Existing browser sessions may remain logged in until the browser session ends. Staff can also click `Log out` and log in with the new code.
 
 ## Change the Port
 
-The app currently uses port `3000`.
+The app currently uses port `8080`.
 
 To change it:
 
@@ -76,13 +76,13 @@ To change it:
 3. Change:
 
 ```text
-APP_PORT=3000
+APP_PORT=8080
 ```
 
 4. Start the app with the same port value:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 3000
+uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 If you change `APP_PORT` to `8000`, start with:

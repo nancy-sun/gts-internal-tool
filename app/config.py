@@ -15,7 +15,7 @@ class Settings:
             "APP_NAME",
             "GTS Internal Tool",
         )
-        self.app_port = int(os.getenv("APP_PORT", "3000"))
+        self.app_port = int(os.getenv("APP_PORT", "8080"))
         self.shared_access_code = os.getenv("SHARED_ACCESS_CODE", "")
         self.session_secret_key = os.getenv("SESSION_SECRET_KEY", "")
         self.database_path = os.getenv("DATABASE_PATH", "data/gts_catalogue.sqlite3")

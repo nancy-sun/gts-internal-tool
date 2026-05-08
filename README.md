@@ -46,22 +46,22 @@ See [BACKUP.md](BACKUP.md).
 
 1. Create `.env` from `.env.example`.
 2. Install dependencies.
-3. Start the app on port 3000.
+3. Start the app on port 8080.
 
 ```bash
 cp .env.example .env
 python -m pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 3000
+uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 Open:
 
 ```text
-http://localhost:3000
+http://localhost:8080
 ```
 
 Other office computers can use the office computer LAN address:
 
 ```text
-http://192.168.x.x:3000
+http://192.168.x.x:8080
 ```
