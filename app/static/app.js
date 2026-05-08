@@ -184,6 +184,7 @@
       appendParagraphs(td, [row.factory_warning], "small-warning");
     }
     appendParagraphs(td, row.price_warnings || [], "price-warning");
+    appendParagraphs(td, row.quotation_warnings || [], "price-warning");
     (row.product_changes || []).forEach(function (change) {
       var label = document.createElement("label");
       label.className = "checkbox-line";
@@ -223,6 +224,7 @@
         (row.warnings && row.warnings.length) ||
         row.factory_warning ||
         (row.price_warnings && row.price_warnings.length) ||
+        (row.quotation_warnings && row.quotation_warnings.length) ||
         (row.product_changes && row.product_changes.length)
     );
   }

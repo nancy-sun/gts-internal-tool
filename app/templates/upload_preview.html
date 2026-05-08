@@ -13,19 +13,19 @@
 
   <form method="post" action="/upload/confirm" data-upload-preview-form>
     <input type="hidden" name="token" value="{{ token }}">
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap upload-preview-wrap">
+      <table class="upload-preview-table">
         <thead>
           <tr>
             <th>Row</th>
             <th>Status</th>
-            <th>GTS No.</th>
+            <th>GTS</th>
             <th>OEM</th>
             <th>Chinese Description</th>
             <th>Factory</th>
             <th>Unit</th>
-            <th>Unit Price</th>
-            <th>Expected Delivery</th>
+            <th>Price</th>
+            <th>Delivery</th>
             {% if has_warnings %}
               <th class="warning-heading">Warnings</th>
             {% endif %}
@@ -35,7 +35,7 @@
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              {% set row_has_warning = row.errors or row.warnings or row.factory_warning or row.price_warnings or row.product_changes %}
+              {% set row_has_warning = row.errors or row.warnings or row.factory_warning or row.price_warnings or row.quotation_warnings or row.product_changes %}
               <td>
                 {% if row.errors %}
                   <span class="status-warning">Failed</span>
@@ -64,6 +64,9 @@
                     <p class="small-warning">{{ row.factory_warning }}</p>
                   {% endif %}
                   {% for warning in row.price_warnings %}
+                    <p class="price-warning">{{ warning }}</p>
+                  {% endfor %}
+                  {% for warning in row.quotation_warnings %}
                     <p class="price-warning">{{ warning }}</p>
                   {% endfor %}
                   {% for change in row.product_changes %}

@@ -22,6 +22,7 @@ def build_import_preview(
         preview["product_changes"] = []
         preview["factory_warning"] = None
         preview["price_warnings"] = []
+        preview["quotation_warnings"] = []
 
         if parsed_row.is_valid:
             product, conflict = find_product_for_import(connection, parsed_row.values)
@@ -32,12 +33,7 @@ def build_import_preview(
             elif product:
                 preview["matched_product"] = dict(product)
                 preview["product_changes"] = detect_product_changes(product, parsed_row.values)
-                preview["factory_warning"] = detect_factory_warning(
-                    connection,
-                    product["id"],
-                    parsed_row.values.get("factory"),
-                )
-                preview["price_warnings"] = detect_price_warnings(
+                preview["quotation_warnings"] = detect_quotation_change_warnings(
                     connection,
                     product["id"],
                     parsed_row.values,
@@ -92,70 +88,49 @@ def detect_product_changes(product: Row, values: dict[str, Any]) -> list[dict[st
     return changes
 
 
-def detect_factory_warning(
-    connection: Connection,
-    product_id: int,
-    incoming_factory: Any,
-) -> str | None:
-    factory = _text(incoming_factory)
-    if not factory:
-        return None
-
-    existing = connection.execute(
-        """
-        SELECT DISTINCT factory
-        FROM quotation_items
-        WHERE product_id = ?
-          AND factory IS NOT NULL
-          AND TRIM(factory) != ''
-          AND factory != ?
-        LIMIT 1
-        """,
-        (product_id, factory),
-    ).fetchone()
-    if not existing:
-        return None
-    return (
-        "This product already has quotation history from another factory. "
-        "Confirming import will add a new historical quotation row; existing rows are not overwritten."
-    )
-
-
-def detect_price_warnings(
+def detect_quotation_change_warnings(
     connection: Connection,
     product_id: int,
     values: dict[str, Any],
 ) -> list[str]:
-    incoming_price = values.get("unit_price")
-    if incoming_price is None:
-        return []
-
     latest = connection.execute(
         """
-        SELECT gts_no, unit_price, updated_at
+        SELECT gts_no, factory, unit, unit_price, updated_at
         FROM quotation_items
         WHERE product_id = ?
-          AND unit_price IS NOT NULL
         ORDER BY updated_at DESC, id DESC
         LIMIT 1
         """,
         (product_id,),
     ).fetchone()
-    if not latest or latest["unit_price"] is None:
-        return []
-
-    existing_price = float(latest["unit_price"])
-    new_price = float(incoming_price)
-    if existing_price == new_price:
+    if not latest:
         return []
 
     gts_no = _text(values.get("gts_no")) or _text(latest["gts_no"]) or "this product"
-    return [
-        (
-            f"Price review: this upload adds a new price for {gts_no}: "
-            f"¥{existing_price:.2f} -> ¥{new_price:.2f}. Please double-check before importing."
-        )
-    ]
+    warnings = []
+    for field, label in (("factory", "Factory"), ("unit", "Unit")):
+        incoming_value = _text(values.get(field))
+        existing_value = _text(latest[field])
+        if incoming_value and existing_value and incoming_value != existing_value:
+            warnings.append(
+                (
+                    f"{label} review: this upload adds a new {label.lower()} for {gts_no}: "
+                    f"{existing_value} -> {incoming_value}. Please double-check before importing."
+                )
+            )
+
+    incoming_price = values.get("unit_price")
+    if incoming_price is not None and latest["unit_price"] is not None:
+        existing_price = float(latest["unit_price"])
+        new_price = float(incoming_price)
+        if existing_price != new_price:
+            warnings.append(
+                (
+                    f"Price review: this upload adds a new price for {gts_no}: "
+                    f"¥{existing_price:.2f} -> ¥{new_price:.2f}. Please double-check before importing."
+                )
+            )
+    return warnings
 
 
 def import_preview_rows(

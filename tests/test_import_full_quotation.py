@@ -6,7 +6,7 @@ from app.services.import_full_quotation import build_import_preview
 from app.services.operation_logging import utc_now_text
 
 
-def test_build_import_preview_adds_price_warning_for_changed_latest_price():
+def test_build_import_preview_adds_warnings_for_changed_latest_factory_unit_and_price():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
@@ -23,9 +23,10 @@ def test_build_import_preview_adds_price_warning_for_changed_latest_price():
     connection.execute(
         """
         INSERT INTO quotation_items (
-            product_id, gts_no, unit_price, created_by, created_at, updated_by, updated_at
+            product_id, gts_no, factory, unit, unit_price,
+            created_by, created_at, updated_by, updated_at
         )
-        VALUES (1, 'GTS0001', 10, 'Alice', ?, 'Alice', ?)
+        VALUES (1, 'GTS0001', 'Factory A', 'PCS', 10, 'Alice', ?, 'Alice', ?)
         """,
         (now, now),
     )
@@ -38,7 +39,8 @@ def test_build_import_preview_adds_price_warning_for_changed_latest_price():
             "oem_normalized": "",
             "description": "",
             "chinese_description": "",
-            "factory": "",
+            "factory": "Factory B",
+            "unit": "SET",
             "unit_price": 12.5,
         },
         warnings=[],
@@ -47,7 +49,9 @@ def test_build_import_preview_adds_price_warning_for_changed_latest_price():
 
     preview = build_import_preview(connection, [parsed_row])
 
-    assert preview[0]["price_warnings"] == [
+    assert preview[0]["quotation_warnings"] == [
+        "Factory review: this upload adds a new factory for GTS0001: Factory A -> Factory B. Please double-check before importing.",
+        "Unit review: this upload adds a new unit for GTS0001: PCS -> SET. Please double-check before importing.",
         "Price review: this upload adds a new price for GTS0001: ¥10.00 -> ¥12.50. Please double-check before importing."
     ]
     assert preview_has_warnings(preview) is True
