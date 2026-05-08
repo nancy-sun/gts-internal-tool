@@ -75,11 +75,18 @@
   eventSource.addEventListener("complete", function (event) {
     var data = JSON.parse(event.data);
     eventSource.close();
-    if (confirmButton) {
+    if (confirmButton && data.has_errors) {
+      confirmButton.disabled = true;
+    } else if (confirmButton) {
       confirmButton.disabled = false;
     }
     if (progressText) {
-      progressText.textContent = "Preview ready: " + data.row_count + " rows.";
+      if (data.has_errors) {
+        progressText.textContent = "Preview has errors. Fix the Excel file before importing.";
+        progressText.classList.add("status-warning");
+      } else {
+        progressText.textContent = "Preview ready: " + data.row_count + " rows.";
+      }
     }
   });
 
@@ -134,8 +141,9 @@
     appendCell(tr, row.row_number);
     var statusCell = appendCell(tr, "");
     var status = document.createElement("span");
-    status.className = hasWarnings ? "status-warning" : "status-ready";
-    status.textContent = row.errors && row.errors.length ? "Failed" : hasWarnings ? "Not Ready" : "Ready";
+    status.className =
+      row.errors && row.errors.length ? "status-warning" : hasWarnings ? "status-review" : "status-ready";
+    status.textContent = row.errors && row.errors.length ? "Failed" : hasWarnings ? "Review" : "Ready";
     statusCell.appendChild(status);
     appendCell(tr, values.gts_no || "");
     appendCell(tr, values.oem || "");
@@ -175,6 +183,7 @@
     if (row.factory_warning) {
       appendParagraphs(td, [row.factory_warning], "small-warning");
     }
+    appendParagraphs(td, row.price_warnings || [], "price-warning");
     (row.product_changes || []).forEach(function (change) {
       var label = document.createElement("label");
       label.className = "checkbox-line";
@@ -213,6 +222,7 @@
       (row.errors && row.errors.length) ||
         (row.warnings && row.warnings.length) ||
         row.factory_warning ||
+        (row.price_warnings && row.price_warnings.length) ||
         (row.product_changes && row.product_changes.length)
     );
   }
@@ -227,4 +237,17 @@
     }
     return "¥" + numeric.toFixed(2);
   }
+})();
+
+(function () {
+  var previewForm = document.querySelector("[data-upload-preview-form]");
+  if (!previewForm) {
+    return;
+  }
+
+  previewForm.addEventListener("submit", function (event) {
+    if (!confirm("Confirm import? This will add quotation rows to the system.")) {
+      event.preventDefault();
+    }
+  });
 })();

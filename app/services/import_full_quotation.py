@@ -21,6 +21,7 @@ def build_import_preview(
         preview["matched_product"] = None
         preview["product_changes"] = []
         preview["factory_warning"] = None
+        preview["price_warnings"] = []
 
         if parsed_row.is_valid:
             product, conflict = find_product_for_import(connection, parsed_row.values)
@@ -35,6 +36,11 @@ def build_import_preview(
                     connection,
                     product["id"],
                     parsed_row.values.get("factory"),
+                )
+                preview["price_warnings"] = detect_price_warnings(
+                    connection,
+                    product["id"],
+                    parsed_row.values,
                 )
 
         preview_rows.append(preview)
@@ -113,6 +119,43 @@ def detect_factory_warning(
         "This product already has quotation history from another factory. "
         "Confirming import will add a new historical quotation row; existing rows are not overwritten."
     )
+
+
+def detect_price_warnings(
+    connection: Connection,
+    product_id: int,
+    values: dict[str, Any],
+) -> list[str]:
+    incoming_price = values.get("unit_price")
+    if incoming_price is None:
+        return []
+
+    latest = connection.execute(
+        """
+        SELECT gts_no, unit_price, updated_at
+        FROM quotation_items
+        WHERE product_id = ?
+          AND unit_price IS NOT NULL
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+        """,
+        (product_id,),
+    ).fetchone()
+    if not latest or latest["unit_price"] is None:
+        return []
+
+    existing_price = float(latest["unit_price"])
+    new_price = float(incoming_price)
+    if existing_price == new_price:
+        return []
+
+    gts_no = _text(values.get("gts_no")) or _text(latest["gts_no"]) or "this product"
+    return [
+        (
+            f"Price review: this upload adds a new price for {gts_no}: "
+            f"¥{existing_price:.2f} -> ¥{new_price:.2f}. Please double-check before importing."
+        )
+    ]
 
 
 def import_preview_rows(

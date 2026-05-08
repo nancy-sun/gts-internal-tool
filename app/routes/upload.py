@@ -121,6 +121,7 @@ def upload_preview_stream(request: Request, token: str):
                 {
                     "row_count": len(preview_rows),
                     "has_warnings": preview_has_warnings(preview_rows),
+                    "has_errors": preview_has_errors(preview_rows),
                 },
             )
         except Exception as exc:
@@ -140,6 +141,22 @@ async def upload_confirm(request: Request, token: str = Form(...)):
         return RedirectResponse(url="/upload", status_code=303)
 
     payload = json.loads(path.read_text(encoding="utf-8"))
+    if preview_has_errors(payload["rows"]):
+        return templates.TemplateResponse(
+            "upload_preview.html",
+            {
+                "request": request,
+                "token": token,
+                "operator_name": payload["operator_name"],
+                "file_name": payload["file_name"],
+                "rows": payload["rows"],
+                "has_warnings": preview_has_warnings(payload["rows"]),
+                "has_errors": True,
+                "error": "Preview has errors. Fix the Excel file before importing.",
+            },
+            status_code=400,
+        )
+
     form = await request.form()
     selected_updates = parse_selected_updates(form)
 
@@ -191,9 +208,14 @@ def preview_has_warnings(rows: list[dict]) -> bool:
         row.get("errors")
         or row.get("warnings")
         or row.get("factory_warning")
+        or row.get("price_warnings")
         or row.get("product_changes")
         for row in rows
     )
+
+
+def preview_has_errors(rows: list[dict]) -> bool:
+    return any(row.get("errors") for row in rows)
 
 
 def sse_event(event: str, data: dict) -> str:

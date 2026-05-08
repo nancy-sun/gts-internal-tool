@@ -7,8 +7,11 @@
     <h1>Upload Preview</h1>
     <p>{{ file_name }} uploaded by {{ operator_name }}</p>
   </section>
+  {% if error %}
+    <p class="error">{{ error }}</p>
+  {% endif %}
 
-  <form method="post" action="/upload/confirm">
+  <form method="post" action="/upload/confirm" data-upload-preview-form>
     <input type="hidden" name="token" value="{{ token }}">
     <div class="table-wrap">
       <table>
@@ -32,12 +35,12 @@
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              {% set row_has_warning = row.errors or row.warnings or row.factory_warning or row.product_changes %}
+              {% set row_has_warning = row.errors or row.warnings or row.factory_warning or row.price_warnings or row.product_changes %}
               <td>
                 {% if row.errors %}
                   <span class="status-warning">Failed</span>
                 {% elif row_has_warning %}
-                  <span class="status-warning">Not Ready</span>
+                  <span class="status-review">Review</span>
                 {% else %}
                   <span class="status-ready">Ready</span>
                 {% endif %}
@@ -60,6 +63,9 @@
                   {% if row.factory_warning %}
                     <p class="small-warning">{{ row.factory_warning }}</p>
                   {% endif %}
+                  {% for warning in row.price_warnings %}
+                    <p class="price-warning">{{ warning }}</p>
+                  {% endfor %}
                   {% for change in row.product_changes %}
                     <label class="checkbox-line">
                       <input
@@ -78,7 +84,7 @@
     </div>
     <div class="form-actions">
       <a class="text-link" href="/upload">Cancel</a>
-      <button type="submit">Confirm Import</button>
+      <button type="submit" {% if has_errors %}disabled{% endif %}>Confirm Import</button>
     </div>
   </form>
 {% endblock %}

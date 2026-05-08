@@ -8,6 +8,7 @@
   --accent: #176d5d;
   --accent-dark: #115247;
   --danger: #b3261e;
+  --review: #b76b00;
 }
 
 * {
@@ -172,6 +173,13 @@ button:focus {
   font-weight: 700;
 }
 
+.price-warning {
+  margin-bottom: 6px;
+  color: var(--review);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .checkbox-line {
   display: block;
   margin-top: 6px;
@@ -192,6 +200,11 @@ button:focus {
 
 .status-warning {
   color: var(--danger);
+  font-weight: 700;
+}
+
+.status-review {
+  color: var(--review);
   font-weight: 700;
 }
 
