@@ -47,7 +47,7 @@
               <td>{{ row["values"]["chinese_description"] or "" }}</td>
               <td>{{ row["values"]["factory"] or "" }}</td>
               <td>{{ row["values"]["unit"] or "" }}</td>
-              <td>{{ row["values"]["unit_price"] or "" }}</td>
+              <td>{% if row["values"]["unit_price"] is not none %}¥{{ "%.2f"|format(row["values"]["unit_price"]) }}{% endif %}</td>
               <td>{{ row["values"]["expected_delivery"] or "" }}</td>
               {% if has_warnings %}
                 <td class="{% if row_has_warning %}warning-cell{% endif %}">
