@@ -579,7 +579,7 @@ th {
 
 .upload-preview-table th:nth-child(3),
 .upload-preview-table td:nth-child(3) {
-  width: 170px;
+  width: 150px;
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: normal;
@@ -587,7 +587,10 @@ th {
 
 .upload-preview-table th:nth-child(4),
 .upload-preview-table td:nth-child(4) {
-  width: 220px;
+  width: 190px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .upload-preview-table th:nth-child(5),
@@ -597,7 +600,10 @@ th {
 
 .upload-preview-table th:nth-child(6),
 .upload-preview-table td:nth-child(6) {
-  width: 150px;
+  width: 120px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .upload-preview-table th:nth-child(7),
@@ -635,10 +641,18 @@ th {
 
 .generation-preview-table th:nth-child(3),
 .generation-preview-table td:nth-child(3) {
-  width: 170px;
+  width: 150px;
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: normal;
+}
+
+.generation-preview-table th:nth-child(4),
+.generation-preview-table td:nth-child(4) {
+  width: 220px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 tr:last-child td {
