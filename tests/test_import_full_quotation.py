@@ -54,6 +54,29 @@ def test_build_import_preview_adds_warnings_for_changed_latest_factory_unit_and_
         "PCS => SET",
         "¥10.00 => ¥12.50",
     ]
+    assert preview[0]["quotation_changes"] == [
+        {
+            "field": "factory",
+            "label": "Factory",
+            "existing": "Factory A",
+            "incoming": "Factory B",
+            "message": "Factory A => Factory B",
+        },
+        {
+            "field": "unit",
+            "label": "Unit",
+            "existing": "PCS",
+            "incoming": "SET",
+            "message": "PCS => SET",
+        },
+        {
+            "field": "unit_price",
+            "label": "Price",
+            "existing": "¥10.00",
+            "incoming": "¥12.50",
+            "message": "¥10.00 => ¥12.50",
+        },
+    ]
     assert preview_has_warnings(preview) is True
     assert preview_has_errors(preview) is False
 
@@ -163,6 +186,122 @@ def test_import_preview_rows_skips_exact_duplicate_quotation_item():
     assert result["skipped_duplicates"] == 1
     assert item_count == 1
     assert product["description"] == "Existing description"
+
+
+def test_import_preview_rows_skips_unapproved_quotation_change():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            product_id, gts_no, gts_no_normalized, factory, unit, unit_price,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'Factory A', 'PCS', 10, 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    preview_rows = [
+        {
+            "row_number": 4,
+            "errors": [],
+            "quotation_changes": [{"field": "unit_price", "message": "¥10.00 => ¥12.50"}],
+            "values": {
+                "gts_no": "GTS0001",
+                "gts_no_normalized": "GTS0001",
+                "oem": "",
+                "oem_normalized": "",
+                "factory": "Factory A",
+                "unit": "PCS",
+                "unit_price": 12.5,
+            },
+        }
+    ]
+
+    result = import_preview_rows(
+        connection,
+        preview_rows=preview_rows,
+        operator_name="Bob",
+        file_name="changed.xlsx",
+        selected_updates=set(),
+        selected_quotation_changes=set(),
+    )
+
+    item_count = connection.execute("SELECT COUNT(*) AS c FROM quotation_items").fetchone()["c"]
+    assert result["inserted_items"] == 0
+    assert result["skipped_unapproved_changes"] == 1
+    assert item_count == 1
+
+
+def test_import_preview_rows_imports_approved_quotation_change():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            product_id, gts_no, gts_no_normalized, factory, unit, unit_price,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'Factory A', 'PCS', 10, 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    preview_rows = [
+        {
+            "row_number": 4,
+            "errors": [],
+            "quotation_changes": [{"field": "unit_price", "message": "¥10.00 => ¥12.50"}],
+            "values": {
+                "gts_no": "GTS0001",
+                "gts_no_normalized": "GTS0001",
+                "oem": "",
+                "oem_normalized": "",
+                "factory": "Factory A",
+                "unit": "PCS",
+                "unit_price": 12.5,
+            },
+        }
+    ]
+
+    result = import_preview_rows(
+        connection,
+        preview_rows=preview_rows,
+        operator_name="Bob",
+        file_name="changed.xlsx",
+        selected_updates=set(),
+        selected_quotation_changes={4},
+    )
+
+    item_count = connection.execute("SELECT COUNT(*) AS c FROM quotation_items").fetchone()["c"]
+    latest_price = connection.execute(
+        "SELECT unit_price FROM quotation_items ORDER BY id DESC LIMIT 1"
+    ).fetchone()["unit_price"]
+    assert result["inserted_items"] == 1
+    assert result["skipped_unapproved_changes"] == 0
+    assert item_count == 2
+    assert latest_price == 12.5
 
 
 def initialize_test_schema(connection: sqlite3.Connection) -> None:

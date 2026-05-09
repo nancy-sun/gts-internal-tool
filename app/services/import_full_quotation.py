@@ -21,6 +21,7 @@ def build_import_preview(
         preview["matched_product"] = None
         preview["product_changes"] = []
         preview["quotation_warnings"] = []
+        preview["quotation_changes"] = []
 
         if parsed_row.is_valid:
             product, conflict = find_product_for_import(connection, parsed_row.values)
@@ -31,11 +32,14 @@ def build_import_preview(
             elif product:
                 preview["matched_product"] = dict(product)
                 preview["product_changes"] = detect_product_changes(product, parsed_row.values)
-                preview["quotation_warnings"] = detect_quotation_change_warnings(
+                preview["quotation_changes"] = detect_quotation_changes(
                     connection,
                     product["id"],
                     parsed_row.values,
                 )
+                preview["quotation_warnings"] = [
+                    change["message"] for change in preview["quotation_changes"]
+                ]
 
         preview_rows.append(preview)
     return preview_rows
@@ -86,11 +90,11 @@ def detect_product_changes(product: Row, values: dict[str, Any]) -> list[dict[st
     return changes
 
 
-def detect_quotation_change_warnings(
+def detect_quotation_changes(
     connection: Connection,
     product_id: int,
     values: dict[str, Any],
-) -> list[str]:
+) -> list[dict[str, str]]:
     latest = connection.execute(
         """
         SELECT gts_no, factory, unit, unit_price, updated_at
@@ -104,20 +108,41 @@ def detect_quotation_change_warnings(
     if not latest:
         return []
 
-    warnings = []
+    changes = []
+    labels = {
+        "factory": "Factory",
+        "unit": "Unit",
+        "unit_price": "Price",
+    }
     for field in ("factory", "unit"):
         incoming_value = _text(values.get(field))
         existing_value = _text(latest[field])
         if incoming_value and existing_value and incoming_value != existing_value:
-            warnings.append(f"{existing_value} => {incoming_value}")
+            changes.append(
+                {
+                    "field": field,
+                    "label": labels[field],
+                    "existing": existing_value,
+                    "incoming": incoming_value,
+                    "message": f"{existing_value} => {incoming_value}",
+                }
+            )
 
     incoming_price = values.get("unit_price")
     if incoming_price is not None and latest["unit_price"] is not None:
         existing_price = float(latest["unit_price"])
         new_price = float(incoming_price)
         if existing_price != new_price:
-            warnings.append(f"¥{existing_price:.2f} => ¥{new_price:.2f}")
-    return warnings
+            changes.append(
+                {
+                    "field": "unit_price",
+                    "label": labels["unit_price"],
+                    "existing": f"¥{existing_price:.2f}",
+                    "incoming": f"¥{new_price:.2f}",
+                    "message": f"¥{existing_price:.2f} => ¥{new_price:.2f}",
+                }
+            )
+    return changes
 
 
 def import_preview_rows(
@@ -127,12 +152,15 @@ def import_preview_rows(
     operator_name: str,
     file_name: str,
     selected_updates: set[tuple[int, str]],
+    selected_quotation_changes: set[int] | None = None,
 ) -> dict[str, int]:
+    selected_quotation_changes = selected_quotation_changes or set()
     created_products = 0
     updated_products = 0
     inserted_items = 0
     failed_rows = 0
     skipped_duplicates = 0
+    skipped_unapproved_changes = 0
     now = utc_now_text()
 
     for preview_row in preview_rows:
@@ -149,6 +177,9 @@ def import_preview_rows(
         product_id = product["id"] if product else None
         if product_id and quotation_item_duplicate_exists(connection, product_id, values):
             skipped_duplicates += 1
+            continue
+        if preview_row.get("quotation_changes") and preview_row["row_number"] not in selected_quotation_changes:
+            skipped_unapproved_changes += 1
             continue
 
         if product:
@@ -188,7 +219,9 @@ def import_preview_rows(
         note=(
             f"created_products={created_products}; "
             f"updated_products={updated_products}; "
-            f"skipped_duplicates={skipped_duplicates}; failed_rows={failed_rows}"
+            f"skipped_duplicates={skipped_duplicates}; "
+            f"skipped_unapproved_changes={skipped_unapproved_changes}; "
+            f"failed_rows={failed_rows}"
         ),
     )
     return {
@@ -197,6 +230,7 @@ def import_preview_rows(
         "inserted_items": inserted_items,
         "failed_rows": failed_rows,
         "skipped_duplicates": skipped_duplicates,
+        "skipped_unapproved_changes": skipped_unapproved_changes,
     }
 
 

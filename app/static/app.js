@@ -191,6 +191,16 @@
     appendParagraphs(td, row.errors || [], "error");
     appendParagraphs(td, row.warnings || [], "small-warning");
     appendParagraphs(td, row.quotation_warnings || [], "price-warning");
+    if (row.quotation_changes && row.quotation_changes.length) {
+      var quotationLabel = document.createElement("label");
+      quotationLabel.className = "checkbox-line quotation-change-control";
+      var quotationInput = document.createElement("input");
+      quotationInput.type = "checkbox";
+      quotationInput.name = "apply_quotation_change__" + row.row_number;
+      quotationLabel.appendChild(quotationInput);
+      quotationLabel.appendChild(document.createTextNode(" Save changed quotation data"));
+      td.appendChild(quotationLabel);
+    }
     (row.product_changes || []).forEach(function (change) {
       var label = document.createElement("label");
       label.className = "checkbox-line";
@@ -229,6 +239,7 @@
       (row.errors && row.errors.length) ||
         (row.warnings && row.warnings.length) ||
         (row.quotation_warnings && row.quotation_warnings.length) ||
+        (row.quotation_changes && row.quotation_changes.length) ||
         (row.product_changes && row.product_changes.length)
     );
   }

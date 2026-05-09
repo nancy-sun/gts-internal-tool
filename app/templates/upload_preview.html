@@ -36,7 +36,7 @@
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              {% set row_has_warning = row.errors or row.warnings or row.quotation_warnings or row.product_changes %}
+              {% set row_has_warning = row.errors or row.warnings or row.quotation_warnings or row.quotation_changes or row.product_changes %}
               <td>
                 {% if row.errors %}
                   <span class="status-warning">Failed</span>
@@ -64,6 +64,15 @@
                   {% for warning in row.quotation_warnings %}
                     <p class="price-warning">{{ warning }}</p>
                   {% endfor %}
+                  {% if row.quotation_changes %}
+                    <label class="checkbox-line quotation-change-control">
+                      <input
+                        type="checkbox"
+                        name="apply_quotation_change__{{ row.row_number }}"
+                      >
+                      Save changed quotation data
+                    </label>
+                  {% endif %}
                   {% for change in row.product_changes %}
                     <label class="checkbox-line">
                       <input

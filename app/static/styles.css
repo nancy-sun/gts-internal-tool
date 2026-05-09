@@ -296,6 +296,10 @@ button:focus {
   font-weight: 700;
 }
 
+.quotation-change-control {
+  color: var(--review);
+}
+
 .warning-heading,
 .warning-cell {
   color: var(--danger);

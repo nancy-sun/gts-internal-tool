@@ -159,6 +159,7 @@ async def upload_confirm(request: Request, token: str = Form(...)):
 
     form = await request.form()
     selected_updates = parse_selected_updates(form)
+    selected_quotation_changes = parse_selected_quotation_changes(form)
 
     with get_connection() as connection:
         result = import_preview_rows(
@@ -167,6 +168,7 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             operator_name=payload["operator_name"],
             file_name=payload["file_name"],
             selected_updates=selected_updates,
+            selected_quotation_changes=selected_quotation_changes,
         )
         connection.commit()
 
@@ -200,6 +202,16 @@ def parse_selected_updates(form_items) -> set[tuple[int, str]]:
             continue
         _, row_number, field = key.split("__", 2)
         selected.add((int(row_number), field))
+    return selected
+
+
+def parse_selected_quotation_changes(form_items) -> set[int]:
+    selected = set()
+    for key in form_items:
+        if not key.startswith("apply_quotation_change__"):
+            continue
+        _, row_number = key.split("__", 1)
+        selected.add(int(row_number))
     return selected
 
 
