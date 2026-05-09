@@ -155,6 +155,37 @@ def test_parse_full_quotation_workbook_uses_aliases_before_fallback_columns(tmp_
     assert rows[0].values["unit_price"] == 7.5
 
 
+def test_parse_full_quotation_workbook_skips_repeated_header_rows(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    headers = ["No.", "GTS No.", "Description", "OEM", "Factory", "Quantity", "Unit Price"]
+    for index, header in enumerate(headers, start=1):
+        sheet.cell(row=3, column=index, value=header)
+        sheet.cell(row=5, column=index, value=header)
+
+    sheet["A4"] = 1
+    sheet["B4"] = "GTS-001"
+    sheet["C4"] = "First Product"
+    sheet["D4"] = "OEM-001"
+    sheet["E4"] = "Factory A"
+    sheet["F4"] = 2
+    sheet["G4"] = 10
+    sheet["A6"] = 2
+    sheet["B6"] = "GTS-002"
+    sheet["C6"] = "Second Product"
+    sheet["D6"] = "OEM-002"
+    sheet["E6"] = "Factory B"
+    sheet["F6"] = 3
+    sheet["G6"] = 12
+    path = tmp_path / "quotation_repeated_header.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert [row.row_number for row in rows] == [4, 6]
+    assert [row.values["gts_no"] for row in rows] == ["GTS-001", "GTS-002"]
+
+
 def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliases(tmp_path: Path):
     workbook = Workbook()
     sheet = workbook.active

@@ -147,6 +147,8 @@ def iter_full_quotation_workbook_rows(
             }
             if all(value in ("", None) for value in values.values()):
                 continue
+            if row_looks_like_header(values):
+                continue
 
             warnings: list[str] = []
             errors: list[str] = []
@@ -232,6 +234,14 @@ HEADER_LOOKUP = {
     for field, aliases in HEADER_ALIASES.items()
     for alias in aliases
 }
+
+
+def row_looks_like_header(values: dict[str, Any]) -> bool:
+    matched_fields = 0
+    for field, value in values.items():
+        if HEADER_LOOKUP.get(normalize_header_label(value)) == field:
+            matched_fields += 1
+    return matched_fields >= 2
 
 
 def _clean_cell_value(value: Any) -> Any:
