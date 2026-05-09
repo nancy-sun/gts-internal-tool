@@ -44,17 +44,25 @@ body {
   margin: 40px auto;
 }
 
-.page:has(.upload-preview-table) {
+.page:has(.preview-page-form) {
   width: min(1680px, calc(100vw - 24px));
+  height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
+  margin: 0 auto;
+  padding: 10px 0 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .breadcrumb-bar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-start;
-  gap: 14px;
-  margin-bottom: 24px;
-  padding: 12px 14px;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
   background: #eaf3f0;
   border: 1px solid #bdd6ce;
   border-radius: 8px;
@@ -94,8 +102,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 7px 14px;
+  min-height: 30px;
+  padding: 5px 10px;
   border: 1px solid var(--accent);
   border-radius: 6px;
   background: var(--accent);
@@ -135,10 +143,20 @@ body {
   margin-bottom: 24px;
 }
 
+.page:has(.preview-page-form) .page-heading {
+  margin-bottom: 10px;
+  flex: 0 0 auto;
+}
+
 h1 {
   margin: 0 0 8px;
   font-size: 28px;
   line-height: 1.25;
+}
+
+.page:has(.preview-page-form) h1 {
+  margin-bottom: 2px;
+  font-size: 24px;
 }
 
 p {
@@ -383,6 +401,18 @@ button:disabled {
   margin-top: 18px;
 }
 
+.preview-page-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.preview-page-form .form-actions {
+  flex: 0 0 auto;
+  margin-top: 10px;
+}
+
 .text-link {
   color: var(--accent);
   font-weight: 700;
@@ -448,11 +478,16 @@ button:disabled {
   border-radius: 8px;
 }
 
-.upload-preview-wrap {
-  max-height: min(66vh, 720px);
-  overflow-y: auto;
-  overflow-x: hidden;
+.preview-page-form .table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   overscroll-behavior: contain;
+}
+
+.upload-preview-wrap {
+  max-height: none;
+  overflow-x: hidden;
 }
 
 table {
@@ -463,6 +498,10 @@ table {
 
 .upload-preview-table {
   table-layout: auto;
+  min-width: 0;
+}
+
+.generation-preview-table {
   min-width: 0;
 }
 

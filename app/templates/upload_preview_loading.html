@@ -9,7 +9,7 @@
     <p>{{ file_name }} uploaded by {{ operator_name }}</p>
   </section>
 
-  <form method="post" action="/upload/confirm" data-upload-preview-form>
+  <form class="preview-page-form" method="post" action="/upload/confirm" data-upload-preview-form>
     <input type="hidden" name="token" value="{{ token }}">
     <div
       class="table-wrap upload-preview-wrap"

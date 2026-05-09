@@ -9,10 +9,10 @@
     <p>{{ file_name }} uploaded by {{ operator_name }}</p>
   </section>
 
-  <form method="post" action="/generate/download">
+  <form class="preview-page-form" method="post" action="/generate/download">
     <input type="hidden" name="token" value="{{ token }}">
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap preview-table-wrap">
+      <table class="generation-preview-table">
         <thead>
           <tr>
             <th>Row</th>
