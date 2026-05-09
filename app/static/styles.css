@@ -53,7 +53,11 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .breadcrumb-list {
@@ -64,14 +68,14 @@ body {
   padding: 0;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   list-style: none;
 }
 
 .breadcrumb-list li + li::before {
-  content: "/";
+  content: "›";
   margin-right: 8px;
-  color: #9aa5b1;
+  color: #8b96a4;
 }
 
 .breadcrumb-list a,
@@ -80,18 +84,35 @@ body {
   text-decoration: none;
 }
 
+.breadcrumb-list li[aria-current="page"] {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .return-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 34px;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border: 1px solid #bdd6ce;
   border-radius: 6px;
-  background: var(--surface);
+  background: #eef7f4;
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.return-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #d9eee8;
+  color: var(--accent-dark);
+  line-height: 1;
 }
 
 .return-link:hover,
@@ -101,6 +122,11 @@ body {
   color: var(--accent-dark);
   border-color: var(--accent);
   outline: none;
+}
+
+.return-link:hover,
+.return-link:focus {
+  background: #e1f1ec;
 }
 
 .page-heading {
