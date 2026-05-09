@@ -42,6 +42,17 @@
                 {% elif row.status == "no_quotation" %}
                   <p class="small-warning">Product matched, but no quotation history exists.</p>
                 {% endif %}
+                {% if row.candidates %}
+                  <label class="candidate-line">
+                    <input
+                      type="checkbox"
+                      name="include__{{ row.row_number }}"
+                      value="1"
+                      checked
+                    >
+                    Use this row
+                  </label>
+                {% endif %}
                 {% for candidate in row.candidates %}
                   <label class="candidate-line">
                     <input

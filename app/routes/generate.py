@@ -140,9 +140,15 @@ def preview_path(token: str) -> Path:
 
 def parse_selected_candidates(form_items) -> dict[int, int]:
     selected = {}
+    included_rows = {
+        int(key.split("__", 1)[1])
+        for key, value in form_items.multi_items()
+        if key.startswith("include__") and value
+    }
     for key, value in form_items.multi_items():
         if not key.startswith("candidate__") or not value:
             continue
         row_number = int(key.split("__", 1)[1])
-        selected[row_number] = int(value)
+        if row_number in included_rows:
+            selected[row_number] = int(value)
     return selected
