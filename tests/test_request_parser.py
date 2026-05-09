@@ -29,9 +29,11 @@ def test_parse_request_workbook_accepts_gts_and_description_with_extra_columns(t
     sheet["C3"] = "Extra"
     sheet["D3"] = "Desc."
     sheet["E3"] = "Qty"
+    sheet["F3"] = "Unit"
     sheet["B4"] = "GTS-200"
     sheet["D4"] = "Uploaded Description"
     sheet["E4"] = 5
+    sheet["F4"] = "SET"
     path = tmp_path / "request_gts_description.xlsx"
     workbook.save(path)
 
@@ -41,6 +43,7 @@ def test_parse_request_workbook_accepts_gts_and_description_with_extra_columns(t
     assert rows[0].values["gts_no_normalized"] == "GTS200"
     assert rows[0].values["description"] == "Uploaded Description"
     assert rows[0].values["quantity"] == 5
+    assert rows[0].values["unit"] == "SET"
 
 
 def test_parse_request_workbook_uses_aliases_before_fallback_columns(tmp_path: Path):

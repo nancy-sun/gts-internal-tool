@@ -16,10 +16,10 @@ from app.services.excel_parser import (
 from app.services.normalization import normalize_gts_no, normalize_oem
 
 
-REQUEST_FIELDS = ["gts_no", "description", "oem", "quantity", "comment"]
+REQUEST_FIELDS = ["gts_no", "description", "oem", "quantity", "unit", "comment"]
 REQUEST_HEADER_ALIASES = {
     field: HEADER_ALIASES[field]
-    for field in ("gts_no", "description", "oem", "quantity", "comment")
+    for field in ("gts_no", "description", "oem", "quantity", "unit", "comment")
 }
 REQUEST_HEADER_LOOKUP = {
     normalize_header_label(alias): field

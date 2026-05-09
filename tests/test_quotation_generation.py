@@ -41,7 +41,7 @@ def test_build_output_row_recalculates_total_price():
     assert output["total_price"] == 50
 
 
-def test_build_output_row_preserves_uploaded_request_description():
+def test_build_output_row_preserves_uploaded_request_oem_description_and_unit():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
@@ -49,19 +49,45 @@ def test_build_output_row_preserves_uploaded_request_description():
     connection.execute(
         """
         INSERT INTO quotation_items (
-            id, product_id, description, chinese_description, updated_by, updated_at,
+            id, product_id, description, oem, chinese_description, unit, updated_by, updated_at,
             created_by, created_at
         )
-        VALUES (1, 1, 'Historical Description', '历史描述', 'Alice', ?, 'Alice', ?)
+        VALUES (1, 1, 'Historical Description', 'HIST-OEM', '历史描述', 'PCS', 'Alice', ?, 'Alice', ?)
         """,
         (now, now),
     )
     candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
 
-    output = build_output_row(candidate, None, "Uploaded Request Description")
+    output = build_output_row(candidate, None, "Uploaded Request Description", "REQ-OEM", "SET")
 
     assert output["description"] == "Uploaded Request Description"
+    assert output["oem"] == "REQ-OEM"
+    assert output["unit"] == "SET"
     assert output["chinese_description"] == "历史描述"
+
+
+def test_build_output_row_uses_system_oem_description_and_unit_when_request_values_empty():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            id, product_id, description, oem, unit, updated_by, updated_at,
+            created_by, created_at
+        )
+        VALUES (1, 1, 'Historical Description', 'HIST-OEM', 'PCS', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
+
+    output = build_output_row(candidate, None, "", "", "")
+
+    assert output["description"] == "Historical Description"
+    assert output["oem"] == "HIST-OEM"
+    assert output["unit"] == "PCS"
 
 
 def test_apply_generated_workbook_formatting_sets_requested_number_formats():

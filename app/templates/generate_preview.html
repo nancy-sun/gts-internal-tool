@@ -21,6 +21,7 @@
             <th>OEM</th>
             <th>品名</th>
             <th>数量</th>
+            <th>单位</th>
             <th>候选报价</th>
           </tr>
         </thead>
@@ -55,6 +56,13 @@
                 {% endif %}
               </td>
               <td>{{ row["values"]["quantity"] if row["values"]["quantity"] is not none else "" }}</td>
+              <td>
+                {% if row["values"]["unit"] %}
+                  {{ row["values"]["unit"] }}
+                {% elif row.candidates %}
+                  {{ row.candidates[0].unit or "" }}
+                {% endif %}
+              </td>
               <td>
                 {% for error in row.errors %}
                   <p class="error">{{ error }}</p>

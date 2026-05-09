@@ -160,9 +160,14 @@ def create_generated_workbook(
         if not candidate:
             continue
 
-        request_quantity = preview_row["values"].get("quantity")
-        request_description = preview_row["values"].get("description")
-        output_values = build_output_row(candidate, request_quantity, request_description)
+        request_values = preview_row["values"]
+        output_values = build_output_row(
+            candidate,
+            request_values.get("quantity"),
+            request_values.get("description"),
+            request_values.get("oem"),
+            request_values.get("unit"),
+        )
         output_values["no"] = generated_count + 1
         for column_index, (field, _) in enumerate(GENERATED_COLUMNS, start=1):
             worksheet.cell(row=output_row, column=column_index, value=output_values.get(field))
@@ -190,17 +195,28 @@ def build_output_row(
     candidate: Row,
     request_quantity: float | None,
     request_description: str | None = None,
+    request_oem: str | None = None,
+    request_unit: str | None = None,
 ) -> dict[str, Any]:
     output = {field: candidate[field] for field, _ in GENERATED_COLUMNS if field in candidate.keys()}
     output["photo"] = None
-    if request_description:
-        output["description"] = request_description
+    for field, request_value in (
+        ("description", request_description),
+        ("oem", request_oem),
+        ("unit", request_unit),
+    ):
+        if _has_text(request_value):
+            output[field] = request_value
     output["quantity"] = request_quantity if request_quantity is not None else None
     if request_quantity is not None and candidate["unit_price"] is not None:
         output["total_price"] = float(request_quantity) * float(candidate["unit_price"])
     elif request_quantity is None:
         output["total_price"] = None
     return output
+
+
+def _has_text(value: Any) -> bool:
+    return value is not None and str(value).strip() != ""
 
 
 def apply_generated_workbook_formatting(worksheet) -> None:
