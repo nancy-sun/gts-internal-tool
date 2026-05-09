@@ -49,6 +49,7 @@ HEADER_ALIASES = {
         "中文描述",
         "描述",
         "产品描述",
+        "品名",
     ],
     "quantity": ["Quantity", "Qty"],
     "unit": ["Unit", "单位"],

@@ -131,7 +131,7 @@ def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliase
         "desc.",
         "oem.",
         "工厂",
-        "产品描述",
+        "品名",
         "qty",
         "单位",
         "prix",
