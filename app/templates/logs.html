@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Operation Logs - GTS Internal Tool{% endblock %}
-{% block page_name %}Operation Logs{% endblock %}
+{% block title %}操作记录 - GTS Internal Tool{% endblock %}
+{% block page_name %}操作记录{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>Operation Logs</h1>
+    <h1>操作记录</h1>
   </section>
 
   <section class="table-section">
@@ -14,12 +14,12 @@
         <table>
           <thead>
             <tr>
-              <th>Action Time</th>
-              <th>Operator Name</th>
-              <th>Action Type</th>
-              <th>File Name</th>
-              <th>Row Count</th>
-              <th>Note</th>
+              <th>操作时间</th>
+              <th>操作员</th>
+              <th>操作类型</th>
+              <th>文件名</th>
+              <th>行数</th>
+              <th>备注</th>
             </tr>
           </thead>
           <tbody>
@@ -27,7 +27,21 @@
               <tr>
                 <td>{{ row.action_time }}</td>
                 <td>{{ row.operator_name }}</td>
-                <td>{{ row.action_type }}</td>
+                <td>
+                  {% if row.action_type == "upload_full_quotation" %}
+                    上传完整报价单
+                  {% elif row.action_type == "generate_quotation" %}
+                    生成报价单
+                  {% elif row.action_type == "search" %}
+                    查询
+                  {% elif row.action_type == "edit_product" %}
+                    编辑产品
+                  {% elif row.action_type == "edit_quotation_item" %}
+                    编辑报价记录
+                  {% else %}
+                    {{ row.action_type }}
+                  {% endif %}
+                </td>
                 <td>{{ row.file_name or "" }}</td>
                 <td>{{ row.row_count if row.row_count is not none else "" }}</td>
                 <td>{{ row.note or "" }}</td>
@@ -37,7 +51,7 @@
         </table>
       </div>
     {% else %}
-      <p>No operation logs yet.</p>
+      <p>暂无操作记录。</p>
     {% endif %}
   </section>
 {% endblock %}

@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Login - GTS Internal Tool{% endblock %}
-{% block page_name %}Login{% endblock %}
+{% block title %}登录 - GTS Internal Tool{% endblock %}
+{% block page_name %}登录{% endblock %}
 
 {% block content %}
   <section class="narrow-panel">
-    <h1>Office Access</h1>
+    <h1>办公室访问</h1>
     <form method="post" action="/login" class="form-stack">
-      <label for="access_code">Shared access code</label>
+      <label for="access_code">共享访问码</label>
       <input id="access_code" name="access_code" type="password" autocomplete="current-password" required autofocus>
       {% if error %}
         <p class="error">{{ error }}</p>
       {% endif %}
-      <button type="submit">Enter</button>
+      <button type="submit">进入</button>
     </form>
   </section>
 {% endblock %}

@@ -29,7 +29,7 @@ def login(request: Request, access_code: str = Form(...)):
 
     return templates.TemplateResponse(
         "login.html",
-        {"request": request, "error": "Access code is incorrect."},
+        {"request": request, "error": "访问码不正确。"},
         status_code=401,
     )
 

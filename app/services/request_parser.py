@@ -78,11 +78,11 @@ def parse_request_workbook(
             values["gts_no_normalized"] = gts_no_normalized
             values["oem_normalized"] = oem_normalized
             values["quantity"] = _parse_number(values["quantity"], "quantity", warnings)
-            warnings.extend([f"GTS No. {warning}" for warning in gts_warnings])
+            warnings.extend([f"GTS {warning}" for warning in gts_warnings])
             warnings.extend([f"OEM {warning}" for warning in oem_warnings])
 
             if not gts_no_normalized and not oem_normalized:
-                errors.append("Row must contain GTS No. or OEM.")
+                errors.append("每行必须填写 GTS 或 OEM。")
 
             parsed_rows.append(
                 ParsedRequestRow(

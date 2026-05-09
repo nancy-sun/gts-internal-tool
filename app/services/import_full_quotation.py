@@ -27,7 +27,7 @@ def build_import_preview(
             product, conflict = find_product_for_import(connection, parsed_row.values)
             if conflict:
                 preview["errors"].append(
-                    "GTS No. and OEM match different products. Manual review required."
+                    "GTS 和 OEM 匹配到不同产品，需要人工确认。"
                 )
             elif product:
                 preview["matched_product"] = dict(product)
@@ -110,9 +110,9 @@ def detect_quotation_changes(
 
     changes = []
     labels = {
-        "factory": "Factory",
-        "unit": "Unit",
-        "unit_price": "Price",
+        "factory": "工厂",
+        "unit": "单位",
+        "unit_price": "价格",
     }
     for field in ("factory", "unit"):
         incoming_value = _text(values.get(field))
@@ -217,11 +217,11 @@ def import_preview_rows(
         file_name=file_name,
         row_count=inserted_items,
         note=(
-            f"created_products={created_products}; "
-            f"updated_products={updated_products}; "
-            f"skipped_duplicates={skipped_duplicates}; "
-            f"skipped_unapproved_changes={skipped_unapproved_changes}; "
-            f"failed_rows={failed_rows}"
+            f"新增产品={created_products}; "
+            f"更新产品={updated_products}; "
+            f"跳过重复行={skipped_duplicates}; "
+            f"跳过未确认变更报价={skipped_unapproved_changes}; "
+            f"失败行={failed_rows}"
         ),
     )
     return {

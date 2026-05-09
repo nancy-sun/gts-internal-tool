@@ -61,7 +61,7 @@ def build_generation_preview(
         if conflict:
             preview["status"] = "conflict"
             preview["errors"].append(
-                "GTS No. and OEM match different products. Manual review required."
+                "GTS 和 OEM 匹配到不同产品，需要人工确认。"
             )
             preview_rows.append(preview)
             continue
@@ -175,7 +175,7 @@ def create_generated_workbook(
         action_type="generate_quotation",
         file_name=request_file_name,
         row_count=generated_count,
-        note="Generated internal quotation workbook for immediate download.",
+        note="已生成内部报价 Excel，供立即下载。",
     )
 
     apply_generated_workbook_formatting(worksheet)

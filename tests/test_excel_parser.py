@@ -321,9 +321,9 @@ def test_parse_full_quotation_workbook_errors_when_required_columns_missing(tmp_
     )
 
     assert len(rows) == 1
-    assert "Factory is required." in rows[0].errors
-    assert "Unit is required." in rows[0].errors
-    assert "Unit Price is required." in rows[0].errors
+    assert "工厂不能为空。" in rows[0].errors
+    assert "单位不能为空。" in rows[0].errors
+    assert "单价不能为空。" in rows[0].errors
 
 
 def test_parse_full_quotation_workbook_errors_when_required_values_blank(tmp_path: Path):
@@ -342,6 +342,6 @@ def test_parse_full_quotation_workbook_errors_when_required_values_blank(tmp_pat
     rows = parse_full_quotation_workbook(path)
 
     assert len(rows) == 1
-    assert "Factory is required." in rows[0].errors
-    assert "Unit is required." in rows[0].errors
-    assert "Unit Price is required." in rows[0].errors
+    assert "工厂不能为空。" in rows[0].errors
+    assert "单位不能为空。" in rows[0].errors
+    assert "单价不能为空。" in rows[0].errors

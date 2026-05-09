@@ -57,21 +57,21 @@ def test_build_import_preview_adds_warnings_for_changed_latest_factory_unit_and_
     assert preview[0]["quotation_changes"] == [
         {
             "field": "factory",
-            "label": "Factory",
+            "label": "工厂",
             "existing": "Factory A",
             "incoming": "Factory B",
             "message": "Factory A => Factory B",
         },
         {
             "field": "unit",
-            "label": "Unit",
+            "label": "单位",
             "existing": "PCS",
             "incoming": "SET",
             "message": "PCS => SET",
         },
         {
             "field": "unit_price",
-            "label": "Price",
+            "label": "价格",
             "existing": "¥10.00",
             "incoming": "¥12.50",
             "message": "¥10.00 => ¥12.50",
@@ -122,7 +122,7 @@ def test_preview_has_errors_is_true_for_gts_oem_product_conflict():
 
     assert preview_has_errors(preview) is True
     assert preview[0]["errors"] == [
-        "GTS No. and OEM match different products. Manual review required."
+        "GTS 和 OEM 匹配到不同产品，需要人工确认。"
     ]
 
 

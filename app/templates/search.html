@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}Search Database - GTS Internal Tool{% endblock %}
-{% block page_name %}Search Database{% endblock %}
+{% block title %}查询数据库 - GTS Internal Tool{% endblock %}
+{% block page_name %}查询数据库{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>Search Database</h1>
+    <h1>查询数据库</h1>
   </section>
 
   <form method="get" action="/search" class="search-form">
-    <label for="field">Search by</label>
+    <label for="field">查询字段</label>
     <select id="field" name="field">
-      <option value="gts_no" {% if field == "gts_no" %}selected{% endif %}>GTS No.</option>
+      <option value="gts_no" {% if field == "gts_no" %}selected{% endif %}>GTS</option>
       <option value="oem" {% if field == "oem" %}selected{% endif %}>OEM</option>
-      <option value="description" {% if field == "description" %}selected{% endif %}>Description</option>
-      <option value="chinese_description" {% if field == "chinese_description" %}selected{% endif %}>Chinese Description</option>
-      <option value="factory" {% if field == "factory" %}selected{% endif %}>Factory</option>
+      <option value="description" {% if field == "description" %}selected{% endif %}>英文描述</option>
+      <option value="chinese_description" {% if field == "chinese_description" %}selected{% endif %}>品名</option>
+      <option value="factory" {% if field == "factory" %}selected{% endif %}>工厂</option>
     </select>
-    <label for="q">Keyword</label>
+    <label for="q">关键词</label>
     <input id="q" name="q" value="{{ query }}" autocomplete="off">
-    <button type="submit">Search</button>
+    <button type="submit">查询</button>
   </form>
 
   {% if warnings %}
@@ -32,23 +32,23 @@
 
   {% if query %}
     <section class="table-section">
-      <h2>Results</h2>
+      <h2>查询结果</h2>
       {% if rows %}
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>GTS No.</th>
+                <th>GTS</th>
                 <th>OEM</th>
-                <th>Description</th>
-                <th>Chinese Description</th>
-                <th>Factory</th>
-                <th>Unit Price</th>
-                <th>Packaging</th>
-                <th>Expected Delivery</th>
-                <th>Comment</th>
-                <th>Updated By</th>
-                <th>Updated At</th>
+                <th>英文描述</th>
+                <th>品名</th>
+                <th>工厂</th>
+                <th>单价</th>
+                <th>包装</th>
+                <th>交期</th>
+                <th>备注</th>
+                <th>更新人</th>
+                <th>更新时间</th>
               </tr>
             </thead>
             <tbody>
@@ -71,7 +71,7 @@
           </table>
         </div>
       {% else %}
-        <p>No matching records found.</p>
+        <p>没有找到匹配记录。</p>
       {% endif %}
     </section>
   {% endif %}

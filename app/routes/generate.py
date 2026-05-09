@@ -57,7 +57,7 @@ async def generate_preview(
             "generate.html",
             {
                 "request": request,
-                "error": f"Upload file is larger than {settings.max_upload_size_mb} MB.",
+                "error": f"上传文件超过 {settings.max_upload_size_mb} MB。",
             },
             status_code=400,
         )
@@ -127,10 +127,10 @@ async def generate_download(request: Request, token: str = Form(...)):
 
 def validate_request_upload(request_file: UploadFile, operator_name: str) -> str | None:
     if not operator_name.strip():
-        return "Operator name is required."
+        return "请填写操作员姓名。"
     filename = request_file.filename or ""
     if not filename.lower().endswith(".xlsx"):
-        return "Only .xlsx files are allowed."
+        return "只能上传 .xlsx 文件。"
     return None
 
 

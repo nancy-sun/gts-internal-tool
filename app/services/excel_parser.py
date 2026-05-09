@@ -153,26 +153,26 @@ def iter_full_quotation_workbook_rows(
             warnings: list[str] = []
             errors: list[str] = []
             errors.extend(
-                f"{field_label(field)} is required."
+                f"{field_label(field)}不能为空。"
                 for field in missing_required_headers
             )
             gts_no_normalized, gts_warnings = normalize_gts_no(values["gts_no"])
             oem_normalized, oem_warnings = normalize_oem(values["oem"])
             values["gts_no_normalized"] = gts_no_normalized
             values["oem_normalized"] = oem_normalized
-            warnings.extend([f"GTS No. {warning}" for warning in gts_warnings])
+            warnings.extend([f"GTS {warning}" for warning in gts_warnings])
             warnings.extend([f"OEM {warning}" for warning in oem_warnings])
 
             for field in NUMERIC_FIELDS:
                 values[field] = _parse_number(values[field], field, warnings)
 
             if not gts_no_normalized and not oem_normalized:
-                errors.append("Row must contain GTS No. or OEM.")
+                errors.append("每行必须填写 GTS 或 OEM。")
             for field in REQUIRED_UPLOAD_FIELDS:
                 if field in missing_required_headers:
                     continue
                 if values.get(field) in ("", None):
-                    errors.append(f"{field_label(field)} is required.")
+                    errors.append(f"{field_label(field)}不能为空。")
 
             yield ParsedQuotationRow(
                 row_number=row_number,
@@ -247,9 +247,9 @@ def resolve_columns(worksheet, header_row: int, template: dict[str, Any]) -> dic
 
 def field_label(field: str) -> str:
     return {
-        "factory": "Factory",
-        "unit": "Unit",
-        "unit_price": "Unit Price",
+        "factory": "工厂",
+        "unit": "单位",
+        "unit_price": "单价",
     }.get(field, field)
 
 
@@ -292,5 +292,5 @@ def _parse_number(value: Any, field: str, warnings: list[str]) -> float | None:
     try:
         return float(text)
     except ValueError:
-        warnings.append(f"{field} is not a number and will be left blank.")
+        warnings.append(f"{field_label(field)}不是数字，已留空。")
         return None

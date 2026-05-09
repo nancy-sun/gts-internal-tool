@@ -15,9 +15,7 @@ def normalize_part_number(value: object | None) -> tuple[str, list[str]]:
 
     suspicious_characters = sorted(set(SUSPICIOUS_CHARACTER_PATTERN.findall(raw_value)))
     if suspicious_characters:
-        warnings.append(
-            "Suspicious characters found: " + ", ".join(suspicious_characters)
-        )
+        warnings.append("发现可疑字符：" + ", ".join(suspicious_characters))
 
     normalized = re.sub(r"[^A-Za-z0-9]", "", raw_value).upper()
     return normalized, warnings
