@@ -19,6 +19,7 @@
             <th>状态</th>
             <th>GTS</th>
             <th>OEM</th>
+            <th>品名</th>
             <th>数量</th>
             <th>候选报价</th>
           </tr>
@@ -46,6 +47,13 @@
               </td>
               <td>{{ row["values"]["gts_no"] or "" }}</td>
               <td>{{ row["values"]["oem"] or "" }}</td>
+              <td>
+                {% if row.product and row.product.chinese_description %}
+                  {{ row.product.chinese_description }}
+                {% elif row.candidates %}
+                  {{ row.candidates[0].chinese_description or "" }}
+                {% endif %}
+              </td>
               <td>{{ row["values"]["quantity"] if row["values"]["quantity"] is not none else "" }}</td>
               <td>
                 {% for error in row.errors %}
