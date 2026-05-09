@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Preview - GTS Internal Tool{% endblock %}
-{% block page_name %}Upload Preview{% endblock %}
+{% block title %}导入预览 - GTS Internal Tool{% endblock %}
+{% block page_name %}导入预览{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>Upload Preview</h1>
-    <p>{{ file_name }} uploaded by {{ operator_name }}</p>
+    <h1>导入预览</h1>
+    <p>文件：{{ file_name }}　操作员：{{ operator_name }}</p>
   </section>
 
   <form class="preview-page-form" method="post" action="/upload/confirm" data-upload-preview-form>
@@ -18,33 +18,33 @@
       <table class="upload-preview-table">
         <thead>
           <tr data-upload-preview-header>
-            <th>Row</th>
-            <th>Status</th>
+            <th>行</th>
+            <th>状态</th>
             <th>GTS</th>
             <th>OEM</th>
-            <th>Chinese Description</th>
-            <th>Factory</th>
-            <th>Unit</th>
-            <th>Price</th>
-            <th>Delivery</th>
+            <th>品名</th>
+            <th>工厂</th>
+            <th>单位</th>
+            <th>价格</th>
+            <th>交期</th>
           </tr>
         </thead>
         <tbody data-upload-preview-body>
           <tr>
             <td colspan="9">
               <span class="loading-icon" aria-hidden="true"></span>
-              Preparing preview...
+              正在生成预览...
             </td>
           </tr>
         </tbody>
       </table>
     </div>
     <div class="form-actions">
-      <span class="preview-progress" data-upload-preview-progress>Loading rows...</span>
-      <a class="text-link" href="/upload">Cancel</a>
+      <span class="preview-progress" data-upload-preview-progress>正在读取行...</span>
+      <a class="text-link" href="/upload">取消</a>
       <button type="submit" data-upload-preview-confirm disabled>
         <span class="button-loading-icon" data-upload-preview-confirm-spinner aria-hidden="true"></span>
-        <span>Confirm Import</span>
+        <span>确认导入</span>
       </button>
     </div>
   </form>

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Preview - GTS Internal Tool{% endblock %}
-{% block page_name %}Upload Preview{% endblock %}
+{% block title %}导入预览 - GTS Internal Tool{% endblock %}
+{% block page_name %}导入预览{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>Upload Preview</h1>
-    <p>{{ file_name }} uploaded by {{ operator_name }}</p>
+    <h1>导入预览</h1>
+    <p>文件：{{ file_name }}　操作员：{{ operator_name }}</p>
   </section>
   {% if error %}
     <p class="error">{{ error }}</p>
@@ -18,17 +18,17 @@
       <table class="upload-preview-table">
         <thead>
           <tr>
-            <th>Row</th>
-            <th>Status</th>
+            <th>行</th>
+            <th>状态</th>
             <th>GTS</th>
             <th>OEM</th>
-            <th>Chinese Description</th>
-            <th>Factory</th>
-            <th>Unit</th>
-            <th>Price</th>
-            <th>Delivery</th>
+            <th>品名</th>
+            <th>工厂</th>
+            <th>单位</th>
+            <th>价格</th>
+            <th>交期</th>
             {% if has_warnings %}
-              <th class="warning-heading">Warnings</th>
+              <th class="warning-heading">提醒</th>
             {% endif %}
           </tr>
         </thead>
@@ -37,13 +37,13 @@
             <tr>
               <td>{{ row.row_number }}</td>
               {% set row_has_warning = row.errors or row.warnings or row.quotation_warnings or row.quotation_changes or row.product_changes %}
-              <td>
+              <td class="status-cell">
                 {% if row.errors %}
-                  <span class="status-warning">Failed</span>
+                  <span class="status-icon status-warning" title="失败" aria-label="失败">×</span>
                 {% elif row_has_warning %}
-                  <span class="status-review">Review</span>
+                  <span class="status-icon status-review" title="需确认" aria-label="需确认">!</span>
                 {% else %}
-                  <span class="status-ready">Ready</span>
+                  <span class="status-icon status-ready" title="可导入" aria-label="可导入">✓</span>
                 {% endif %}
               </td>
               <td>{{ row["values"]["gts_no"] or "" }}</td>
@@ -70,7 +70,7 @@
                         type="checkbox"
                         name="apply_quotation_change__{{ row.row_number }}"
                       >
-                      Save changed quotation data
+                      保存这条变更报价
                     </label>
                   {% endif %}
                   {% for change in row.product_changes %}
@@ -79,7 +79,13 @@
                         type="checkbox"
                         name="update_product__{{ row.row_number }}__{{ change.field }}"
                       >
-                      Update {{ change.field }} from "{{ change.existing }}" to "{{ change.incoming }}"
+                      更新
+                      {% if change.field == "oem" %}OEM
+                      {% elif change.field == "description" %}英文描述
+                      {% elif change.field == "chinese_description" %}品名
+                      {% else %}{{ change.field }}
+                      {% endif %}
+                      ："{{ change.existing }}" → "{{ change.incoming }}"
                     </label>
                   {% endfor %}
                 </td>
@@ -90,8 +96,8 @@
       </table>
     </div>
     <div class="form-actions">
-      <a class="text-link" href="/upload">Cancel</a>
-      <button type="submit" {% if has_errors %}disabled{% endif %}>Confirm Import</button>
+      <a class="text-link" href="/upload">取消</a>
+      <button type="submit" {% if has_errors %}disabled{% endif %}>确认导入</button>
     </div>
   </form>
 {% endblock %}

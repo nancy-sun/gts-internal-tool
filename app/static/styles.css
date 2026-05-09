@@ -338,6 +338,27 @@ button:focus {
   font-weight: 700;
 }
 
+.status-cell {
+  text-align: center;
+}
+
+.status-cell .loading-icon {
+  margin-right: 0;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .preview-progress {
   margin-right: auto;
   color: var(--muted);
@@ -497,11 +518,12 @@ table {
 }
 
 .upload-preview-table {
-  table-layout: auto;
+  table-layout: fixed;
   min-width: 0;
 }
 
 .generation-preview-table {
+  table-layout: fixed;
   min-width: 0;
 }
 
@@ -543,15 +565,80 @@ th {
 
 .upload-preview-table th:first-child,
 .upload-preview-table td:first-child {
-  width: 1%;
+  width: 52px;
   white-space: nowrap;
 }
 
 .upload-preview-table th:nth-child(2),
 .upload-preview-table td:nth-child(2) {
-  width: 82px;
-  min-width: 82px;
+  width: 52px;
+  min-width: 52px;
+  text-align: center;
   white-space: nowrap;
+}
+
+.upload-preview-table th:nth-child(3),
+.upload-preview-table td:nth-child(3) {
+  width: 170px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.upload-preview-table th:nth-child(4),
+.upload-preview-table td:nth-child(4) {
+  width: 220px;
+}
+
+.upload-preview-table th:nth-child(5),
+.upload-preview-table td:nth-child(5) {
+  width: 120px;
+}
+
+.upload-preview-table th:nth-child(6),
+.upload-preview-table td:nth-child(6) {
+  width: 150px;
+}
+
+.upload-preview-table th:nth-child(7),
+.upload-preview-table td:nth-child(7) {
+  width: 64px;
+  white-space: nowrap;
+}
+
+.upload-preview-table th:nth-child(8),
+.upload-preview-table td:nth-child(8) {
+  width: 110px;
+  white-space: nowrap;
+}
+
+.upload-preview-table th:nth-child(9),
+.upload-preview-table td:nth-child(9) {
+  width: 110px;
+}
+
+.upload-preview-table th:nth-child(10),
+.upload-preview-table td:nth-child(10) {
+  width: auto;
+}
+
+.generation-preview-table th:first-child,
+.generation-preview-table td:first-child {
+  width: 52px;
+  white-space: nowrap;
+}
+
+.generation-preview-table th:nth-child(2),
+.generation-preview-table td:nth-child(2) {
+  width: 76px;
+}
+
+.generation-preview-table th:nth-child(3),
+.generation-preview-table td:nth-child(3) {
+  width: 170px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 tr:last-child td {

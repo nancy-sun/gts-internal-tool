@@ -69,7 +69,7 @@
     }
     rowElements[row.row_number] = rowElement;
     if (progressText) {
-      progressText.textContent = "Loaded " + rowCount + " rows...";
+      progressText.textContent = "已读取 " + rowCount + " 行...";
     }
   });
 
@@ -84,10 +84,10 @@
     }
     if (progressText) {
       if (data.has_errors) {
-        progressText.textContent = "Preview has errors. Fix the Excel file before importing.";
+        progressText.textContent = "预览有错误，请修改 Excel 后再导入。";
         progressText.classList.add("status-warning");
       } else {
-        progressText.textContent = "Preview ready: " + data.row_count + " rows.";
+        progressText.textContent = "预览完成：" + data.row_count + " 行。";
       }
     }
   });
@@ -97,7 +97,7 @@
     stopConfirmLoading();
     if (progressText) {
       var data = JSON.parse(event.data);
-      progressText.textContent = data.message || "Preview loading failed.";
+      progressText.textContent = data.message || "预览加载失败。";
       progressText.classList.add("status-warning");
     }
   });
@@ -106,7 +106,7 @@
     eventSource.close();
     stopConfirmLoading();
     if (progressText) {
-      progressText.textContent = "Preview loading failed.";
+      progressText.textContent = "预览加载失败。";
       progressText.classList.add("status-warning");
     }
   };
@@ -129,11 +129,12 @@
     tr.className = "preview-loading-row";
     appendCell(tr, rowNumber);
     var statusCell = appendCell(tr, "");
+    statusCell.className = "status-cell";
     var spinner = document.createElement("span");
     spinner.className = "loading-icon";
     spinner.setAttribute("aria-hidden", "true");
+    spinner.title = "读取中";
     statusCell.appendChild(spinner);
-    statusCell.appendChild(document.createTextNode(" Loading"));
     for (var i = 0; i < 7; i += 1) {
       appendCell(tr, "");
     }
@@ -150,11 +151,8 @@
     var hasWarnings = rowHasWarnings(row);
     appendCell(tr, row.row_number);
     var statusCell = appendCell(tr, "");
-    var status = document.createElement("span");
-    status.className =
-      row.errors && row.errors.length ? "status-warning" : hasWarnings ? "status-review" : "status-ready";
-    status.textContent = row.errors && row.errors.length ? "Failed" : hasWarnings ? "Review" : "Ready";
-    statusCell.appendChild(status);
+    statusCell.className = "status-cell";
+    statusCell.appendChild(createStatusIcon(row, hasWarnings));
     appendCell(tr, values.gts_no || "");
     appendCell(tr, values.oem || "");
     appendCell(tr, values.chinese_description || "");
@@ -175,7 +173,7 @@
     warningsVisible = true;
     var th = document.createElement("th");
     th.className = "warning-heading preview-warning-heading";
-    th.textContent = "Warnings";
+    th.textContent = "提醒";
     headerRow.appendChild(th);
     Object.keys(rowElements).forEach(function (rowNumber) {
       appendCell(rowElements[rowNumber], "");
@@ -198,7 +196,7 @@
       quotationInput.type = "checkbox";
       quotationInput.name = "apply_quotation_change__" + row.row_number;
       quotationLabel.appendChild(quotationInput);
-      quotationLabel.appendChild(document.createTextNode(" Save changed quotation data"));
+      quotationLabel.appendChild(document.createTextNode(" 保存这条变更报价"));
       td.appendChild(quotationLabel);
     }
     (row.product_changes || []).forEach(function (change) {
@@ -210,7 +208,8 @@
       label.appendChild(input);
       label.appendChild(
         document.createTextNode(
-          ' Update ' + change.field + ' from "' + change.existing + '" to "' + change.incoming + '"'
+          ' 更新' + productChangeLabel(change.field) + '："'
+          + change.existing + '" → "' + change.incoming + '"'
         )
       );
       td.appendChild(label);
@@ -232,6 +231,43 @@
     cell.textContent = text == null ? "" : text;
     row.appendChild(cell);
     return cell;
+  }
+
+  function createStatusIcon(row, hasWarnings) {
+    var status = document.createElement("span");
+    status.className = "status-icon";
+    if (row.errors && row.errors.length) {
+      status.className += " status-warning";
+      status.textContent = "×";
+      status.title = "失败";
+      status.setAttribute("aria-label", "失败");
+      return status;
+    }
+    if (hasWarnings) {
+      status.className += " status-review";
+      status.textContent = "!";
+      status.title = "需确认";
+      status.setAttribute("aria-label", "需确认");
+      return status;
+    }
+    status.className += " status-ready";
+    status.textContent = "✓";
+    status.title = "可导入";
+    status.setAttribute("aria-label", "可导入");
+    return status;
+  }
+
+  function productChangeLabel(field) {
+    if (field === "oem") {
+      return "OEM";
+    }
+    if (field === "description") {
+      return "英文描述";
+    }
+    if (field === "chinese_description") {
+      return "品名";
+    }
+    return field;
   }
 
   function rowHasWarnings(row) {
@@ -263,7 +299,7 @@
   }
 
   previewForm.addEventListener("submit", function (event) {
-    if (!confirm("Confirm import? This will add quotation rows to the system.")) {
+    if (!confirm("确认导入？系统会新增报价记录。")) {
       event.preventDefault();
     }
   });

@@ -95,7 +95,7 @@ def upload_preview_stream(request: Request, token: str):
     path = preview_path(token)
     if not path.exists():
         return StreamingResponse(
-            iter([sse_event("preview_error", {"message": "Preview file was not found."})]),
+            iter([sse_event("preview_error", {"message": "找不到预览文件。"})]),
             media_type="text/event-stream",
         )
 
@@ -152,7 +152,7 @@ async def upload_confirm(request: Request, token: str = Form(...)):
                 "rows": payload["rows"],
                 "has_warnings": preview_has_warnings(payload["rows"]),
                 "has_errors": True,
-                "error": "Preview has errors. Fix the Excel file before importing.",
+                "error": "预览有错误，请修改 Excel 后再导入。",
             },
             status_code=400,
         )

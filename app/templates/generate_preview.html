@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Generation Preview - GTS Internal Tool{% endblock %}
-{% block page_name %}Generation Preview{% endblock %}
+{% block title %}生成预览 - GTS Internal Tool{% endblock %}
+{% block page_name %}生成预览{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>Generation Preview</h1>
-    <p>{{ file_name }} uploaded by {{ operator_name }}</p>
+    <h1>生成预览</h1>
+    <p>文件：{{ file_name }}　操作员：{{ operator_name }}</p>
   </section>
 
   <form class="preview-page-form" method="post" action="/generate/download">
@@ -15,19 +15,35 @@
       <table class="generation-preview-table">
         <thead>
           <tr>
-            <th>Row</th>
-            <th>Status</th>
-            <th>GTS No.</th>
+            <th>行</th>
+            <th>状态</th>
+            <th>GTS</th>
             <th>OEM</th>
-            <th>Quantity</th>
-            <th>Candidates</th>
+            <th>数量</th>
+            <th>候选报价</th>
           </tr>
         </thead>
         <tbody>
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              <td>{{ row.status }}</td>
+              <td>
+                {% if row.status == "ready" %}
+                  可生成
+                {% elif row.status == "multiple_candidates" %}
+                  多候选
+                {% elif row.status == "conflict" %}
+                  冲突
+                {% elif row.status == "unmatched" %}
+                  未匹配
+                {% elif row.status == "no_quotation" %}
+                  无报价
+                {% elif row.status == "invalid" %}
+                  无效
+                {% else %}
+                  {{ row.status }}
+                {% endif %}
+              </td>
               <td>{{ row["values"]["gts_no"] or "" }}</td>
               <td>{{ row["values"]["oem"] or "" }}</td>
               <td>{{ row["values"]["quantity"] if row["values"]["quantity"] is not none else "" }}</td>
@@ -39,9 +55,9 @@
                   <p class="small-warning">{{ warning }}</p>
                 {% endfor %}
                 {% if row.status == "unmatched" %}
-                  <p class="small-warning">No matching product found.</p>
+                  <p class="small-warning">未找到匹配产品。</p>
                 {% elif row.status == "no_quotation" %}
-                  <p class="small-warning">Product matched, but no quotation history exists.</p>
+                  <p class="small-warning">产品已匹配，但没有历史报价。</p>
                 {% endif %}
                 {% if row.candidates %}
                   <label class="candidate-line">
@@ -51,7 +67,7 @@
                       value="1"
                       checked
                     >
-                    Use this row
+                    使用此行
                   </label>
                 {% endif %}
                 {% for candidate in row.candidates %}
@@ -62,8 +78,8 @@
                       value="{{ candidate.id }}"
                       {% if loop.first %}checked{% endif %}
                     >
-                    {{ candidate.factory or "No factory" }} |
-                    {{ candidate.unit_price if candidate.unit_price is not none else "No unit price" }} |
+                    {{ candidate.factory or "无工厂" }} |
+                    {{ candidate.unit_price if candidate.unit_price is not none else "无价格" }} |
                     {{ candidate.updated_by }} |
                     {{ candidate.updated_at }}
                   </label>
@@ -75,8 +91,8 @@
       </table>
     </div>
     <div class="form-actions">
-      <a class="text-link" href="/generate">Cancel</a>
-      <button type="submit">Generate Excel</button>
+      <a class="text-link" href="/generate">取消</a>
+      <button type="submit">生成 Excel</button>
     </div>
   </form>
 {% endblock %}
