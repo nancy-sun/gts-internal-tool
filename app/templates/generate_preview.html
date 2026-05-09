@@ -95,9 +95,9 @@
                       {% if loop.first %}checked{% endif %}
                     >
                     {{ candidate.factory or "无工厂" }} |
-                    {{ candidate.unit_price if candidate.unit_price is not none else "无价格" }} |
+                    {% if candidate.unit_price is not none %}¥{{ "%.2f"|format(candidate.unit_price) }}{% else %}无价格{% endif %} |
                     {{ candidate.updated_by }} |
-                    {{ candidate.updated_at }}
+                    {{ candidate.updated_at[:10] if candidate.updated_at else "" }}
                   </label>
                 {% endfor %}
               </td>
