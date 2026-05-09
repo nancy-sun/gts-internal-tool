@@ -42,7 +42,10 @@
     <div class="form-actions">
       <span class="preview-progress" data-upload-preview-progress>Loading rows...</span>
       <a class="text-link" href="/upload">Cancel</a>
-      <button type="submit" data-upload-preview-confirm disabled>Confirm Import</button>
+      <button type="submit" data-upload-preview-confirm disabled>
+        <span class="button-loading-icon" data-upload-preview-confirm-spinner aria-hidden="true"></span>
+        <span>Confirm Import</span>
+      </button>
     </div>
   </form>
 {% endblock %}

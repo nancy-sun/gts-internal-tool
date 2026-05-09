@@ -39,6 +39,7 @@
   var tableBody = document.querySelector("[data-upload-preview-body]");
   var headerRow = document.querySelector("[data-upload-preview-header]");
   var confirmButton = document.querySelector("[data-upload-preview-confirm]");
+  var confirmSpinner = document.querySelector("[data-upload-preview-confirm-spinner]");
   var progressText = document.querySelector("[data-upload-preview-progress]");
   var rowElements = {};
   var rowCount = 0;
@@ -75,6 +76,7 @@
   eventSource.addEventListener("complete", function (event) {
     var data = JSON.parse(event.data);
     eventSource.close();
+    stopConfirmLoading();
     if (confirmButton && data.has_errors) {
       confirmButton.disabled = true;
     } else if (confirmButton) {
@@ -92,6 +94,7 @@
 
   eventSource.addEventListener("preview_error", function (event) {
     eventSource.close();
+    stopConfirmLoading();
     if (progressText) {
       var data = JSON.parse(event.data);
       progressText.textContent = data.message || "Preview loading failed.";
@@ -101,6 +104,7 @@
 
   eventSource.onerror = function () {
     eventSource.close();
+    stopConfirmLoading();
     if (progressText) {
       progressText.textContent = "Preview loading failed.";
       progressText.classList.add("status-warning");
@@ -111,6 +115,12 @@
     if (!initialRowCleared) {
       tableBody.textContent = "";
       initialRowCleared = true;
+    }
+  }
+
+  function stopConfirmLoading() {
+    if (confirmSpinner) {
+      confirmSpinner.classList.add("is-hidden");
     }
   }
 
