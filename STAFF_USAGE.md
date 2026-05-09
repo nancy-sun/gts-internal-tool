@@ -12,8 +12,9 @@ Staff do not have individual accounts. For uploads and generated quotations, ent
 2. Enter your name.
 3. Upload a `.xlsx` quotation file.
 4. Review the preview page.
-5. If a matched product has different non-empty product fields, tick the fields that should be updated.
-6. Confirm import.
+5. If the preview shows warnings such as `old factory => new factory` or `old price => new price`, double-check the row before importing.
+6. If a matched product has different non-empty product fields, tick the fields that should be updated.
+7. Confirm import.
 
 The system keeps old quotation rows and inserts new quotation rows. It does not delete old rows.
 

@@ -200,11 +200,9 @@ def resolve_columns(worksheet, header_row: int, template: dict[str, Any]) -> dic
     for column_index in range(1, max_scan_columns + 1):
         header_value = worksheet.cell(row=header_row, column=column_index).value
         normalized_header = normalize_header_label(header_value)
-        if not normalized_header:
-            continue
-        for field, aliases in HEADER_ALIASES.items():
-            if normalized_header in {normalize_header_label(alias) for alias in aliases}:
-                detected_headers.setdefault(field, get_column_letter(column_index))
+        field = HEADER_LOOKUP.get(normalized_header)
+        if field:
+            detected_headers.setdefault(field, get_column_letter(column_index))
 
     fallback_columns = template.get("columns", {})
     return {
@@ -230,6 +228,13 @@ def normalize_header_label(value: Any) -> str:
     if value is None:
         return ""
     return "".join(character for character in str(value).upper() if character.isalnum())
+
+
+HEADER_LOOKUP = {
+    normalize_header_label(alias): field
+    for field, aliases in HEADER_ALIASES.items()
+    for alias in aliases
+}
 
 
 def _clean_cell_value(value: Any) -> Any:

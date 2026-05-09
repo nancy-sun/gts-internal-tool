@@ -20,8 +20,6 @@ def build_import_preview(
         preview = asdict(parsed_row)
         preview["matched_product"] = None
         preview["product_changes"] = []
-        preview["factory_warning"] = None
-        preview["price_warnings"] = []
         preview["quotation_warnings"] = []
 
         if parsed_row.is_valid:

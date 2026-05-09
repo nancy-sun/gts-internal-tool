@@ -35,7 +35,7 @@
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              {% set row_has_warning = row.errors or row.warnings or row.factory_warning or row.price_warnings or row.quotation_warnings or row.product_changes %}
+              {% set row_has_warning = row.errors or row.warnings or row.quotation_warnings or row.product_changes %}
               <td>
                 {% if row.errors %}
                   <span class="status-warning">Failed</span>
@@ -59,12 +59,6 @@
                   {% endfor %}
                   {% for warning in row.warnings %}
                     <p class="small-warning">{{ warning }}</p>
-                  {% endfor %}
-                  {% if row.factory_warning %}
-                    <p class="small-warning">{{ row.factory_warning }}</p>
-                  {% endif %}
-                  {% for warning in row.price_warnings %}
-                    <p class="price-warning">{{ warning }}</p>
                   {% endfor %}
                   {% for warning in row.quotation_warnings %}
                     <p class="price-warning">{{ warning }}</p>

@@ -207,8 +207,6 @@ def preview_has_warnings(rows: list[dict]) -> bool:
     return any(
         row.get("errors")
         or row.get("warnings")
-        or row.get("factory_warning")
-        or row.get("price_warnings")
         or row.get("quotation_warnings")
         or row.get("product_changes")
         for row in rows

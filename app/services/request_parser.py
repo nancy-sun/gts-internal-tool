@@ -21,6 +21,11 @@ REQUEST_HEADER_ALIASES = {
     field: HEADER_ALIASES[field]
     for field in ("gts_no", "description", "oem", "quantity", "comment")
 }
+REQUEST_HEADER_LOOKUP = {
+    normalize_header_label(alias): field
+    for field, aliases in REQUEST_HEADER_ALIASES.items()
+    for alias in aliases
+}
 
 
 @dataclass
@@ -97,16 +102,11 @@ def resolve_request_header_row(worksheet, template: dict[str, Any]) -> int:
     max_header_scan_columns = int(template.get("header_scan_columns", 40))
     max_row = worksheet.max_row or max_header_scan_rows
     scan_row_limit = min(max_row, max_header_scan_rows)
-    alias_lookup = {
-        normalize_header_label(alias)
-        for aliases in REQUEST_HEADER_ALIASES.values()
-        for alias in aliases
-    }
 
     for row in range(1, scan_row_limit + 1):
         for column in range(1, max_header_scan_columns + 1):
             header = normalize_header_label(worksheet.cell(row=row, column=column).value)
-            if header in alias_lookup:
+            if header in REQUEST_HEADER_LOOKUP:
                 return row
     return int(template.get("header_row", 1))
 
@@ -118,11 +118,9 @@ def resolve_request_columns(worksheet, header_row: int, template: dict[str, Any]
         normalized_header = normalize_header_label(
             worksheet.cell(row=header_row, column=column_index).value
         )
-        if not normalized_header:
-            continue
-        for field, aliases in REQUEST_HEADER_ALIASES.items():
-            if normalized_header in {normalize_header_label(alias) for alias in aliases}:
-                detected_headers.setdefault(field, get_column_letter(column_index))
+        field = REQUEST_HEADER_LOOKUP.get(normalized_header)
+        if field:
+            detected_headers.setdefault(field, get_column_letter(column_index))
 
     fallback_columns = template.get("columns", {})
     return {

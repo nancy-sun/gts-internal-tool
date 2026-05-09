@@ -180,10 +180,6 @@
     td.className = "warning-cell";
     appendParagraphs(td, row.errors || [], "error");
     appendParagraphs(td, row.warnings || [], "small-warning");
-    if (row.factory_warning) {
-      appendParagraphs(td, [row.factory_warning], "small-warning");
-    }
-    appendParagraphs(td, row.price_warnings || [], "price-warning");
     appendParagraphs(td, row.quotation_warnings || [], "price-warning");
     (row.product_changes || []).forEach(function (change) {
       var label = document.createElement("label");
@@ -222,8 +218,6 @@
     return Boolean(
       (row.errors && row.errors.length) ||
         (row.warnings && row.warnings.length) ||
-        row.factory_warning ||
-        (row.price_warnings && row.price_warnings.length) ||
         (row.quotation_warnings && row.quotation_warnings.length) ||
         (row.product_changes && row.product_changes.length)
     );
