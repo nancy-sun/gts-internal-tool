@@ -53,11 +53,12 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
-  padding: 10px 12px;
-  background: #ffffff;
-  border: 1px solid var(--line);
+  margin-bottom: 24px;
+  padding: 12px 14px;
+  background: #eaf3f0;
+  border: 1px solid #bdd6ce;
   border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(23, 32, 51, 0.06);
 }
 
 .breadcrumb-list {
@@ -80,7 +81,7 @@ body {
 
 .breadcrumb-list a,
 .return-link {
-  color: var(--accent);
+  color: var(--accent-dark);
   text-decoration: none;
 }
 
@@ -93,11 +94,12 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
-  padding: 6px 12px;
-  border: 1px solid #bdd6ce;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--accent);
   border-radius: 6px;
-  background: #eef7f4;
+  background: var(--accent);
+  color: #ffffff;
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -110,23 +112,23 @@ body {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: #d9eee8;
-  color: var(--accent-dark);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   line-height: 1;
 }
 
-.return-link:hover,
-.return-link:focus,
 .breadcrumb-list a:hover,
 .breadcrumb-list a:focus {
   color: var(--accent-dark);
-  border-color: var(--accent);
   outline: none;
 }
 
 .return-link:hover,
 .return-link:focus {
-  background: #e1f1ec;
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: #ffffff;
+  outline: none;
 }
 
 .page-heading {
