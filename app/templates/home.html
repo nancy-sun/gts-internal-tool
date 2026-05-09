@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Home - GTS Internal Tool{% endblock %}
+{% block title %}首页 - GTS Internal Tool{% endblock %}
 
 {% block content %}
   <section class="page-heading">
     <h1>GTS Internal Tool</h1>
   </section>
 
-  <nav class="action-grid" aria-label="Main actions">
+  <nav class="action-grid" aria-label="主要功能">
     <a class="action-card" href="/upload">
-      <span>Upload Full Quotation List</span>
+      <span>上传完整报价单</span>
     </a>
     <a class="action-card" href="/generate">
-      <span>Generate Quotation from GTS/OEM List</span>
+      <span>按 GTS/OEM 生成报价单</span>
     </a>
     <a class="action-card" href="/search">
-      <span>Search Database</span>
+      <span>查询数据库</span>
     </a>
     <a class="action-card" href="/logs">
-      <span>Operation Logs</span>
+      <span>操作记录</span>
     </a>
   </nav>
 {% endblock %}
