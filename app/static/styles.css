@@ -51,8 +51,8 @@ body {
 .breadcrumb-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 14px;
   margin-bottom: 24px;
   padding: 12px 14px;
   background: #eaf3f0;

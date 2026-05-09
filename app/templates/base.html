@@ -18,14 +18,14 @@
     <main class="page">
       {% if request.session.get("authenticated") and request.url.path != "/" %}
         <nav class="breadcrumb-bar" aria-label="Breadcrumb">
-          <ol class="breadcrumb-list">
-            <li><a href="/">Dashboard</a></li>
-            <li aria-current="page">{% block page_name %}Current Page{% endblock %}</li>
-          </ol>
           <a class="return-link" href="/" aria-label="Return to dashboard">
             <span class="return-icon" aria-hidden="true">↩</span>
             <span>Return</span>
           </a>
+          <ol class="breadcrumb-list">
+            <li><a href="/">Dashboard</a></li>
+            <li aria-current="page">{% block page_name %}Current Page{% endblock %}</li>
+          </ol>
         </nav>
       {% endif %}
       {% block content %}{% endblock %}
