@@ -27,19 +27,19 @@
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              <td>
+              <td class="status-cell">
                 {% if row.status == "ready" %}
-                  可生成
+                  <span class="status-icon status-ready" title="可生成" aria-label="可生成">✓</span>
                 {% elif row.status == "multiple_candidates" %}
-                  多候选
+                  <span class="status-icon status-review" title="多候选，需确认" aria-label="多候选，需确认">!</span>
                 {% elif row.status == "conflict" %}
-                  冲突
+                  <span class="status-icon status-warning" title="冲突" aria-label="冲突">×</span>
                 {% elif row.status == "unmatched" %}
-                  未匹配
+                  <span class="status-icon status-warning" title="未匹配" aria-label="未匹配">×</span>
                 {% elif row.status == "no_quotation" %}
-                  无报价
+                  <span class="status-icon status-warning" title="无报价" aria-label="无报价">×</span>
                 {% elif row.status == "invalid" %}
-                  无效
+                  <span class="status-icon status-warning" title="无效" aria-label="无效">×</span>
                 {% else %}
                   {{ row.status }}
                 {% endif %}
