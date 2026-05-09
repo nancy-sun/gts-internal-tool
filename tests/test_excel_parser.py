@@ -296,7 +296,7 @@ def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliase
     assert rows[0].values["comment"] == "测试备注"
 
 
-def test_parse_full_quotation_workbook_warns_when_important_columns_missing(tmp_path: Path):
+def test_parse_full_quotation_workbook_errors_when_required_columns_missing(tmp_path: Path):
     workbook = Workbook()
     sheet = workbook.active
     sheet["A1"] = "No."
@@ -321,6 +321,27 @@ def test_parse_full_quotation_workbook_warns_when_important_columns_missing(tmp_
     )
 
     assert len(rows) == 1
-    assert "Factory column was not found; value will be blank." in rows[0].warnings
-    assert "Unit column was not found; value will be blank." in rows[0].warnings
-    assert "Unit Price column was not found; value will be blank." in rows[0].warnings
+    assert "Factory is required." in rows[0].errors
+    assert "Unit is required." in rows[0].errors
+    assert "Unit Price is required." in rows[0].errors
+
+
+def test_parse_full_quotation_workbook_errors_when_required_values_blank(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["A1"] = "No."
+    sheet["B1"] = "GTS No."
+    sheet["F1"] = "Factory"
+    sheet["I1"] = "Unit"
+    sheet["J1"] = "Unit Price"
+    sheet["A2"] = 1
+    sheet["B2"] = "GTS-400"
+    path = tmp_path / "quotation_blank_required_values.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert "Factory is required." in rows[0].errors
+    assert "Unit is required." in rows[0].errors
+    assert "Unit Price is required." in rows[0].errors

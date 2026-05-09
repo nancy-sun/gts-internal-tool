@@ -35,7 +35,7 @@ QUOTATION_FIELDS = [
 ]
 
 NUMERIC_FIELDS = {"quantity", "unit_price", "total_price"}
-IMPORTANT_UPLOAD_FIELDS = {"factory", "unit", "unit_price"}
+REQUIRED_UPLOAD_FIELDS = {"factory", "unit", "unit_price"}
 
 HEADER_ALIASES = {
     "no": ["No.", "No", "Item No."],
@@ -134,8 +134,8 @@ def iter_full_quotation_workbook_rows(
         start_row = header_row + 1
         max_rows = int(template.get("max_rows", 300))
         columns = resolve_columns(worksheet, header_row, template)
-        missing_important_headers = [
-            field for field in IMPORTANT_UPLOAD_FIELDS if field not in columns
+        missing_required_headers = [
+            field for field in REQUIRED_UPLOAD_FIELDS if field not in columns
         ]
 
         for row_number in range(start_row, start_row + max_rows):
@@ -152,9 +152,9 @@ def iter_full_quotation_workbook_rows(
 
             warnings: list[str] = []
             errors: list[str] = []
-            warnings.extend(
-                f"{field_label(field)} column was not found; value will be blank."
-                for field in missing_important_headers
+            errors.extend(
+                f"{field_label(field)} is required."
+                for field in missing_required_headers
             )
             gts_no_normalized, gts_warnings = normalize_gts_no(values["gts_no"])
             oem_normalized, oem_warnings = normalize_oem(values["oem"])
@@ -168,6 +168,11 @@ def iter_full_quotation_workbook_rows(
 
             if not gts_no_normalized and not oem_normalized:
                 errors.append("Row must contain GTS No. or OEM.")
+            for field in REQUIRED_UPLOAD_FIELDS:
+                if field in missing_required_headers:
+                    continue
+                if values.get(field) in ("", None):
+                    errors.append(f"{field_label(field)} is required.")
 
             yield ParsedQuotationRow(
                 row_number=row_number,
