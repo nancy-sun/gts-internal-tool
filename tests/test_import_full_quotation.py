@@ -2,7 +2,7 @@ import sqlite3
 
 from app.routes.upload import preview_has_errors, preview_has_warnings
 from app.services.excel_parser import ParsedQuotationRow
-from app.services.import_full_quotation import build_import_preview
+from app.services.import_full_quotation import build_import_preview, import_preview_rows
 from app.services.operation_logging import utc_now_text
 
 
@@ -103,6 +103,68 @@ def test_preview_has_errors_is_true_for_gts_oem_product_conflict():
     ]
 
 
+def test_import_preview_rows_skips_exact_duplicate_quotation_item():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, oem, oem_normalized, description,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTSTEST001', 'GTSTEST001', '5010225393', '5010225393',
+                'Existing description', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            product_id, gts_no, gts_no_normalized, oem, oem_normalized,
+            factory, unit, unit_price, created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTSTEST001', 'GTSTEST001', '5010225393', '5010225393',
+                '欧达', 'pc', 999, 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    preview_rows = [
+        {
+            "row_number": 4,
+            "errors": [],
+            "values": {
+                "gts_no": "GTSTEST001",
+                "gts_no_normalized": "GTSTEST001",
+                "oem": "5010225393",
+                "oem_normalized": "5010225393",
+                "description": "Should not update",
+                "chinese_description": "",
+                "factory": "欧达",
+                "unit": "pc",
+                "unit_price": 999,
+            },
+        }
+    ]
+
+    result = import_preview_rows(
+        connection,
+        preview_rows=preview_rows,
+        operator_name="Bob",
+        file_name="duplicate.xlsx",
+        selected_updates={(4, "description")},
+    )
+
+    product = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
+    item_count = connection.execute("SELECT COUNT(*) AS c FROM quotation_items").fetchone()["c"]
+    assert result["inserted_items"] == 0
+    assert result["updated_products"] == 0
+    assert result["skipped_duplicates"] == 1
+    assert item_count == 1
+    assert product["description"] == "Existing description"
+
+
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -150,6 +212,16 @@ def initialize_test_schema(connection: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL,
             updated_by TEXT NOT NULL,
             updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE operation_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_time TEXT NOT NULL,
+            operator_name TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            file_name TEXT,
+            row_count INTEGER,
+            note TEXT
         );
         """
     )

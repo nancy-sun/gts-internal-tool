@@ -132,6 +132,7 @@ def import_preview_rows(
     updated_products = 0
     inserted_items = 0
     failed_rows = 0
+    skipped_duplicates = 0
     now = utc_now_text()
 
     for preview_row in preview_rows:
@@ -143,6 +144,11 @@ def import_preview_rows(
         product, conflict = find_product_for_import(connection, values)
         if conflict:
             failed_rows += 1
+            continue
+
+        product_id = product["id"] if product else None
+        if product_id and quotation_item_duplicate_exists(connection, product_id, values):
+            skipped_duplicates += 1
             continue
 
         if product:
@@ -181,7 +187,8 @@ def import_preview_rows(
         row_count=inserted_items,
         note=(
             f"created_products={created_products}; "
-            f"updated_products={updated_products}; failed_rows={failed_rows}"
+            f"updated_products={updated_products}; "
+            f"skipped_duplicates={skipped_duplicates}; failed_rows={failed_rows}"
         ),
     )
     return {
@@ -189,7 +196,39 @@ def import_preview_rows(
         "updated_products": updated_products,
         "inserted_items": inserted_items,
         "failed_rows": failed_rows,
+        "skipped_duplicates": skipped_duplicates,
     }
+
+
+def quotation_item_duplicate_exists(
+    connection: Connection,
+    product_id: int,
+    values: dict[str, Any],
+) -> bool:
+    return (
+        connection.execute(
+            """
+            SELECT 1
+            FROM quotation_items
+            WHERE product_id = ?
+              AND gts_no_normalized = ?
+              AND oem_normalized = ?
+              AND factory = ?
+              AND unit = ?
+              AND unit_price = ?
+            LIMIT 1
+            """,
+            (
+                product_id,
+                values.get("gts_no_normalized") or "",
+                values.get("oem_normalized") or "",
+                values.get("factory") or "",
+                values.get("unit") or "",
+                values.get("unit_price"),
+            ),
+        ).fetchone()
+        is not None
+    )
 
 
 def create_product(
