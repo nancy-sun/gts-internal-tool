@@ -51,13 +51,21 @@ def search_catalogue(
             q.expected_delivery,
             q.comment,
             q.updated_by,
-            q.updated_at
+            q.updated_at,
+            CASE
+                WHEN {selected_field} = ? THEN 0
+                WHEN {selected_field} LIKE ? THEN 1
+                ELSE 2
+            END AS search_rank,
+            ABS(LENGTH({selected_field}) - LENGTH(?)) AS length_gap
         FROM products p
         LEFT JOIN quotation_items q ON q.product_id = p.id
         WHERE {selected_field} LIKE ?
-        ORDER BY p.updated_at DESC, q.updated_at DESC, p.id DESC, q.id DESC
+        ORDER BY search_rank ASC, length_gap ASC, p.updated_at DESC, q.updated_at DESC, p.id DESC, q.id DESC
         LIMIT ?
         """,
-        (f"%{search_value}%", limit),
+        (search_value, f"{search_value}%", search_value, f"%{search_value}%", limit),
     ).fetchall()
+    if rows and rows[0]["search_rank"] == 0:
+        return [row for row in rows if row["search_rank"] == 0], warnings
     return rows, warnings
