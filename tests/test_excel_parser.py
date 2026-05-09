@@ -122,6 +122,39 @@ def test_parse_full_quotation_workbook_supports_common_header_aliases(tmp_path: 
     assert rows[0].values["unit_price"] == 2.25
 
 
+def test_parse_full_quotation_workbook_uses_aliases_before_fallback_columns(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["A3"] = "No."
+    sheet["B3"] = "Wrong GTS Header"
+    sheet["C3"] = "Wrong Description Header"
+    sheet["D3"] = "OEM"
+    sheet["E3"] = "GTS"
+    sheet["F3"] = "Factory"
+    sheet["H3"] = "Quantity"
+    sheet["J3"] = "Price"
+    sheet["A4"] = 1
+    sheet["B4"] = "GTS-FALLBACK"
+    sheet["C4"] = "Fallback Description"
+    sheet["D4"] = "OEM-FALLBACK"
+    sheet["E4"] = "GTS-ALIAS"
+    sheet["F4"] = "Factory Fallback"
+    sheet["H4"] = 3
+    sheet["J4"] = 7.5
+    path = tmp_path / "quotation_alias_before_fallback.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["gts_no"] == "GTS-ALIAS"
+    assert rows[0].values["description"] == "Fallback Description"
+    assert rows[0].values["oem"] == "OEM-FALLBACK"
+    assert rows[0].values["factory"] == "Factory Fallback"
+    assert rows[0].values["quantity"] == 3
+    assert rows[0].values["unit_price"] == 7.5
+
+
 def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliases(tmp_path: Path):
     workbook = Workbook()
     sheet = workbook.active
@@ -214,7 +247,19 @@ def test_parse_full_quotation_workbook_warns_when_important_columns_missing(tmp_
     path = tmp_path / "quotation_missing_columns.xlsx"
     workbook.save(path)
 
-    rows = parse_full_quotation_workbook(path)
+    rows = parse_full_quotation_workbook(
+        path,
+        {
+            "sheet_name": None,
+            "header_row": 1,
+            "detect_header_from_column": "A",
+            "header_label": "No.",
+            "header_scan_rows": 100,
+            "header_scan_columns": 80,
+            "max_rows": 300,
+            "columns": {"no": "A", "gts_no": "B"},
+        },
+    )
 
     assert len(rows) == 1
     assert "Factory column was not found; value will be blank." in rows[0].warnings

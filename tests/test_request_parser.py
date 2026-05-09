@@ -41,3 +41,29 @@ def test_parse_request_workbook_accepts_gts_and_description_with_extra_columns(t
     assert rows[0].values["gts_no_normalized"] == "GTS200"
     assert rows[0].values["description"] == "Uploaded Description"
     assert rows[0].values["quantity"] == 5
+
+
+def test_parse_request_workbook_uses_aliases_before_fallback_columns(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["A3"] = "Random"
+    sheet["B3"] = "Wrong GTS Header"
+    sheet["C3"] = "Desc"
+    sheet["D3"] = "OEM"
+    sheet["E3"] = "GTS"
+    sheet["G3"] = "Quantity"
+    sheet["B4"] = "GTS-FALLBACK"
+    sheet["C4"] = "Fallback Description"
+    sheet["D4"] = "OEM-FALLBACK"
+    sheet["E4"] = "GTS-ALIAS"
+    sheet["G4"] = 4
+    path = tmp_path / "request_alias_before_fallback.xlsx"
+    workbook.save(path)
+
+    rows = parse_request_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["gts_no"] == "GTS-ALIAS"
+    assert rows[0].values["description"] == "Fallback Description"
+    assert rows[0].values["oem"] == "OEM-FALLBACK"
+    assert rows[0].values["quantity"] == 4
