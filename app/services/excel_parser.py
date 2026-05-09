@@ -51,7 +51,7 @@ HEADER_ALIASES = {
         "产品描述",
         "品名",
     ],
-    "quantity": ["Quantity", "Qty"],
+    "quantity": ["Quantity", "Qty", "数量"],
     "unit": ["Unit", "单位"],
     "unit_price": ["Unit Price", "Price", "Prix", "价格"],
     "total_price": ["Total Price", "Total", "Amount", "总价"],
@@ -194,7 +194,30 @@ def resolve_header_row(worksheet, template: dict[str, Any]) -> int:
         value = worksheet.cell(row=row, column=column_index).value
         if normalize_header_label(value) == wanted:
             return row
+    alias_header_row = find_alias_header_row(worksheet, template)
+    if alias_header_row is not None:
+        return alias_header_row
     return int(template["header_row"])
+
+
+def find_alias_header_row(worksheet, template: dict[str, Any]) -> int | None:
+    max_header_scan_rows = int(template.get("header_scan_rows", 100))
+    max_header_scan_columns = int(template.get("header_scan_columns", 80))
+    max_row = worksheet.max_row or max_header_scan_rows
+    scan_row_limit = min(max_row, max_header_scan_rows)
+
+    for row in range(1, scan_row_limit + 1):
+        matched_fields = set()
+        for column in range(1, max_header_scan_columns + 1):
+            normalized_header = normalize_header_label(
+                worksheet.cell(row=row, column=column).value
+            )
+            field = HEADER_LOOKUP.get(normalized_header)
+            if field:
+                matched_fields.add(field)
+        if len(matched_fields) >= 2:
+            return row
+    return None
 
 
 def resolve_columns(worksheet, header_row: int, template: dict[str, Any]) -> dict[str, str]:
@@ -208,11 +231,13 @@ def resolve_columns(worksheet, header_row: int, template: dict[str, Any]) -> dic
             detected_headers.setdefault(field, get_column_letter(column_index))
 
     fallback_columns = template.get("columns", {})
-    return {
-        field: detected_headers.get(field, fallback_columns.get(field))
-        for field in QUOTATION_FIELDS
-        if field in detected_headers or field in fallback_columns
-    }
+    detected_columns = set(detected_headers.values())
+    resolved_columns = dict(detected_headers)
+    for field in QUOTATION_FIELDS:
+        fallback_column = fallback_columns.get(field)
+        if field not in resolved_columns and fallback_column not in detected_columns:
+            resolved_columns[field] = fallback_column
+    return {field: column for field, column in resolved_columns.items() if column}
 
 
 def field_label(field: str) -> str:

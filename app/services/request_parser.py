@@ -123,8 +123,10 @@ def resolve_request_columns(worksheet, header_row: int, template: dict[str, Any]
             detected_headers.setdefault(field, get_column_letter(column_index))
 
     fallback_columns = template.get("columns", {})
-    return {
-        field: detected_headers.get(field, fallback_columns.get(field))
-        for field in REQUEST_FIELDS
-        if field in detected_headers or field in fallback_columns
-    }
+    detected_columns = set(detected_headers.values())
+    resolved_columns = dict(detected_headers)
+    for field in REQUEST_FIELDS:
+        fallback_column = fallback_columns.get(field)
+        if field not in resolved_columns and fallback_column not in detected_columns:
+            resolved_columns[field] = fallback_column
+    return {field: column for field, column in resolved_columns.items() if column}

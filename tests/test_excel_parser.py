@@ -186,6 +186,34 @@ def test_parse_full_quotation_workbook_skips_repeated_header_rows(tmp_path: Path
     assert [row.values["gts_no"] for row in rows] == ["GTS-001", "GTS-002"]
 
 
+def test_parse_full_quotation_workbook_detects_alias_header_without_no_column(tmp_path: Path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["B4"] = "品名"
+    sheet["C4"] = "oem"
+    sheet["D4"] = "数量"
+    sheet["E4"] = "图片"
+    sheet["F4"] = "价格"
+    sheet["B5"] = "MIRROR GLASS BIG RH=LH"
+    sheet["C5"] = "7420862795"
+    sheet["D5"] = 60
+    sheet["E5"] = "ignored image"
+    sheet["F5"] = 9.5
+    path = tmp_path / "quotation_alias_header_without_no.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].row_number == 5
+    assert rows[0].values["gts_no"] == ""
+    assert rows[0].values["description"] == ""
+    assert rows[0].values["chinese_description"] == "MIRROR GLASS BIG RH=LH"
+    assert rows[0].values["oem"] == "7420862795"
+    assert rows[0].values["quantity"] == 60
+    assert rows[0].values["unit_price"] == 9.5
+
+
 def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliases(tmp_path: Path):
     workbook = Workbook()
     sheet = workbook.active
