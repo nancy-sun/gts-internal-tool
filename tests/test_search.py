@@ -32,6 +32,54 @@ def test_search_gts_returns_only_exact_match_products_when_exact_exists():
     assert [row["product_gts_no"] for row in rows] == ["GTSTEST001"]
 
 
+def test_search_oem_uses_normalized_partial_matching():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    insert_product(
+        connection,
+        1,
+        "GTS-1",
+        "GTS1",
+        "2026-01-01T00:00:00+00:00",
+        oem="5010-064-551",
+        oem_normalized="5010064551",
+    )
+    insert_quotation(connection, 1, 1, "2026-01-01T00:00:00+00:00")
+
+    rows, warnings = search_catalogue(connection, field="oem", query="064 551")
+
+    assert warnings == []
+    assert [row["product_oem"] for row in rows] == ["5010-064-551"]
+
+
+def test_search_chinese_description_and_factory_use_text_contains_matching():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    insert_product(
+        connection,
+        1,
+        "GTS-1",
+        "GTS1",
+        "2026-01-01T00:00:00+00:00",
+        chinese_description="后视镜总成",
+    )
+    insert_quotation(
+        connection,
+        1,
+        1,
+        "2026-01-01T00:00:00+00:00",
+        factory="欧达工厂",
+    )
+
+    chinese_rows, _ = search_catalogue(connection, field="chinese_description", query="后视镜")
+    factory_rows, _ = search_catalogue(connection, field="factory", query="欧达")
+
+    assert [row["product_gts_no"] for row in chinese_rows] == ["GTS-1"]
+    assert [row["factory"] for row in factory_rows] == ["欧达工厂"]
+
+
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -70,15 +118,28 @@ def insert_product(
     gts_no: str,
     gts_no_normalized: str,
     updated_at: str,
+    oem: str | None = None,
+    oem_normalized: str | None = None,
+    chinese_description: str | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO products (
-            id, gts_no, gts_no_normalized, created_by, created_at, updated_by, updated_at
+            id, gts_no, gts_no_normalized, oem, oem_normalized, chinese_description,
+            created_by, created_at, updated_by, updated_at
         )
-        VALUES (?, ?, ?, 'Tester', ?, 'Tester', ?)
+        VALUES (?, ?, ?, ?, ?, ?, 'Tester', ?, 'Tester', ?)
         """,
-        (product_id, gts_no, gts_no_normalized, updated_at, updated_at),
+        (
+            product_id,
+            gts_no,
+            gts_no_normalized,
+            oem,
+            oem_normalized,
+            chinese_description,
+            updated_at,
+            updated_at,
+        ),
     )
 
 
@@ -87,13 +148,14 @@ def insert_quotation(
     quotation_id: int,
     product_id: int,
     updated_at: str,
+    factory: str | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO quotation_items (
-            id, product_id, updated_by, updated_at
+            id, product_id, factory, updated_by, updated_at
         )
-        VALUES (?, ?, 'Tester', ?)
+        VALUES (?, ?, ?, 'Tester', ?)
         """,
-        (quotation_id, product_id, updated_at),
+        (quotation_id, product_id, factory, updated_at),
     )

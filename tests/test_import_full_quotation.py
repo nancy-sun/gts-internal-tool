@@ -304,6 +304,60 @@ def test_import_preview_rows_imports_approved_quotation_change():
     assert latest_price == 12.5
 
 
+def test_import_preview_rows_updates_only_selected_product_fields():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, description, chinese_description,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'Old English', '旧品名', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    preview_rows = [
+        {
+            "row_number": 4,
+            "errors": [],
+            "quotation_changes": [],
+            "values": {
+                "gts_no": "GTS0001",
+                "gts_no_normalized": "GTS0001",
+                "oem": "",
+                "oem_normalized": "",
+                "description": "New English",
+                "chinese_description": "新品名",
+                "factory": "Factory A",
+                "unit": "PCS",
+                "unit_price": 10,
+            },
+        }
+    ]
+
+    result = import_preview_rows(
+        connection,
+        preview_rows=preview_rows,
+        operator_name="Bob",
+        file_name="product_update.xlsx",
+        selected_updates={(4, "chinese_description")},
+        selected_quotation_changes=set(),
+    )
+
+    product = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
+    log = connection.execute("SELECT * FROM operation_logs ORDER BY id DESC LIMIT 1").fetchone()
+    assert result["updated_products"] == 1
+    assert result["inserted_items"] == 1
+    assert product["description"] == "Old English"
+    assert product["chinese_description"] == "新品名"
+    assert product["updated_by"] == "Bob"
+    assert log["action_type"] == "upload_full_quotation"
+    assert log["row_count"] == 1
+
+
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """

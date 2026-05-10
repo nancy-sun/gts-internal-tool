@@ -43,6 +43,10 @@ See [STAFF_USAGE.md](STAFF_USAGE.md).
 
 See [BACKUP.md](BACKUP.md).
 
+## Test Cases
+
+Automated tests live in `tests/`. Manual browser, LAN, and backup checks are listed in [TEST_CASES.md](TEST_CASES.md).
+
 ## Run Locally
 
 1. Create `.env` from `.env.example`.
