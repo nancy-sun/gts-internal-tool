@@ -18,7 +18,7 @@ from app.services.hs_codes import (
     parse_hs_code_upload_workbook,
     save_hs_upload_preview,
 )
-from app.services.preview_tokens import preview_file_path
+from app.services.preview_tokens import preview_file_path, remove_preview_file
 from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
 from app.templating import templates
 
@@ -149,6 +149,7 @@ async def hs_upload_confirm(request: Request, token: str = Form(...)):
             file_name=payload["file_name"],
         )
         connection.commit()
+    remove_preview_file(path)
 
     return templates.TemplateResponse(
         request,
@@ -239,6 +240,7 @@ async def hs_generate_download(request: Request, token: str = Form(...)):
             file_name=payload["file_name"],
         )
         connection.commit()
+    remove_preview_file(path)
 
     return StreamingResponse(
         stream,

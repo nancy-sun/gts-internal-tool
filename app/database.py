@@ -6,8 +6,10 @@ from app.config import get_settings
 def get_connection() -> sqlite3.Connection:
     settings = get_settings()
     settings.database_file.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(settings.database_file)
+    connection = sqlite3.connect(settings.database_file, timeout=10)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA busy_timeout = 10000")
+    connection.execute("PRAGMA journal_mode = WAL")
     return connection
 
 

@@ -33,6 +33,7 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(hs_codes, "UPLOAD_DIR", upload_path)
 
     client = TestClient(create_app())
+    client.upload_path = upload_path
     login_response = client.post("/login", data={"access_code": ACCESS_CODE})
     assert login_response.status_code == 200
     return client
@@ -81,6 +82,7 @@ def test_office_workflow_upload_search_generate_download_and_log(
     confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
     assert confirm_response.status_code == 200
     assert "新增产品" in confirm_response.text
+    assert not (app_client.upload_path / f"preview_{upload_token}.json").exists()
 
     search_response = app_client.get("/search", params={"field": "gts_no", "q": "test001"})
     assert search_response.status_code == 200
@@ -135,6 +137,7 @@ def test_office_workflow_upload_search_generate_download_and_log(
     )
 
     assert download_response.status_code == 200
+    assert not (app_client.upload_path / f"generate_preview_{generate_token}.json").exists()
     workbook = load_workbook(BytesIO(download_response.content))
     worksheet = workbook.active
     assert [worksheet.cell(row=2, column=index).value for index in range(1, 6)] == [
@@ -624,6 +627,7 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
     hs_confirm_response = app_client.post("/hs-codes/upload/confirm", data={"token": hs_token})
     assert hs_confirm_response.status_code == 200
     assert "已更新" in hs_confirm_response.text
+    assert not (app_client.upload_path / f"hs_upload_preview_{hs_token}.json").exists()
 
     overwrite_response = app_client.post(
         "/hs-codes/upload/preview",
@@ -675,6 +679,9 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
         data={"token": generate_token},
     )
     assert download_response.status_code == 200
+    assert not (
+        app_client.upload_path / f"hs_generate_preview_{generate_token}.json"
+    ).exists()
 
     workbook = load_workbook(BytesIO(download_response.content))
     worksheet = workbook.active

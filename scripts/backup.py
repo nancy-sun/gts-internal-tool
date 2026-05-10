@@ -1,4 +1,5 @@
 import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -13,9 +14,9 @@ BACKUP_SOURCES = [
 ]
 
 
-def create_backup() -> Path:
-    date_folder = datetime.now().strftime("%Y-%m-%d")
-    backup_dir = BACKUP_ROOT / date_folder
+def create_backup(now: datetime | None = None) -> Path:
+    backup_time = now or datetime.now()
+    backup_dir = BACKUP_ROOT / backup_time.strftime("%Y-%m-%d_%H%M%S")
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     for source in BACKUP_SOURCES:
@@ -26,10 +27,19 @@ def create_backup() -> Path:
             if destination.exists():
                 shutil.rmtree(destination)
             shutil.copytree(source, destination)
+        elif source.suffix == ".sqlite3":
+            copy_sqlite_database(source, destination)
         else:
             shutil.copy2(source, destination)
 
     return backup_dir
+
+
+def copy_sqlite_database(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(source) as source_connection:
+        with sqlite3.connect(destination) as backup_connection:
+            source_connection.backup(backup_connection)
 
 
 if __name__ == "__main__":

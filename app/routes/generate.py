@@ -13,7 +13,7 @@ from app.services.quotation_generation import (
     build_generation_preview,
     create_generated_workbook,
 )
-from app.services.preview_tokens import preview_file_path
+from app.services.preview_tokens import preview_file_path, remove_preview_file
 from app.services.request_parser import parse_request_workbook
 from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
 from app.templating import templates
@@ -137,6 +137,7 @@ async def generate_download(request: Request, token: str = Form(...)):
             request_file_name=payload["file_name"],
         )
         connection.commit()
+    remove_preview_file(path)
 
     download_name = "internal_quotation.xlsx"
     headers = {"Content-Disposition": f'attachment; filename="{download_name}"'}

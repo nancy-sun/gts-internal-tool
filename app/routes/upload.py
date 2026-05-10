@@ -15,7 +15,7 @@ from app.services.import_full_quotation import (
     build_import_preview_row,
     import_preview_rows,
 )
-from app.services.preview_tokens import preview_file_path
+from app.services.preview_tokens import preview_file_path, remove_preview_file
 from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
 from app.templating import templates
 
@@ -223,6 +223,7 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             required_choices=required_choices,
         )
         connection.commit()
+    remove_preview_file(path)
 
     return templates.TemplateResponse(
         request,

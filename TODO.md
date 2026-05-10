@@ -10,5 +10,6 @@ This file tracks known follow-up work after the current implementation.
 
 ## Later Improvements
 
+- Decide whether browser sessions should expire automatically after a workday.
 - Add browser automation for the main UI flows if manual visual checks become repetitive.
 - Revisit backup/restore testing after the first office test cycle.

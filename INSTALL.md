@@ -100,3 +100,15 @@ python3 scripts/backup.py
 ```
 
 Daily scheduled backup instructions are in `BACKUP.md`.
+
+## Temporary Upload Cleanup
+
+After data is imported or exported, the database is the real saved record. Uploaded Excel files are only kept temporarily.
+
+Manual cleanup:
+
+```bash
+python3 scripts/cleanup_uploads.py
+```
+
+Daily scheduled cleanup instructions are in `BACKUP.md`.

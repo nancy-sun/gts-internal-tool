@@ -9,3 +9,7 @@ def preview_file_path(directory: Path, prefix: str, token: str) -> Path:
     if not TOKEN_PATTERN.fullmatch(token):
         return directory / f"{prefix}_invalid_token.json"
     return directory / f"{prefix}_{token}.json"
+
+
+def remove_preview_file(path: Path) -> None:
+    path.unlink(missing_ok=True)
