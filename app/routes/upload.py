@@ -10,7 +10,11 @@ from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import UPLOAD_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.excel_parser import iter_full_quotation_workbook_rows
-from app.services.import_full_quotation import build_import_preview, import_preview_rows
+from app.services.import_full_quotation import (
+    build_import_lookup_context,
+    build_import_preview_row,
+    import_preview_rows,
+)
 from app.services.preview_tokens import preview_file_path
 from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
 from app.templating import templates
@@ -128,12 +132,14 @@ def upload_preview_stream(request: Request, token: str):
         try:
             for parsed_row in iter_full_quotation_workbook_rows(workbook_path):
                 parsed_rows.append(parsed_row)
-                yield sse_event("loading", {"row_number": parsed_row.row_number})
 
+            preview_rows = []
             with get_connection() as connection:
-                preview_rows = build_import_preview(connection, parsed_rows)
-
-            for preview_row in preview_rows:
+                lookup_context = build_import_lookup_context(connection, parsed_rows)
+            for parsed_row in parsed_rows:
+                yield sse_event("loading", {"row_number": parsed_row.row_number})
+                preview_row = build_import_preview_row(lookup_context, parsed_row)
+                preview_rows.append(preview_row)
                 yield sse_event("row", preview_row)
 
             payload["rows"] = preview_rows

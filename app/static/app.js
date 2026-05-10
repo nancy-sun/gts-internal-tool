@@ -45,55 +45,68 @@
   var rowCount = 0;
   var warningsVisible = false;
   var initialRowCleared = false;
+  var renderQueue = [];
+  var renderQueueRunning = false;
+  var renderStepDelayMs = 12;
   var eventSource = new EventSource(streamUrl);
 
   eventSource.addEventListener("loading", function (event) {
     var data = JSON.parse(event.data);
-    clearInitialRow();
-    rowElements[data.row_number] = renderLoadingRow(data.row_number);
-    tableBody.appendChild(rowElements[data.row_number]);
+    enqueueRender(function () {
+      clearInitialRow();
+      rowElements[data.row_number] = renderLoadingRow(data.row_number);
+      tableBody.appendChild(rowElements[data.row_number]);
+      if (progressText) {
+        progressText.textContent = "正在读取第 " + data.row_number + " 行...";
+      }
+    });
   });
 
   eventSource.addEventListener("row", function (event) {
     var row = JSON.parse(event.data);
-    clearInitialRow();
-    rowCount += 1;
-    if (rowHasWarnings(row)) {
-      ensureWarningsColumn();
-    }
-    var rowElement = renderPreviewRow(row);
-    if (rowElements[row.row_number]) {
-      tableBody.replaceChild(rowElement, rowElements[row.row_number]);
-    } else {
-      tableBody.appendChild(rowElement);
-    }
-    rowElements[row.row_number] = rowElement;
-    if (progressText) {
-      progressText.textContent = "已读取 " + rowCount + " 行...";
-    }
+    enqueueRender(function () {
+      clearInitialRow();
+      rowCount += 1;
+      if (rowHasWarnings(row)) {
+        ensureWarningsColumn();
+      }
+      var rowElement = renderPreviewRow(row);
+      if (rowElements[row.row_number]) {
+        tableBody.replaceChild(rowElement, rowElements[row.row_number]);
+      } else {
+        tableBody.appendChild(rowElement);
+      }
+      rowElements[row.row_number] = rowElement;
+      if (progressText) {
+        progressText.textContent = "已读取 " + rowCount + " 行...";
+      }
+    });
   });
 
   eventSource.addEventListener("complete", function (event) {
     var data = JSON.parse(event.data);
     eventSource.close();
-    stopConfirmLoading();
-    if (confirmButton && data.has_errors) {
-      confirmButton.disabled = true;
-    } else if (confirmButton) {
-      confirmButton.disabled = false;
-    }
-    if (progressText) {
-      if (data.has_errors) {
-        progressText.textContent = "预览有错误，请修改 Excel 后再导入。";
-        progressText.classList.add("status-warning");
-      } else {
-        progressText.textContent = "预览完成：" + data.row_count + " 行。";
+    enqueueRender(function () {
+      stopConfirmLoading();
+      if (confirmButton && data.has_errors) {
+        confirmButton.disabled = true;
+      } else if (confirmButton) {
+        confirmButton.disabled = false;
       }
-    }
+      if (progressText) {
+        if (data.has_errors) {
+          progressText.textContent = "预览有错误，请修改 Excel 后再导入。";
+          progressText.classList.add("status-warning");
+        } else {
+          progressText.textContent = "预览完成：" + data.row_count + " 行。";
+        }
+      }
+    });
   });
 
   eventSource.addEventListener("preview_error", function (event) {
     eventSource.close();
+    cancelRenderQueue();
     stopConfirmLoading();
     if (progressText) {
       var data = JSON.parse(event.data);
@@ -104,6 +117,7 @@
 
   eventSource.onerror = function () {
     eventSource.close();
+    cancelRenderQueue();
     stopConfirmLoading();
     if (progressText) {
       progressText.textContent = "预览加载失败。";
@@ -121,6 +135,31 @@
   function stopConfirmLoading() {
     if (confirmSpinner) {
       confirmSpinner.classList.add("is-hidden");
+    }
+  }
+
+  function enqueueRender(action) {
+    renderQueue.push(action);
+    if (!renderQueueRunning) {
+      renderQueueRunning = true;
+      window.setTimeout(processRenderQueue, 0);
+    }
+  }
+
+  function cancelRenderQueue() {
+    renderQueue = [];
+    renderQueueRunning = false;
+  }
+
+  function processRenderQueue() {
+    var action = renderQueue.shift();
+    if (action) {
+      action();
+    }
+    if (renderQueue.length) {
+      window.setTimeout(processRenderQueue, renderStepDelayMs);
+    } else {
+      renderQueueRunning = false;
     }
   }
 

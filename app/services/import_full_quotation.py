@@ -30,46 +30,65 @@ def build_import_preview(
     parsed_rows: list[ParsedQuotationRow],
 ) -> list[dict[str, Any]]:
     lookup_context = build_import_lookup_context(connection, parsed_rows)
+    return build_import_preview_rows(lookup_context, parsed_rows)
+
+
+def build_import_preview_row(
+    lookup_context: ImportLookupContext,
+    parsed_row: ParsedQuotationRow,
+) -> dict[str, Any]:
+    preview = asdict(parsed_row)
+    preview["matched_product"] = None
+    preview["product_changes"] = []
+    preview["quotation_warnings"] = []
+    preview["quotation_changes"] = []
+    preview["required_choices"] = []
+
+    if not parsed_row.is_valid:
+        return preview
+
+    product, conflict = find_product_in_context(
+        lookup_context,
+        parsed_row.values,
+    )
+    if conflict:
+        preview["errors"].append(
+            "GTS 和 OEM 匹配到不同产品，需要人工确认。"
+        )
+        return preview
+
+    if not product:
+        return preview
+
+    preview["matched_product"] = dict(product)
+    preview["required_choices"].extend(
+        detect_required_product_choices(product, parsed_row.values)
+    )
+    preview["product_changes"] = detect_product_changes(product, parsed_row.values)
+    latest_quote = lookup_context.latest_quotes_by_product_id.get(product["id"])
+    preview["quotation_changes"] = detect_quotation_changes_from_latest(
+        latest_quote,
+        parsed_row.values,
+    )
+    required_quotation_choices = required_quotation_changes_from(
+        preview["quotation_changes"]
+    )
+    preview["quotation_warnings"] = [
+        change["message"]
+        for change in preview["quotation_changes"]
+        if change["field"] not in REQUIRED_QUOTATION_CHOICE_FIELDS
+    ]
+    preview["required_choices"].extend(required_quotation_choices)
+    return preview
+
+
+def build_import_preview_rows(
+    lookup_context: ImportLookupContext,
+    parsed_rows: list[ParsedQuotationRow],
+) -> list[dict[str, Any]]:
     preview_rows = []
     for parsed_row in parsed_rows:
-        preview = asdict(parsed_row)
-        preview["matched_product"] = None
-        preview["product_changes"] = []
-        preview["quotation_warnings"] = []
-        preview["quotation_changes"] = []
-        preview["required_choices"] = []
-
-        if parsed_row.is_valid:
-            product, conflict = find_product_in_context(
-                lookup_context,
-                parsed_row.values,
-            )
-            if conflict:
-                preview["errors"].append(
-                    "GTS 和 OEM 匹配到不同产品，需要人工确认。"
-                )
-            elif product:
-                preview["matched_product"] = dict(product)
-                preview["required_choices"].extend(
-                    detect_required_product_choices(product, parsed_row.values)
-                )
-                preview["product_changes"] = detect_product_changes(product, parsed_row.values)
-                latest_quote = lookup_context.latest_quotes_by_product_id.get(product["id"])
-                preview["quotation_changes"] = detect_quotation_changes_from_latest(
-                    latest_quote,
-                    parsed_row.values,
-                )
-                required_quotation_choices = required_quotation_changes_from(
-                    preview["quotation_changes"]
-                )
-                preview["quotation_warnings"] = [
-                    change["message"]
-                    for change in preview["quotation_changes"]
-                    if change["field"] not in REQUIRED_QUOTATION_CHOICE_FIELDS
-                ]
-                preview["required_choices"].extend(required_quotation_choices)
-
-        preview_rows.append(preview)
+        preview_rows.append(build_import_preview_row(lookup_context, parsed_row))
     return preview_rows
 
 

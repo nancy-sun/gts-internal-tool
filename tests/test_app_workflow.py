@@ -222,6 +222,53 @@ def test_page_breadcrumbs_include_parent_pages(app_client: TestClient) -> None:
     assert_breadcrumb(logs_page.text, ["首页", "操作记录"])
 
 
+def test_upload_preview_stream_replaces_loading_rows_one_by_one(app_client: TestClient) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "stream-order.xlsx",
+                build_quotation_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-STREAM-001",
+                            "oem": "OEM-STREAM-001",
+                            "factory": "Factory A",
+                            "unit": "pc",
+                            "unit_price": 10,
+                        },
+                        {
+                            "gts_no": "GTS-STREAM-002",
+                            "oem": "OEM-STREAM-002",
+                            "factory": "Factory B",
+                            "unit": "pc",
+                            "unit_price": 20,
+                        },
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert upload_response.status_code == 200
+
+    token = extract_token(upload_response.text)
+    stream_response = app_client.get(f"/upload/preview/stream/{token}")
+
+    assert stream_response.status_code == 200
+    first_loading_index = stream_response.text.index(
+        'event: loading\ndata: {"row_number": 4}'
+    )
+    first_row_index = stream_response.text.index(
+        'event: row\ndata: {"row_number": 4'
+    )
+    second_loading_index = stream_response.text.index(
+        'event: loading\ndata: {"row_number": 5}'
+    )
+    assert first_loading_index < first_row_index < second_loading_index
+
+
 def test_upload_preview_reports_missing_required_fields(app_client: TestClient) -> None:
     upload_response = app_client.post(
         "/upload/preview",
