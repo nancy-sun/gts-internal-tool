@@ -46,9 +46,6 @@
                 {% for warning in row.warnings %}
                   <p class="small-warning">{{ warning }}</p>
                 {% endfor %}
-                {% if row.status == "unmatched" %}
-                  <p class="small-warning">数据库中未找到这个 GTS。</p>
-                {% endif %}
               </td>
             </tr>
           {% endfor %}

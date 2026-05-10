@@ -36,6 +36,7 @@ HS_REQUEST_LOOKUP = {
 MAX_ROWS = 300
 HEADER_SCAN_ROWS = 100
 HEADER_SCAN_COLUMNS = 80
+UNMATCHED_GTS_MESSAGE = "数据库中未找到这个 GTS。"
 
 
 @dataclass
@@ -44,10 +45,6 @@ class ParsedHsCodeRow:
     values: dict[str, Any]
     warnings: list[str]
     errors: list[str]
-
-    @property
-    def is_valid(self) -> bool:
-        return not self.errors
 
 
 def parse_hs_code_upload_workbook(workbook_path: Path) -> list[ParsedHsCodeRow]:
@@ -158,25 +155,21 @@ def build_hs_upload_preview(
     connection: Connection,
     parsed_rows: list[ParsedHsCodeRow],
 ) -> list[dict[str, Any]]:
-    products_by_gts = fetch_products_by_gts(connection, parsed_rows)
-    preview_rows = []
-    for parsed_row in parsed_rows:
-        preview = parsed_row_to_preview(parsed_row)
-        if not parsed_row.errors:
-            product = products_by_gts.get(parsed_row.values["gts_no_normalized"])
-            if product:
-                preview["status"] = "matched"
-                preview["product"] = dict(product)
-            else:
-                preview["status"] = "unmatched"
-                preview["errors"].append("数据库中未找到这个 GTS。")
-        preview_rows.append(preview)
-    return preview_rows
+    return build_hs_preview(connection, parsed_rows, unmatched_is_error=True)
 
 
 def build_hs_generate_preview(
     connection: Connection,
     parsed_rows: list[ParsedHsCodeRow],
+) -> list[dict[str, Any]]:
+    return build_hs_preview(connection, parsed_rows, unmatched_is_error=False)
+
+
+def build_hs_preview(
+    connection: Connection,
+    parsed_rows: list[ParsedHsCodeRow],
+    *,
+    unmatched_is_error: bool,
 ) -> list[dict[str, Any]]:
     products_by_gts = fetch_products_by_gts(connection, parsed_rows)
     preview_rows = []
@@ -189,7 +182,10 @@ def build_hs_generate_preview(
                 preview["product"] = dict(product)
             else:
                 preview["status"] = "unmatched"
-                preview["warnings"].append("数据库中未找到这个 GTS。")
+                if unmatched_is_error:
+                    preview["errors"].append(UNMATCHED_GTS_MESSAGE)
+                else:
+                    preview["warnings"].append(UNMATCHED_GTS_MESSAGE)
         preview_rows.append(preview)
     return preview_rows
 
