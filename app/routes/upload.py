@@ -4,17 +4,17 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
 
 from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.services.excel_parser import iter_full_quotation_workbook_rows
 from app.services.import_full_quotation import build_import_preview, import_preview_rows
+from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
+from app.templating import templates
 
 
 router = APIRouter()
-templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 UPLOAD_DIR = BASE_DIR / "uploads"
 
 
@@ -39,7 +39,7 @@ async def upload_preview(
     if redirect:
         return redirect
 
-    error = validate_upload(excel_file, operator_name)
+    error = validate_xlsx_upload(excel_file, operator_name)
     if error:
         return templates.TemplateResponse(
             "upload.html",
@@ -49,12 +49,17 @@ async def upload_preview(
 
     contents = await excel_file.read()
     settings = get_settings()
-    if len(contents) > settings.max_upload_size_bytes:
+    size_error = validate_upload_size(
+        contents,
+        max_upload_size_bytes=settings.max_upload_size_bytes,
+        max_upload_size_mb=settings.max_upload_size_mb,
+    )
+    if size_error:
         return templates.TemplateResponse(
             "upload.html",
             {
                 "request": request,
-                "error": f"上传文件超过 {settings.max_upload_size_mb} MB。",
+                "error": size_error,
             },
             status_code=400,
         )
@@ -180,15 +185,6 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             "result": result,
         },
     )
-
-
-def validate_upload(excel_file: UploadFile, operator_name: str) -> str | None:
-    if not operator_name.strip():
-        return "请填写操作员姓名。"
-    filename = excel_file.filename or ""
-    if not filename.lower().endswith(".xlsx"):
-        return "只能上传 .xlsx 文件。"
-    return None
 
 
 def preview_path(token: str) -> Path:

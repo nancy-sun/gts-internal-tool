@@ -1,5 +1,4 @@
 import sqlite3
-from collections.abc import Iterator
 
 from app.config import get_settings
 
@@ -89,11 +88,3 @@ def initialize_database() -> None:
             ON operation_logs(action_time);
             """
         )
-
-
-def connection_context() -> Iterator[sqlite3.Connection]:
-    connection = get_connection()
-    try:
-        yield connection
-    finally:
-        connection.close()

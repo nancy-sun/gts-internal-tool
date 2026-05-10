@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Request
-from fastapi.templating import Jinja2Templates
 
 from app.auth import require_auth
-from app.config import BASE_DIR
+from app.templating import templates
 
 
 router = APIRouter()
-templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 
 
 @router.get("/")

@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 
 from app.auth import SESSION_AUTH_KEY
-from app.config import BASE_DIR, get_settings
+from app.config import get_settings
+from app.templating import templates
 
 
 router = APIRouter()
-templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 
 
 @router.get("/login")

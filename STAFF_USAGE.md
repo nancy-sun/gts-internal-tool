@@ -1,48 +1,53 @@
 # STAFF_USAGE
 
-## Login
+## 登录
 
-Open the office LAN address in a browser and enter the shared access code.
+在浏览器打开办公室局域网地址，输入共享访问码。
 
-Staff do not have individual accounts. For uploads and generated quotations, enter your name on the page so the manager can see who performed the action.
+系统没有个人账号。上传报价单或生成报价单时，请在页面填写操作员姓名，方便经理查看操作记录。
 
-## Upload Full Quotation List
+## 上传完整报价单
 
-1. Click `Upload Full Quotation List`.
-2. Enter your name.
-3. Upload a `.xlsx` quotation file.
-4. Review the preview page.
-5. If the preview shows warnings such as `old factory => new factory` or `old price => new price`, double-check the row before importing.
-6. If a matched product has different non-empty product fields, tick the fields that should be updated.
-7. Confirm import.
+1. 点击 `上传完整报价单`。
+2. 填写操作员姓名。
+3. 上传 `.xlsx` 报价文件。
+4. 查看导入预览。
+5. 如果预览显示工厂、单位或价格变化，请先确认是否正确。
+6. 如果同一个产品有新的报价变更，勾选 `保存这条变更报价` 后才会写入系统。
+7. 如果匹配产品的非空产品字段不同，勾选需要更新的字段。
+8. 点击 `确认导入`。
 
-The system keeps old quotation rows and inserts new quotation rows. It does not delete old rows.
+系统会保留旧报价记录，并新增新的历史报价记录。MVP 不提供删除功能。
 
-## Generate Quotation
+## 生成报价单
 
-1. Click `Generate Quotation from GTS/OEM List`.
-2. Enter your name.
-3. Upload a `.xlsx` request list.
-4. The request list may contain only `GTS No.`, or `GTS No.` with `Description`, or GTS/OEM/quantity/comment columns.
-5. Review matched, unmatched, conflict, and multiple-candidate rows.
-6. For rows with multiple quotation candidates, select the quotation row to use.
-7. Click `Generate Excel`.
+1. 点击 `按 GTS/OEM 生成报价单`。
+2. 填写操作员姓名。
+3. 上传 `.xlsx` 需求清单。
+4. 需求清单可以只包含 `GTS`，也可以包含 `GTS`、`OEM`、英文描述、数量、单位、备注等列。
+5. 查看生成预览中的匹配、未匹配、冲突和多候选行。
+6. 如果一行有多个候选报价，选择要使用的历史报价。
+7. 如果不想使用某一行，取消勾选 `使用此行`。
+8. 点击 `生成 Excel`。
 
-The generated file is created for immediate download. It is not permanently stored in `generated/` in the MVP.
-If the request list includes `Description`, the generated sheet keeps that uploaded description and fills Chinese Description from the selected historical quotation row.
+生成文件只用于立即下载，MVP 不会永久保存到 `generated/`。
 
-## Search Database
+生成 Excel 时，如果上传的需求清单提供了 OEM、英文描述或单位，系统会保留上传值；如果这些字段为空，系统会使用选中的历史报价数据补齐。
 
-Use `Search Database` to search by:
+## 查询数据库
 
-- GTS No.
+点击 `查询数据库`，可按以下字段查询：
+
+- GTS
 - OEM
-- Description
-- Chinese Description
-- Factory
+- 英文描述
+- 品名
+- 工厂
 
-Search actions are not logged.
+GTS/OEM 查询支持模糊匹配。例如搜索 `test001` 或 `001`，可以匹配到 `GTSTEST001`。如果存在完全匹配结果，系统只显示完全匹配结果。
 
-## Operation Logs
+查询操作目前不写入操作记录。
 
-Managers can open `Operation Logs` to see uploads and generated quotations.
+## 操作记录
+
+经理可以打开 `操作记录` 查看上传和生成报价单的记录。

@@ -4,7 +4,6 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
 
 from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
@@ -14,10 +13,11 @@ from app.services.quotation_generation import (
     create_generated_workbook,
 )
 from app.services.request_parser import parse_request_workbook
+from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
+from app.templating import templates
 
 
 router = APIRouter()
-templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 UPLOAD_DIR = BASE_DIR / "uploads"
 
 
@@ -42,7 +42,7 @@ async def generate_preview(
     if redirect:
         return redirect
 
-    error = validate_request_upload(request_file, operator_name)
+    error = validate_xlsx_upload(request_file, operator_name)
     if error:
         return templates.TemplateResponse(
             "generate.html",
@@ -52,12 +52,17 @@ async def generate_preview(
 
     contents = await request_file.read()
     settings = get_settings()
-    if len(contents) > settings.max_upload_size_bytes:
+    size_error = validate_upload_size(
+        contents,
+        max_upload_size_bytes=settings.max_upload_size_bytes,
+        max_upload_size_mb=settings.max_upload_size_mb,
+    )
+    if size_error:
         return templates.TemplateResponse(
             "generate.html",
             {
                 "request": request,
-                "error": f"上传文件超过 {settings.max_upload_size_mb} MB。",
+                "error": size_error,
             },
             status_code=400,
         )
@@ -123,15 +128,6 @@ async def generate_download(request: Request, token: str = Form(...)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers=headers,
     )
-
-
-def validate_request_upload(request_file: UploadFile, operator_name: str) -> str | None:
-    if not operator_name.strip():
-        return "请填写操作员姓名。"
-    filename = request_file.filename or ""
-    if not filename.lower().endswith(".xlsx"):
-        return "只能上传 .xlsx 文件。"
-    return None
 
 
 def preview_path(token: str) -> Path:
