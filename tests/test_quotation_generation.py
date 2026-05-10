@@ -48,7 +48,7 @@ def test_build_output_row_recalculates_total_price():
     )
     candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
 
-    output = build_output_row(candidate, 4)
+    output = build_output_row(candidate, None, 4)
 
     assert output["quantity"] == 4
     assert output["total_price"] == 50
@@ -72,7 +72,7 @@ def test_build_output_row_uses_whole_number_quantity_for_export_and_total():
     )
     candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
 
-    output = build_output_row(candidate, 3.4)
+    output = build_output_row(candidate, None, 3.4)
 
     assert output["quantity"] == 3
     assert output["total_price"] == 30
@@ -95,13 +95,13 @@ def test_build_output_row_leaves_total_price_blank_without_request_quantity():
     )
     candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
 
-    output = build_output_row(candidate, None)
+    output = build_output_row(candidate, None, None)
 
     assert output["quantity"] is None
     assert output["total_price"] is None
 
 
-def test_build_output_row_preserves_uploaded_request_oem_description_and_unit():
+def test_build_output_row_uses_current_product_oem_description_and_request_unit():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
@@ -117,11 +117,30 @@ def test_build_output_row_preserves_uploaded_request_oem_description_and_unit():
         (now, now),
     )
     candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, description, oem, oem_normalized,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS-CURRENT', 'GTSCURRENT', 'Current Product Description',
+                'CURRENT-OEM', 'CURRENTOEM', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    product = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
 
-    output = build_output_row(candidate, None, "Uploaded Request Description", "REQ-OEM", "SET")
+    output = build_output_row(
+        candidate,
+        product,
+        None,
+        "Uploaded Request Description",
+        "REQ-OEM",
+        "SET",
+    )
 
-    assert output["description"] == "Uploaded Request Description"
-    assert output["oem"] == "REQ-OEM"
+    assert output["description"] == "Current Product Description"
+    assert output["oem"] == "CURRENT-OEM"
     assert output["unit"] == "SET"
     assert output["chinese_description"] == "历史描述"
 
@@ -143,7 +162,7 @@ def test_build_output_row_uses_system_oem_description_and_unit_when_request_valu
     )
     candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
 
-    output = build_output_row(candidate, None, "", "", "")
+    output = build_output_row(candidate, None, None, "", "", "")
 
     assert output["description"] == "Historical Description"
     assert output["oem"] == "HIST-OEM"
@@ -311,7 +330,7 @@ def test_build_generation_preview_uses_batch_lookups_for_repeated_products():
 
     assert [row["product"]["id"] for row in preview] == [1, 1, 1]
     assert [row["candidates"][0]["id"] for row in preview] == [1, 1, 1]
-    assert counting_connection.select_count == 2
+    assert counting_connection.select_count == 3
 
 
 def test_build_generation_preview_matches_by_oem_when_gts_is_missing():
@@ -431,6 +450,20 @@ def test_create_generated_workbook_excludes_unchecked_rows_and_keeps_blank_photo
     now = utc_now_text()
     connection.execute(
         """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, description, oem, oem_normalized,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES
+            (1, 'GTS-CURRENT-1', 'GTSCURRENT1', 'Current 1', 'OEM-CURRENT-1',
+             'OEMCURRENT1', 'Alice', ?, 'Alice', ?),
+            (2, 'GTS-CURRENT-2', 'GTSCURRENT2', 'Current 2', 'OEM-CURRENT-2',
+             'OEMCURRENT2', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now, now, now),
+    )
+    connection.execute(
+        """
         INSERT INTO quotation_items (
             id, product_id, gts_no, description, oem, unit, unit_price, updated_by, updated_at,
             created_by, created_at
@@ -464,7 +497,7 @@ def test_create_generated_workbook_excludes_unchecked_rows_and_keeps_blank_photo
 
     assert generated_count == 1
     assert worksheet["A3"].value == 1
-    assert worksheet["B3"].value == "GTS-1"
+    assert worksheet["B3"].value == "GTS-CURRENT-1"
     assert worksheet["E3"].value is None
     assert worksheet["K3"].value == 30
     assert worksheet["X3"].value == now[:10]

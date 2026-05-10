@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}编辑产品 - GTS Internal Tool{% endblock %}
+{% block page_name %}编辑产品{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact-heading">
+    <h1>编辑产品</h1>
+  </section>
+
+  {% if success %}
+    <div class="notice success-notice">
+      <p>{{ success }}</p>
+    </div>
+  {% endif %}
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if warnings %}
+    <div class="notice warning-notice">
+      {% for warning in warnings %}
+        <p>{{ warning }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if product %}
+    <form class="office-form edit-product-form" method="post" autocomplete="off">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+
+      <label for="operator_name">操作人</label>
+      <input id="operator_name" name="operator_name" required autocomplete="off">
+
+      <label for="gts_no">GTS</label>
+      <input id="gts_no" name="gts_no" value="{{ values.gts_no or '' }}" autocomplete="off">
+
+      <label for="oem">OEM</label>
+      <input id="oem" name="oem" value="{{ values.oem or '' }}" autocomplete="off">
+
+      <label for="description">英文描述</label>
+      <input id="description" name="description" value="{{ values.description or '' }}" autocomplete="off">
+
+      <label for="hs_code">HS Code</label>
+      <input id="hs_code" name="hs_code" value="{{ values.hs_code or '' }}" autocomplete="off">
+
+      <label for="edit_password">确认密码</label>
+      <input
+        id="edit_password"
+        name="edit_password"
+        type="password"
+        required
+        autocomplete="new-password"
+        inputmode="numeric"
+      >
+
+      <button type="submit">保存修改</button>
+    </form>
+  {% else %}
+    <p>找不到产品。</p>
+  {% endif %}
+{% endblock %}

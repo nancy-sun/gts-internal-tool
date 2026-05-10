@@ -91,6 +91,21 @@ If you change `APP_PORT` to `8000`, start with:
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
+## Change the Product Edit Password
+
+Manual product edits require a separate confirmation password. The password is not stored in browser local storage or the login session.
+
+1. Stop the running app.
+2. Open `.env`.
+3. Change:
+
+```text
+PRODUCT_EDIT_PASSWORD=55123511
+```
+
+4. Save `.env`.
+5. Start the app again.
+
 ## Backup Setup
 
 Manual backup:

@@ -48,8 +48,8 @@
                   {{ row.status }}
                 {% endif %}
               </td>
-              <td>{{ row["values"]["gts_no"] or "" }}</td>
-              <td>{{ row["values"]["oem"] or "" }}</td>
+              <td>{{ row.product.gts_no if row.product else row["values"]["gts_no"] or "" }}</td>
+              <td>{{ row.product.oem if row.product else row["values"]["oem"] or "" }}</td>
               <td>
                 {% if row.product and row.product.chinese_description %}
                   {{ row.product.chinese_description }}
@@ -71,6 +71,9 @@
                 {% endfor %}
                 {% for warning in row.warnings %}
                   <p class="small-warning">{{ warning }}</p>
+                {% endfor %}
+                {% for notice in row.change_notices or [] %}
+                  <p class="small-warning">{{ notice }}</p>
                 {% endfor %}
                 {% if row.status == "unmatched" %}
                   <p class="small-warning">未找到匹配产品。</p>

@@ -101,11 +101,11 @@ def parse_hs_code_workbook(
                 values["hs_code"] = _text(values.get("hs_code"))
             gts_no_normalized, gts_warnings = normalize_gts_no(values["gts_no"])
             values["gts_no_normalized"] = gts_no_normalized
+            if require_hs_code and (not gts_no_normalized or not values.get("hs_code")):
+                continue
             warnings.extend([f"GTS {warning}" for warning in gts_warnings])
             if not gts_no_normalized:
                 errors.append("GTS 不能为空。")
-            if require_hs_code and not _text(values.get("hs_code")):
-                errors.append("HS Code 不能为空。")
             parsed_rows.append(
                 ParsedHsCodeRow(
                     row_number=row_number,
@@ -155,14 +155,24 @@ def build_hs_upload_preview(
     connection: Connection,
     parsed_rows: list[ParsedHsCodeRow],
 ) -> list[dict[str, Any]]:
-    return build_hs_preview(connection, parsed_rows, unmatched_is_error=True)
+    return build_hs_preview(
+        connection,
+        parsed_rows,
+        unmatched_is_error=True,
+        allow_historical_lookup=False,
+    )
 
 
 def build_hs_generate_preview(
     connection: Connection,
     parsed_rows: list[ParsedHsCodeRow],
 ) -> list[dict[str, Any]]:
-    return build_hs_preview(connection, parsed_rows, unmatched_is_error=False)
+    return build_hs_preview(
+        connection,
+        parsed_rows,
+        unmatched_is_error=False,
+        allow_historical_lookup=True,
+    )
 
 
 def build_hs_preview(
@@ -170,16 +180,25 @@ def build_hs_preview(
     parsed_rows: list[ParsedHsCodeRow],
     *,
     unmatched_is_error: bool,
+    allow_historical_lookup: bool,
 ) -> list[dict[str, Any]]:
     products_by_gts = fetch_products_by_gts(connection, parsed_rows)
+    products_by_historical_gts = (
+        fetch_products_by_historical_gts(connection, parsed_rows)
+        if allow_historical_lookup
+        else {}
+    )
     preview_rows = []
     for parsed_row in parsed_rows:
         preview = parsed_row_to_preview(parsed_row)
         if not parsed_row.errors:
-            product = products_by_gts.get(parsed_row.values["gts_no_normalized"])
+            product = products_by_gts.get(
+                parsed_row.values["gts_no_normalized"],
+            ) or products_by_historical_gts.get(parsed_row.values["gts_no_normalized"])
             if product:
                 preview["status"] = "matched"
                 preview["product"] = dict(product)
+                preview["change_notices"] = build_hs_change_notices(product, parsed_row.values)
             else:
                 preview["status"] = "unmatched"
                 if unmatched_is_error:
@@ -198,6 +217,7 @@ def parsed_row_to_preview(parsed_row: ParsedHsCodeRow) -> dict[str, Any]:
         "errors": list(parsed_row.errors),
         "status": "invalid" if parsed_row.errors else "ready",
         "product": None,
+        "change_notices": [],
     }
 
 
@@ -230,6 +250,50 @@ def fetch_products_by_gts(
     return products
 
 
+def fetch_products_by_historical_gts(
+    connection: Connection,
+    parsed_rows: list[ParsedHsCodeRow],
+) -> dict[str, Row]:
+    gts_numbers = sorted(
+        {
+            row.values["gts_no_normalized"]
+            for row in parsed_rows
+            if row.values.get("gts_no_normalized")
+        }
+    )
+    if not gts_numbers:
+        return {}
+    placeholders = ", ".join("?" for _ in gts_numbers)
+    rows = connection.execute(
+        f"""
+        SELECT
+            q.gts_no_normalized AS lookup_value,
+            p.*
+        FROM quotation_items q
+        JOIN products p ON p.id = q.product_id
+        WHERE q.gts_no_normalized IN ({placeholders})
+        ORDER BY q.updated_at DESC, q.id DESC
+        """,
+        gts_numbers,
+    ).fetchall()
+    products = {}
+    for row in rows:
+        lookup_value = _text(row["lookup_value"])
+        if lookup_value and lookup_value not in products:
+            products[lookup_value] = row
+    return products
+
+
+def build_hs_change_notices(
+    product: Row | dict[str, Any],
+    request_values: dict[str, Any],
+) -> list[str]:
+    request_gts = _text(request_values.get("gts_no"))
+    if request_gts and request_values.get("gts_no_normalized") != product["gts_no_normalized"]:
+        return [f"GTS 已从 {request_gts} 改为 {_text(product['gts_no']) or '(空)'}"]
+    return []
+
+
 def save_hs_upload_preview(
     connection: Connection,
     *,
@@ -240,7 +304,7 @@ def save_hs_upload_preview(
     updated = 0
     failed = 0
     for row in preview_rows:
-        if row.get("errors") or row.get("status") != "matched":
+        if not is_valid_hs_upload_row(row):
             failed += 1
             continue
         connection.execute(
@@ -264,6 +328,18 @@ def save_hs_upload_preview(
     return {"updated": updated, "failed": failed}
 
 
+def is_valid_hs_upload_row(row: dict[str, Any]) -> bool:
+    values = row.get("values") or {}
+    product = row.get("product") or {}
+    return (
+        not row.get("errors")
+        and row.get("status") == "matched"
+        and bool(product.get("id"))
+        and bool(values.get("gts_no_normalized"))
+        and bool(_text(values.get("hs_code")))
+    )
+
+
 def create_hs_code_workbook(
     connection: Connection,
     *,
@@ -283,7 +359,7 @@ def create_hs_code_workbook(
     output_count = 0
     for row_index, row in enumerate(preview_rows, start=2):
         product = row.get("product") or {}
-        worksheet.cell(row=row_index, column=1, value=row["values"].get("gts_no") or "")
+        worksheet.cell(row=row_index, column=1, value=product.get("gts_no") or row["values"].get("gts_no") or "")
         worksheet.cell(row=row_index, column=2, value=product.get("oem") or "")
         worksheet.cell(row=row_index, column=3, value=product.get("hs_code") or "")
         output_count += 1

@@ -50,6 +50,8 @@ BLANK_ROW_CANDIDATE_ID = -1
 class GenerationLookupContext:
     products_by_gts: dict[str, Row]
     products_by_oem: dict[str, Row]
+    products_by_historical_gts: dict[str, Row]
+    products_by_historical_oem: dict[str, Row]
     candidates_by_product_id: dict[int, list[Row]]
 
 
@@ -94,6 +96,10 @@ def build_generation_preview(
         preview["product"] = dict(product)
         candidates = lookup_context.candidates_by_product_id.get(product["id"], [])
         preview["candidates"] = [dict(candidate) for candidate in candidates]
+        preview["change_notices"] = build_product_change_notices(
+            product,
+            parsed_row.values,
+        )
         if not candidates:
             preview["status"] = "no_quotation"
         elif len(candidates) > 1:
@@ -122,9 +128,24 @@ def build_generation_lookup_context(
         oem_numbers,
         order_by="updated_at DESC, id DESC",
     )
+    products_by_historical_gts = fetch_products_by_historical_quotation_field(
+        connection,
+        "gts_no_normalized",
+        gts_numbers,
+    )
+    products_by_historical_oem = fetch_products_by_historical_quotation_field(
+        connection,
+        "oem_normalized",
+        oem_numbers,
+    )
     product_ids = {
         int(product["id"])
-        for product in [*products_by_gts.values(), *products_by_oem.values()]
+        for product in [
+            *products_by_gts.values(),
+            *products_by_oem.values(),
+            *products_by_historical_gts.values(),
+            *products_by_historical_oem.values(),
+        ]
     }
     candidates_by_product_id = fetch_quotation_candidates_by_product_id(
         connection,
@@ -133,6 +154,8 @@ def build_generation_lookup_context(
     return GenerationLookupContext(
         products_by_gts=products_by_gts,
         products_by_oem=products_by_oem,
+        products_by_historical_gts=products_by_historical_gts,
+        products_by_historical_oem=products_by_historical_oem,
         candidates_by_product_id=candidates_by_product_id,
     )
 
@@ -143,8 +166,12 @@ def find_product_in_context(
 ) -> tuple[Row | None, bool]:
     gts_no_normalized = values.get("gts_no_normalized") or ""
     oem_normalized = values.get("oem_normalized") or ""
-    gts_product = context.products_by_gts.get(gts_no_normalized)
-    oem_product = context.products_by_oem.get(oem_normalized)
+    gts_product = context.products_by_gts.get(
+        gts_no_normalized,
+    ) or context.products_by_historical_gts.get(gts_no_normalized)
+    oem_product = context.products_by_oem.get(
+        oem_normalized,
+    ) or context.products_by_historical_oem.get(oem_normalized)
 
     if gts_product and oem_product and gts_product["id"] != oem_product["id"]:
         return None, True
@@ -153,6 +180,53 @@ def find_product_in_context(
     if oem_product:
         return oem_product, False
     return None, False
+
+
+def fetch_products_by_historical_quotation_field(
+    connection: Connection,
+    field: str,
+    values: list[str],
+) -> dict[str, Row]:
+    if field not in {"gts_no_normalized", "oem_normalized"}:
+        raise ValueError("Unsupported historical quotation lookup field")
+    if not values:
+        return {}
+
+    placeholders = ", ".join("?" for _ in values)
+    rows = connection.execute(
+        f"""
+        SELECT
+            q.{field} AS lookup_value,
+            p.*
+        FROM quotation_items q
+        JOIN products p ON p.id = q.product_id
+        WHERE q.{field} IN ({placeholders})
+        ORDER BY q.updated_at DESC, q.id DESC
+        """,
+        values,
+    ).fetchall()
+    products = {}
+    for row in rows:
+        lookup_value = _text(row["lookup_value"])
+        if lookup_value and lookup_value not in products:
+            products[lookup_value] = row
+    return products
+
+
+def build_product_change_notices(
+    product: Row | dict[str, Any],
+    request_values: dict[str, Any],
+) -> list[str]:
+    notices = []
+    request_gts = _text(request_values.get("gts_no"))
+    request_oem = _text(request_values.get("oem"))
+    product_gts = _text(product["gts_no"])
+    product_oem = _text(product["oem"])
+    if request_gts and request_values.get("gts_no_normalized") != product["gts_no_normalized"]:
+        notices.append(f"GTS 已从 {request_gts} 改为 {product_gts or '(空)'}")
+    if request_oem and request_values.get("oem_normalized") != product["oem_normalized"]:
+        notices.append(f"OEM 已从 {request_oem} 改为 {product_oem or '(空)'}")
+    return notices
 
 
 def fetch_quotation_candidates_by_product_id(
@@ -241,9 +315,14 @@ def create_generated_workbook(
             ).fetchone()
             if not candidate:
                 continue
+            product = connection.execute(
+                "SELECT * FROM products WHERE id = ?",
+                (candidate["product_id"],),
+            ).fetchone()
 
             output_values = build_output_row(
                 candidate,
+                product,
                 request_values.get("quantity"),
                 request_values.get("description"),
                 request_values.get("oem"),
@@ -288,20 +367,20 @@ def build_blank_output_row(request_values: dict[str, Any]) -> dict[str, Any]:
 
 def build_output_row(
     candidate: Row,
+    product: Row | None,
     request_quantity: float | None,
     request_description: str | None = None,
     request_oem: str | None = None,
     request_unit: str | None = None,
 ) -> dict[str, Any]:
     output = {field: candidate[field] for field, _ in GENERATED_COLUMNS if field in candidate.keys()}
+    if product:
+        for field in ("gts_no", "description", "oem"):
+            output[field] = product[field]
     output["photo"] = None
     if _has_text(output.get("updated_at")):
         output["updated_at"] = str(output["updated_at"])[:10]
-    for field, request_value in (
-        ("description", request_description),
-        ("oem", request_oem),
-        ("unit", request_unit),
-    ):
+    for field, request_value in (("unit", request_unit),):
         if _has_text(request_value):
             output[field] = request_value
     output["quantity"] = whole_quantity(request_quantity)

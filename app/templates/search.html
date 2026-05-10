@@ -50,6 +50,7 @@
                 <th>备注</th>
                 <th>更新人</th>
                 <th>更新时间</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -67,6 +68,9 @@
                   <td>{{ row.comment or "" }}</td>
                   <td>{{ row.updated_by or "" }}</td>
                   <td>{{ row.updated_at[:10] if row.updated_at else "" }}</td>
+                  <td>
+                    <a class="table-action-link" href="/products/{{ row.product_id }}/edit">编辑</a>
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>

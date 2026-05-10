@@ -36,7 +36,7 @@
                   <span class="status-icon status-review" title="未匹配" aria-label="未匹配">!</span>
                 {% endif %}
               </td>
-              <td>{{ row["values"]["gts_no"] or "" }}</td>
+              <td>{{ row.product.gts_no if row.product else row["values"]["gts_no"] or "" }}</td>
               <td>{{ row.product.oem if row.product else "" }}</td>
               <td>{{ row.product.hs_code if row.product else "" }}</td>
               <td>
@@ -45,6 +45,9 @@
                 {% endfor %}
                 {% for warning in row.warnings %}
                   <p class="small-warning">{{ warning }}</p>
+                {% endfor %}
+                {% for notice in row.change_notices or [] %}
+                  <p class="small-warning">{{ notice }}</p>
                 {% endfor %}
               </td>
             </tr>

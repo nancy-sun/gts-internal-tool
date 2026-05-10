@@ -148,7 +148,7 @@ def test_office_workflow_upload_search_generate_download_and_log(
         "Photo",
     ]
     assert worksheet["B3"].value == "GTS-TEST-001"
-    assert worksheet["C3"].value == "Uploaded request description"
+    assert worksheet["C3"].value == "Mirror request source"
     assert worksheet["D3"].value == "5010 225 393"
     assert worksheet["G3"].value == "后视镜"
     assert worksheet["H3"].value == 3
@@ -543,7 +543,7 @@ def test_generate_preview_allows_mixed_valid_and_invalid_request_rows(
     assert generate_response.status_code == 200
     assert "GTS 和 OEM 都缺失" in generate_response.text
     assert 'class="missing-identifier-row"' in generate_response.text
-    assert "GTSMIXED001" in generate_response.text
+    assert "GTS-MIXED-001" in generate_response.text
 
     generate_token = extract_token(generate_response.text)
     candidate_id = fetch_single_candidate_id(tmp_path / "gts-test.sqlite3")
@@ -706,6 +706,143 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
     assert logs_response.status_code == 200
     assert "update_hs_code" in logs_response.text
     assert "generate_hs_code" in logs_response.text
+
+
+def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
+    app_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "product-edit-source.xlsx",
+                build_quotation_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-OLD-001",
+                            "description": "Old product description",
+                            "oem": "OEM-OLD-001",
+                            "factory": "Factory A",
+                            "unit": "pc",
+                            "unit_price": 99,
+                        }
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    upload_token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{upload_token}")
+    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    assert confirm_response.status_code == 200
+
+    edit_page = app_client.get("/products/1/edit")
+    assert edit_page.status_code == 200
+    assert 'value="GTS-OLD-001"' in edit_page.text
+    assert 'value="OEM-OLD-001"' in edit_page.text
+    assert 'value="Old product description"' in edit_page.text
+
+    bad_password_response = app_client.post(
+        "/products/1/edit",
+        data={
+            "operator_name": "Nancy",
+            "gts_no": "GTS-NEW-001",
+            "oem": "OEM-NEW-001",
+            "description": "New product description",
+            "hs_code": "87089999",
+            "edit_password": "wrong",
+        },
+    )
+    assert bad_password_response.status_code == 400
+    assert "确认密码不正确" in bad_password_response.text
+
+    edit_response = app_client.post(
+        "/products/1/edit",
+        data={
+            "operator_name": "Nancy",
+            "gts_no": "GTS-NEW-001",
+            "oem": "OEM-NEW-001",
+            "description": "New product description",
+            "hs_code": "87089999",
+            "edit_password": "55123511",
+        },
+    )
+    assert edit_response.status_code == 200
+    assert "产品资料已更新" in edit_response.text
+
+    generate_response = app_client.post(
+        "/generate/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "request_file": (
+                "old-request.xlsx",
+                build_request_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-OLD-001",
+                            "description": "Request description should not override product",
+                            "oem": "OEM-OLD-001",
+                            "quantity": 2,
+                        }
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert generate_response.status_code == 200
+    assert "GTS 已从 GTS-OLD-001 改为 GTS-NEW-001" in generate_response.text
+    assert "OEM 已从 OEM-OLD-001 改为 OEM-NEW-001" in generate_response.text
+
+    generate_token = extract_token(generate_response.text)
+    candidate_id = fetch_single_candidate_id(tmp_path / "gts-test.sqlite3")
+    download_response = app_client.post(
+        "/generate/download",
+        data={
+            "token": generate_token,
+            "include__2": "1",
+            "candidate__2": str(candidate_id),
+        },
+    )
+    assert download_response.status_code == 200
+    workbook = load_workbook(BytesIO(download_response.content))
+    worksheet = workbook.active
+    assert worksheet["B3"].value == "GTS-NEW-001"
+    assert worksheet["C3"].value == "New product description"
+    assert worksheet["D3"].value == "OEM-NEW-001"
+
+    hs_generate_response = app_client.post(
+        "/hs-codes/generate/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "old-hs-request.xlsx",
+                build_hs_request_workbook([{"gts_no": "GTS-OLD-001"}]),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert hs_generate_response.status_code == 200
+    assert "GTS 已从 GTS-OLD-001 改为 GTS-NEW-001" in hs_generate_response.text
+
+    hs_token = extract_token(hs_generate_response.text)
+    hs_download_response = app_client.post(
+        "/hs-codes/generate/download",
+        data={"token": hs_token},
+    )
+    assert hs_download_response.status_code == 200
+    hs_workbook = load_workbook(BytesIO(hs_download_response.content))
+    hs_worksheet = hs_workbook.active
+    assert hs_worksheet["A2"].value == "GTS-NEW-001"
+    assert hs_worksheet["B2"].value == "OEM-NEW-001"
+    assert hs_worksheet["C2"].value == "87089999"
+
+    logs_response = app_client.get("/logs")
+    assert logs_response.status_code == 200
+    assert "编辑产品" in logs_response.text
 
 
 def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
