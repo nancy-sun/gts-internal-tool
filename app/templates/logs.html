@@ -25,7 +25,7 @@
           <tbody>
             {% for row in rows %}
               <tr>
-                <td>{{ row.action_time }}</td>
+                <td>{{ row.action_time[:10] if row.action_time else "" }}</td>
                 <td>{{ row.operator_name }}</td>
                 <td>
                   {% if row.action_type == "upload_full_quotation" %}

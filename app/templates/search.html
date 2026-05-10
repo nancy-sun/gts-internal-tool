@@ -64,7 +64,7 @@
                   <td>{{ row.expected_delivery or "" }}</td>
                   <td>{{ row.comment or "" }}</td>
                   <td>{{ row.updated_by or "" }}</td>
-                  <td>{{ row.updated_at or "" }}</td>
+                  <td>{{ row.updated_at[:10] if row.updated_at else "" }}</td>
                 </tr>
               {% endfor %}
             </tbody>
