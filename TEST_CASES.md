@@ -18,6 +18,7 @@ The automated tests cover:
 - Search finds uploaded GTS values by partial input and shows `¥` unit prices.
 - Generate preview matches uploaded GTS data, shows database Chinese description, unit, candidate price, and operator.
 - Generate download creates a real Excel file, keeps uploaded request description, fills missing OEM/unit from system data, recalculates total price, and writes generation logs.
+- HS Code upload matches products by normalized GTS, overwrites existing HS Code values, displays HS Code in product search, exports `GTS`/`OEM`/`HS Code` in uploaded row order, and writes HS Code logs.
 - Core service behavior: normalization, Excel parsing, matching, conflicts, duplicate skip, latest candidate selection, generated columns, backup copying, and operation log creation.
 
 ## Browser UI
@@ -25,7 +26,7 @@ The automated tests cover:
 These are visual/browser checks that are still better reviewed manually unless we add a browser automation dependency such as Playwright.
 
 - Open every page and confirm visible labels are Chinese, except product/technical terms such as `GTS Internal Tool`, `GTS`, `OEM`, `Excel`, and `.xlsx`.
-- Confirm dashboard shows only the navigation brand and the four action buttons.
+- Confirm dashboard shows quotation actions and a separate HS Code section.
 - Confirm breadcrumb and return button appear on non-dashboard pages.
 - Confirm upload preview status uses icons, not text.
 - Confirm generation preview status uses icons, not text.

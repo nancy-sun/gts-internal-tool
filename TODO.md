@@ -1,40 +1,14 @@
 # TODO
 
-## HS Code Data
+This file tracks known follow-up work after the current implementation.
 
-Add a simple HS code workflow after the current quotation MVP is stable.
+## Manual Verification
 
-### Upload HS Code Data
+- Test the HS Code upload flow with a real office workbook.
+- Test the HS Code report flow with a real GTS list workbook.
+- Confirm product search shows HS Code and quotation upload / quotation generation do not show HS Code.
 
-- Add an `上传 HS Code` page similar to quotation upload.
-- Accept `.xlsx` files containing only:
-  - GTS No.
-  - HS Code
-- Normalize GTS No. using the existing GTS normalization rule.
-- Each GTS product should have one active HS code value.
-- During preview, match uploaded GTS No. against existing product data.
-- If the uploaded HS code is different from the existing HS code for that GTS:
-  - show a warning in preview
-  - ask the user to choose whether to keep the old HS code or use the new HS code
-- Confirm before saving.
-- Record upload action in operation logs.
+## Later Improvements
 
-### Get HS Codes
-
-- Add a `获取 HS Code` section/page.
-- Accept a request Excel containing a list of items with GTS No.
-- Normalize GTS No. and match against the database.
-- Show a preview table with:
-  - uploaded GTS No.
-  - matched product
-  - HS Code
-  - match status
-- Allow the user to generate/export an Excel file with the matched HS codes.
-- Show unmatched GTS rows clearly.
-
-### Before Implementation
-
-- Decide where HS code should be stored:
-  - add `hs_code` to `products`, or
-  - create a new simple HS code table.
-- Keep the feature small. Do not add customs, tariff, supplier, or compliance workflows in this phase.
+- Add browser automation for the main UI flows if manual visual checks become repetitive.
+- Revisit backup/restore testing after the first office test cycle.

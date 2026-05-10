@@ -31,6 +31,8 @@ Implemented:
 - Request-list upload, matching preview, manual candidate selection, and immediate Excel download
 - Generated quotation Excel includes a blank Photo column
 - Operation logging for generated quotations
+- HS Code upload by GTS, product search display, and HS Code report Excel download
+- Operation logging for HS Code updates and generated HS Code reports
 - Manual local backup script and backup instructions
 
 Phase 1 through Phase 5 MVP work is implemented.

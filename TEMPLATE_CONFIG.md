@@ -89,3 +89,31 @@ Example:
 ```
 
 `sheet_name: null` means the first worksheet is used.
+
+## HS Code Files
+
+HS Code upload and HS Code report generation use the first worksheet and detect columns by header name.
+
+HS Code upload requires:
+
+```text
+GTS column
+HS Code column
+```
+
+HS Code generation requires:
+
+```text
+GTS column
+```
+
+The GTS column uses the same GTS aliases as quotation upload. The HS Code column supports these aliases:
+
+```text
+HS
+hscode
+海关编码
+hs code
+```
+
+Extra columns are ignored. Parsed row order is kept when generating the HS Code report.

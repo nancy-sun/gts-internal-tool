@@ -25,11 +25,12 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     from app.config import get_settings
     from app.main import create_app
-    from app.routes import generate, upload
+    from app.routes import generate, hs_codes, upload
 
     get_settings.cache_clear()
     monkeypatch.setattr(upload, "UPLOAD_DIR", upload_path)
     monkeypatch.setattr(generate, "UPLOAD_DIR", upload_path)
+    monkeypatch.setattr(hs_codes, "UPLOAD_DIR", upload_path)
 
     client = TestClient(create_app())
     login_response = client.post("/login", data={"access_code": ACCESS_CODE})
@@ -564,6 +565,142 @@ def test_generate_preview_allows_mixed_valid_and_invalid_request_rows(
     assert worksheet.max_row == 4
 
 
+def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
+    app_client: TestClient,
+) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "hs-products.xlsx",
+                build_quotation_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-HS-001",
+                            "oem": "OEM-HS-001",
+                            "factory": "Factory A",
+                            "unit": "pc",
+                            "unit_price": 10,
+                        },
+                        {
+                            "gts_no": "GTS-HS-002",
+                            "oem": "OEM-HS-002",
+                            "factory": "Factory B",
+                            "unit": "pc",
+                            "unit_price": 20,
+                        },
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    upload_token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{upload_token}")
+    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    assert confirm_response.status_code == 200
+
+    hs_upload_response = app_client.post(
+        "/hs-codes/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "hs-upload.xlsx",
+                build_hs_code_workbook(
+                    [
+                        {"gts_no": "GTS-HS-001", "hs_code": "87089910"},
+                        {"gts_no": "GTS-HS-002", "hs_code": "87089920"},
+                    ],
+                    hs_header="海关编码",
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert hs_upload_response.status_code == 200
+    assert "87089910" in hs_upload_response.text
+    hs_token = extract_token(hs_upload_response.text)
+    hs_confirm_response = app_client.post("/hs-codes/upload/confirm", data={"token": hs_token})
+    assert hs_confirm_response.status_code == 200
+    assert "已更新" in hs_confirm_response.text
+
+    overwrite_response = app_client.post(
+        "/hs-codes/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "hs-overwrite.xlsx",
+                build_hs_code_workbook(
+                    [{"gts_no": "GTS-HS-001", "hs_code": "87089999"}],
+                    hs_header="HS",
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    overwrite_token = extract_token(overwrite_response.text)
+    overwrite_confirm = app_client.post(
+        "/hs-codes/upload/confirm",
+        data={"token": overwrite_token},
+    )
+    assert overwrite_confirm.status_code == 200
+
+    search_response = app_client.get("/search", params={"field": "gts_no", "q": "GTSHS001"})
+    assert search_response.status_code == 200
+    assert "87089999" in search_response.text
+    assert "87089910" not in search_response.text
+
+    generate_response = app_client.post(
+        "/hs-codes/generate/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "hs-request.xlsx",
+                build_hs_request_workbook(
+                    [
+                        {"gts_no": "GTS-HS-002"},
+                        {"gts_no": "GTS-HS-001"},
+                        {"gts_no": "GTS-HS-MISSING"},
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert generate_response.status_code == 200
+    generate_token = extract_token(generate_response.text)
+    download_response = app_client.post(
+        "/hs-codes/generate/download",
+        data={"token": generate_token},
+    )
+    assert download_response.status_code == 200
+
+    workbook = load_workbook(BytesIO(download_response.content))
+    worksheet = workbook.active
+    assert [worksheet.cell(row=1, column=index).value for index in range(1, 4)] == [
+        "GTS",
+        "OEM",
+        "HS Code",
+    ]
+    assert [worksheet.cell(row=row, column=1).value for row in range(2, 5)] == [
+        "GTS-HS-002",
+        "GTS-HS-001",
+        "GTS-HS-MISSING",
+    ]
+    assert worksheet["B2"].value == "OEM-HS-002"
+    assert worksheet["C2"].value == "87089920"
+    assert worksheet["B3"].value == "OEM-HS-001"
+    assert worksheet["C3"].value == "87089999"
+    assert worksheet["B4"].value is None
+    assert worksheet["C4"].value is None
+
+    logs_response = app_client.get("/logs")
+    assert logs_response.status_code == 200
+    assert "update_hs_code" in logs_response.text
+    assert "generate_hs_code" in logs_response.text
+
+
 def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
@@ -656,6 +793,29 @@ def build_request_workbook(rows: list[dict]) -> BytesIO:
     for row_index, row in enumerate(rows, start=2):
         for column_index, field in enumerate(field_order, start=1):
             worksheet.cell(row=row_index, column=column_index, value=row.get(field, ""))
+    return workbook_bytes(workbook)
+
+
+def build_hs_code_workbook(rows: list[dict], hs_header: str = "HS Code") -> BytesIO:
+    workbook = Workbook()
+    worksheet = workbook.active
+    headers = ["GTS No.", "Description", hs_header, "Comment"]
+    for column_index, header in enumerate(headers, start=1):
+        worksheet.cell(row=1, column=column_index, value=header)
+    for row_index, row in enumerate(rows, start=2):
+        worksheet.cell(row=row_index, column=1, value=row.get("gts_no", ""))
+        worksheet.cell(row=row_index, column=2, value=row.get("description", ""))
+        worksheet.cell(row=row_index, column=3, value=row.get("hs_code", ""))
+        worksheet.cell(row=row_index, column=4, value=row.get("comment", ""))
+    return workbook_bytes(workbook)
+
+
+def build_hs_request_workbook(rows: list[dict]) -> BytesIO:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.cell(row=1, column=1, value="GTS")
+    for row_index, row in enumerate(rows, start=2):
+        worksheet.cell(row=row_index, column=1, value=row.get("gts_no", ""))
     return workbook_bytes(workbook)
 
 

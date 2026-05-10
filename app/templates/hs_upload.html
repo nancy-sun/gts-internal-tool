@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}上传 HS Code - GTS Internal Tool{% endblock %}
+{% block page_name %}上传 HS Code{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>上传 HS Code</h1>
+  </section>
+  {% if error %}
+    <p class="error">{{ error }}</p>
+  {% endif %}
+  <form class="form-stack" method="post" action="/hs-codes/upload/preview" enctype="multipart/form-data">
+    <label>
+      操作员姓名
+      <input name="operator_name" required autocomplete="name">
+    </label>
+    <label>
+      Excel 文件
+      <input name="excel_file" type="file" accept=".xlsx" required>
+    </label>
+    <button type="submit">上传</button>
+  </form>
+{% endblock %}

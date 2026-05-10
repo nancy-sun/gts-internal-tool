@@ -44,6 +44,7 @@ def search_catalogue(
             p.oem AS product_oem,
             p.description AS product_description,
             p.chinese_description AS product_chinese_description,
+            p.hs_code AS product_hs_code,
             q.id AS quotation_item_id,
             q.factory,
             q.unit_price,

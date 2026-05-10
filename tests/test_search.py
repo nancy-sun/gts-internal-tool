@@ -80,6 +80,25 @@ def test_search_chinese_description_and_factory_use_text_contains_matching():
     assert [row["factory"] for row in factory_rows] == ["欧达工厂"]
 
 
+def test_search_returns_product_hs_code():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    insert_product(
+        connection,
+        1,
+        "GTS-1",
+        "GTS1",
+        "2026-01-01T00:00:00+00:00",
+        hs_code="87089910",
+    )
+    insert_quotation(connection, 1, 1, "2026-01-01T00:00:00+00:00")
+
+    rows, _ = search_catalogue(connection, field="gts_no", query="GTS1")
+
+    assert rows[0]["product_hs_code"] == "87089910"
+
+
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -91,6 +110,7 @@ def initialize_test_schema(connection: sqlite3.Connection) -> None:
             oem_normalized TEXT,
             description TEXT,
             chinese_description TEXT,
+            hs_code TEXT,
             created_by TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_by TEXT NOT NULL,
@@ -121,14 +141,15 @@ def insert_product(
     oem: str | None = None,
     oem_normalized: str | None = None,
     chinese_description: str | None = None,
+    hs_code: str | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO products (
-            id, gts_no, gts_no_normalized, oem, oem_normalized, chinese_description,
+            id, gts_no, gts_no_normalized, oem, oem_normalized, chinese_description, hs_code,
             created_by, created_at, updated_by, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'Tester', ?, 'Tester', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Tester', ?, 'Tester', ?)
         """,
         (
             product_id,
@@ -137,6 +158,7 @@ def insert_product(
             oem,
             oem_normalized,
             chinese_description,
+            hs_code,
             updated_at,
             updated_at,
         ),

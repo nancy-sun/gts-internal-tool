@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}HS Code 上传预览 - GTS Internal Tool{% endblock %}
+{% block page_name %}HS Code 上传预览{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>HS Code 上传预览</h1>
+    <p>文件：{{ file_name }}　操作员：{{ operator_name }}</p>
+  </section>
+
+  <form class="preview-page-form" method="post" action="/hs-codes/upload/confirm">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="table-wrap upload-preview-wrap">
+      <table class="upload-preview-table">
+        <thead>
+          <tr>
+            <th>行</th>
+            <th>状态</th>
+            <th>GTS</th>
+            <th>当前 HS Code</th>
+            <th>新 HS Code</th>
+            <th>提醒</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.row_number }}</td>
+              <td class="status-cell">
+                {% if row.errors %}
+                  <span class="status-icon status-warning" title="失败" aria-label="失败">×</span>
+                {% elif row.status == "matched" %}
+                  <span class="status-icon status-ready" title="可更新" aria-label="可更新">✓</span>
+                {% else %}
+                  <span class="status-icon status-review" title="需确认" aria-label="需确认">!</span>
+                {% endif %}
+              </td>
+              <td>{{ row["values"]["gts_no"] or "" }}</td>
+              <td>{{ row.product.hs_code if row.product else "" }}</td>
+              <td>{{ row["values"]["hs_code"] or "" }}</td>
+              <td>
+                {% for error in row.errors %}
+                  <p class="error">{{ error }}</p>
+                {% endfor %}
+                {% for warning in row.warnings %}
+                  <p class="small-warning">{{ warning }}</p>
+                {% endfor %}
+                {% if row.status == "unmatched" %}
+                  <p class="small-warning">数据库中未找到这个 GTS。</p>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="form-actions">
+      <a class="text-link" href="/hs-codes/upload">取消</a>
+      <button type="submit" {% if has_errors %}disabled{% endif %}>确认更新</button>
+    </div>
+  </form>
+{% endblock %}

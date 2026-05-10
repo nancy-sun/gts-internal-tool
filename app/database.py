@@ -23,6 +23,7 @@ def initialize_database() -> None:
                 oem_normalized TEXT,
                 description TEXT,
                 chinese_description TEXT,
+                hs_code TEXT,
                 created_by TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_by TEXT NOT NULL,
@@ -87,4 +88,21 @@ def initialize_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_operation_logs_action_time
             ON operation_logs(action_time);
             """
+        )
+        ensure_column(connection, "products", "hs_code", "TEXT")
+
+
+def ensure_column(
+    connection: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+    column_type: str,
+) -> None:
+    columns = {
+        row["name"]
+        for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    }
+    if column_name not in columns:
+        connection.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
         )

@@ -3,18 +3,47 @@
 {% block title %}首页 - GTS Internal Tool{% endblock %}
 
 {% block content %}
-  <nav class="action-grid" aria-label="主要功能">
-    <a class="action-card" href="/upload">
-      <span>上传完整报价单</span>
-    </a>
-    <a class="action-card" href="/generate">
-      <span>按 GTS/OEM 生成报价单</span>
-    </a>
-    <a class="action-card" href="/search">
-      <span>查询数据库</span>
-    </a>
-    <a class="action-card" href="/logs">
-      <span>操作记录</span>
-    </a>
-  </nav>
+  <div class="dashboard-layout">
+    <section class="dashboard-section">
+      <h2>报价工作</h2>
+      <nav class="dashboard-grid dashboard-grid-primary" aria-label="报价工作">
+        <a class="action-card action-card-primary" href="/upload">
+          <span class="card-label">上传报价</span>
+          <span class="card-arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="action-card action-card-primary" href="/generate">
+          <span class="card-label">生成报价单</span>
+          <span class="card-arrow" aria-hidden="true">›</span>
+        </a>
+      </nav>
+    </section>
+
+    <section class="dashboard-section">
+      <h2>资料查询</h2>
+      <nav class="dashboard-grid" aria-label="资料查询">
+        <a class="action-card" href="/search">
+          <span class="card-label">查询数据库</span>
+          <span class="card-arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="action-card" href="/logs">
+          <span class="card-label">操作记录</span>
+          <span class="card-arrow" aria-hidden="true">›</span>
+        </a>
+      </nav>
+    </section>
+
+    <section class="dashboard-section">
+      <h2>HS Code</h2>
+      <nav class="dashboard-grid" aria-label="HS Code 功能">
+        <a class="action-card" href="/hs-codes/upload">
+          <span class="card-label">上传 HS Code</span>
+          <span class="card-arrow" aria-hidden="true">›</span>
+        </a>
+        <a class="action-card" href="/hs-codes/generate">
+          <span class="card-label">生成 HS Code 报表</span>
+          <span class="card-arrow" aria-hidden="true">›</span>
+        </a>
+      </nav>
+    </section>
+  </div>
 {% endblock %}

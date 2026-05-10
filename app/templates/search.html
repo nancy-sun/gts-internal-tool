@@ -42,6 +42,7 @@
                 <th>OEM</th>
                 <th>英文描述</th>
                 <th>品名</th>
+                <th>HS Code</th>
                 <th>工厂</th>
                 <th>单价</th>
                 <th>包装</th>
@@ -58,6 +59,7 @@
                   <td>{{ row.product_oem or "" }}</td>
                   <td>{{ row.product_description or "" }}</td>
                   <td>{{ row.product_chinese_description or "" }}</td>
+                  <td>{{ row.product_hs_code or "" }}</td>
                   <td>{{ row.factory or "" }}</td>
                   <td>{% if row.unit_price is not none %}¥{{ "%.2f"|format(row.unit_price) }}{% endif %}</td>
                   <td>{{ row.packaging or "" }}</td>
