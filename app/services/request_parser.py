@@ -77,12 +77,15 @@ def parse_request_workbook(
             oem_normalized, oem_warnings = normalize_oem(values["oem"])
             values["gts_no_normalized"] = gts_no_normalized
             values["oem_normalized"] = oem_normalized
+            quantity_was_blank = values["quantity"] in ("", None)
             values["quantity"] = _parse_number(values["quantity"], "quantity", warnings)
             warnings.extend([f"GTS {warning}" for warning in gts_warnings])
             warnings.extend([f"OEM {warning}" for warning in oem_warnings])
+            if quantity_was_blank:
+                warnings.append("未填写数量")
 
             if not gts_no_normalized and not oem_normalized:
-                errors.append("每行必须填写 GTS 或 OEM。")
+                warnings.append("GTS 和 OEM 都缺失")
 
             parsed_rows.append(
                 ParsedRequestRow(

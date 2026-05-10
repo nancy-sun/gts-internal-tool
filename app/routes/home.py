@@ -12,4 +12,4 @@ def home(request: Request):
     redirect = require_auth(request)
     if redirect:
         return redirect
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse(request, "home.html", {"request": request})

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 
 from app.auth import require_auth
 from app.database import get_connection
+from app.navigation import SEARCH_CRUMB, breadcrumbs
 from app.services.search import SEARCH_FIELDS, search_catalogue
 from app.templating import templates
 
@@ -27,6 +28,7 @@ def search_page(request: Request, field: str = "gts_no", q: str = ""):
             )
 
     return templates.TemplateResponse(
+        request,
         "search.html",
         {
             "request": request,
@@ -34,5 +36,6 @@ def search_page(request: Request, field: str = "gts_no", q: str = ""):
             "query": q,
             "rows": rows,
             "warnings": warnings,
+            "breadcrumbs": breadcrumbs(SEARCH_CRUMB),
         },
     )

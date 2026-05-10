@@ -189,16 +189,9 @@
     appendParagraphs(td, row.errors || [], "error");
     appendParagraphs(td, row.warnings || [], "small-warning");
     appendParagraphs(td, row.quotation_warnings || [], "price-warning");
-    if (row.quotation_changes && row.quotation_changes.length) {
-      var quotationLabel = document.createElement("label");
-      quotationLabel.className = "checkbox-line quotation-change-control";
-      var quotationInput = document.createElement("input");
-      quotationInput.type = "checkbox";
-      quotationInput.name = "apply_quotation_change__" + row.row_number;
-      quotationLabel.appendChild(quotationInput);
-      quotationLabel.appendChild(document.createTextNode(" 保存这条变更报价"));
-      td.appendChild(quotationLabel);
-    }
+    (row.required_choices || []).forEach(function (choice) {
+      appendRequiredChoice(td, row.row_number, choice);
+    });
     (row.product_changes || []).forEach(function (change) {
       var label = document.createElement("label");
       label.className = "checkbox-line";
@@ -209,12 +202,37 @@
       label.appendChild(
         document.createTextNode(
           ' 更新' + productChangeLabel(change.field) + '："'
-          + change.existing + '" → "' + change.incoming + '"'
+          + (change.existing_with_source || change.existing) + '" → "' + change.incoming + '"'
         )
       );
       td.appendChild(label);
     });
     return td;
+  }
+
+  function appendRequiredChoice(container, rowNumber, choice) {
+    var wrapper = document.createElement("div");
+    wrapper.className = "required-choice-control";
+    var message = document.createElement("p");
+    message.className = "price-warning";
+    message.textContent = choice.label + "：" + choice.message;
+    wrapper.appendChild(message);
+    wrapper.appendChild(createChoiceRadio(rowNumber, choice.field, "old", "保留旧值"));
+    wrapper.appendChild(createChoiceRadio(rowNumber, choice.field, "new", "使用新值"));
+    container.appendChild(wrapper);
+  }
+
+  function createChoiceRadio(rowNumber, field, value, text) {
+    var label = document.createElement("label");
+    label.className = "radio-line";
+    var input = document.createElement("input");
+    input.type = "radio";
+    input.name = "required_choice__" + rowNumber + "__" + field;
+    input.value = value;
+    input.required = true;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(" " + text));
+    return label;
   }
 
   function appendParagraphs(container, messages, className) {
@@ -272,10 +290,10 @@
 
   function rowHasWarnings(row) {
     return Boolean(
-      (row.errors && row.errors.length) ||
+        (row.errors && row.errors.length) ||
         (row.warnings && row.warnings.length) ||
         (row.quotation_warnings && row.quotation_warnings.length) ||
-        (row.quotation_changes && row.quotation_changes.length) ||
+        (row.required_choices && row.required_choices.length) ||
         (row.product_changes && row.product_changes.length)
     );
   }

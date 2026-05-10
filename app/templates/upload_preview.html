@@ -36,7 +36,7 @@
           {% for row in rows %}
             <tr>
               <td>{{ row.row_number }}</td>
-              {% set row_has_warning = row.errors or row.warnings or row.quotation_warnings or row.quotation_changes or row.product_changes %}
+              {% set row_has_warning = row.errors or row.warnings or row.quotation_warnings or row.required_choices or row.product_changes %}
               <td class="status-cell">
                 {% if row.errors %}
                   <span class="status-icon status-warning" title="失败" aria-label="失败">×</span>
@@ -64,15 +64,29 @@
                   {% for warning in row.quotation_warnings %}
                     <p class="price-warning">{{ warning }}</p>
                   {% endfor %}
-                  {% if row.quotation_changes %}
-                    <label class="checkbox-line quotation-change-control">
-                      <input
-                        type="checkbox"
-                        name="apply_quotation_change__{{ row.row_number }}"
-                      >
-                      保存这条变更报价
-                    </label>
-                  {% endif %}
+                  {% for choice in row.required_choices %}
+                    <div class="required-choice-control">
+                      <p class="price-warning">{{ choice.label }}：{{ choice.message }}</p>
+                      <label class="radio-line">
+                        <input
+                          type="radio"
+                          name="required_choice__{{ row.row_number }}__{{ choice.field }}"
+                          value="old"
+                          required
+                        >
+                        保留旧值
+                      </label>
+                      <label class="radio-line">
+                        <input
+                          type="radio"
+                          name="required_choice__{{ row.row_number }}__{{ choice.field }}"
+                          value="new"
+                          required
+                        >
+                        使用新值
+                      </label>
+                    </div>
+                  {% endfor %}
                   {% for change in row.product_changes %}
                     <label class="checkbox-line">
                       <input
@@ -85,7 +99,7 @@
                       {% elif change.field == "chinese_description" %}品名
                       {% else %}{{ change.field }}
                       {% endif %}
-                      ："{{ change.existing }}" → "{{ change.incoming }}"
+                      ："{{ change.existing_with_source or change.existing }}" → "{{ change.incoming }}"
                     </label>
                   {% endfor %}
                 </td>

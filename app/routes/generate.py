@@ -8,10 +8,12 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
+from app.navigation import GENERATE_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.quotation_generation import (
     build_generation_preview,
     create_generated_workbook,
 )
+from app.services.preview_tokens import preview_file_path
 from app.services.request_parser import parse_request_workbook
 from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
 from app.templating import templates
@@ -27,8 +29,13 @@ def generate_page(request: Request):
     if redirect:
         return redirect
     return templates.TemplateResponse(
+        request,
         "generate.html",
-        {"request": request, "error": None},
+        {
+            "request": request,
+            "error": None,
+            "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
+        },
     )
 
 
@@ -45,8 +52,13 @@ async def generate_preview(
     error = validate_xlsx_upload(request_file, operator_name)
     if error:
         return templates.TemplateResponse(
+            request,
             "generate.html",
-            {"request": request, "error": error},
+            {
+                "request": request,
+                "error": error,
+                "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
+            },
             status_code=400,
         )
 
@@ -59,10 +71,12 @@ async def generate_preview(
     )
     if size_error:
         return templates.TemplateResponse(
+            request,
             "generate.html",
             {
                 "request": request,
                 "error": size_error,
+                "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
             },
             status_code=400,
         )
@@ -87,6 +101,7 @@ async def generate_preview(
     )
 
     return templates.TemplateResponse(
+        request,
         "generate_preview.html",
         {
             "request": request,
@@ -94,6 +109,8 @@ async def generate_preview(
             "operator_name": operator_name.strip(),
             "file_name": safe_name,
             "rows": preview_rows,
+            "return_url": "/generate",
+            "breadcrumbs": child_breadcrumbs(GENERATE_CRUMB, "生成预览"),
         },
     )
 
@@ -131,7 +148,7 @@ async def generate_download(request: Request, token: str = Form(...)):
 
 
 def preview_path(token: str) -> Path:
-    return UPLOAD_DIR / f"generate_preview_{token}.json"
+    return preview_file_path(UPLOAD_DIR, "generate_preview", token)
 
 
 def parse_selected_candidates(form_items) -> dict[int, int]:

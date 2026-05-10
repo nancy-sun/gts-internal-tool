@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from io import BytesIO
 from sqlite3 import Connection, Row
 from typing import Any
@@ -9,6 +9,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from app.services.lookup_helpers import (
+    fetch_products_by_normalized_field,
+    unique_text_values,
+)
 from app.services.operation_logging import create_operation_log
 from app.services.request_parser import ParsedRequestRow
 
@@ -39,12 +43,21 @@ GENERATED_COLUMNS = [
     ("updated_by", "Updated By"),
     ("updated_at", "Updated At"),
 ]
+BLANK_ROW_CANDIDATE_ID = -1
+
+
+@dataclass(frozen=True)
+class GenerationLookupContext:
+    products_by_gts: dict[str, Row]
+    products_by_oem: dict[str, Row]
+    candidates_by_product_id: dict[int, list[Row]]
 
 
 def build_generation_preview(
     connection: Connection,
     parsed_rows: list[ParsedRequestRow],
 ) -> list[dict[str, Any]]:
+    lookup_context = build_generation_lookup_context(connection, parsed_rows)
     preview_rows = []
     for parsed_row in parsed_rows:
         preview = asdict(parsed_row)
@@ -56,8 +69,15 @@ def build_generation_preview(
             preview["status"] = "invalid"
             preview_rows.append(preview)
             continue
+        if not parsed_row.values.get("gts_no_normalized") and not parsed_row.values.get("oem_normalized"):
+            preview["status"] = "missing_identifier"
+            preview_rows.append(preview)
+            continue
 
-        product, conflict = find_product_for_request(connection, parsed_row.values)
+        product, conflict = find_product_in_context(
+            lookup_context,
+            parsed_row.values,
+        )
         if conflict:
             preview["status"] = "conflict"
             preview["errors"].append(
@@ -72,7 +92,7 @@ def build_generation_preview(
             continue
 
         preview["product"] = dict(product)
-        candidates = list_quotation_candidates(connection, product["id"])
+        candidates = lookup_context.candidates_by_product_id.get(product["id"], [])
         preview["candidates"] = [dict(candidate) for candidate in candidates]
         if not candidates:
             preview["status"] = "no_quotation"
@@ -82,25 +102,49 @@ def build_generation_preview(
     return preview_rows
 
 
-def find_product_for_request(
+def build_generation_lookup_context(
     connection: Connection,
+    parsed_rows: list[ParsedRequestRow],
+) -> GenerationLookupContext:
+    valid_values = [row.values for row in parsed_rows if not row.errors]
+    gts_numbers = unique_text_values(row.get("gts_no_normalized") for row in valid_values)
+    oem_numbers = unique_text_values(row.get("oem_normalized") for row in valid_values)
+
+    products_by_gts = fetch_products_by_normalized_field(
+        connection,
+        "gts_no_normalized",
+        gts_numbers,
+        order_by="updated_at DESC, id DESC",
+    )
+    products_by_oem = fetch_products_by_normalized_field(
+        connection,
+        "oem_normalized",
+        oem_numbers,
+        order_by="updated_at DESC, id DESC",
+    )
+    product_ids = {
+        int(product["id"])
+        for product in [*products_by_gts.values(), *products_by_oem.values()]
+    }
+    candidates_by_product_id = fetch_quotation_candidates_by_product_id(
+        connection,
+        product_ids,
+    )
+    return GenerationLookupContext(
+        products_by_gts=products_by_gts,
+        products_by_oem=products_by_oem,
+        candidates_by_product_id=candidates_by_product_id,
+    )
+
+
+def find_product_in_context(
+    context: GenerationLookupContext,
     values: dict[str, Any],
 ) -> tuple[Row | None, bool]:
     gts_no_normalized = values.get("gts_no_normalized") or ""
     oem_normalized = values.get("oem_normalized") or ""
-    gts_product = None
-    oem_product = None
-
-    if gts_no_normalized:
-        gts_product = connection.execute(
-            "SELECT * FROM products WHERE gts_no_normalized = ? ORDER BY updated_at DESC, id DESC LIMIT 1",
-            (gts_no_normalized,),
-        ).fetchone()
-    if oem_normalized:
-        oem_product = connection.execute(
-            "SELECT * FROM products WHERE oem_normalized = ? ORDER BY updated_at DESC, id DESC LIMIT 1",
-            (oem_normalized,),
-        ).fetchone()
+    gts_product = context.products_by_gts.get(gts_no_normalized)
+    oem_product = context.products_by_oem.get(oem_normalized)
 
     if gts_product and oem_product and gts_product["id"] != oem_product["id"]:
         return None, True
@@ -111,16 +155,50 @@ def find_product_for_request(
     return None, False
 
 
-def list_quotation_candidates(connection: Connection, product_id: int) -> list[Row]:
-    return connection.execute(
-        """
+def fetch_quotation_candidates_by_product_id(
+    connection: Connection,
+    product_ids: set[int],
+) -> dict[int, list[Row]]:
+    if not product_ids:
+        return {}
+
+    ordered_ids = sorted(product_ids)
+    placeholders = ", ".join("?" for _ in ordered_ids)
+    rows = connection.execute(
+        f"""
         SELECT *
         FROM quotation_items
-        WHERE product_id = ?
-        ORDER BY updated_at DESC, id DESC
+        WHERE product_id IN ({placeholders})
+        ORDER BY product_id, updated_at DESC, id DESC
         """,
-        (product_id,),
+        ordered_ids,
     ).fetchall()
+
+    grouped_rows: dict[int, list[Row]] = {}
+    for row in rows:
+        grouped_rows.setdefault(int(row["product_id"]), []).append(row)
+
+    return {
+        product_id: dedupe_candidate_rows(product_rows)
+        for product_id, product_rows in grouped_rows.items()
+    }
+
+
+def dedupe_candidate_rows(rows: list[Row]) -> list[Row]:
+    candidates = []
+    seen = set()
+    for row in rows:
+        signature = (
+            _text(row["gts_no_normalized"]),
+            _text(row["factory"]),
+            _text(row["unit"]),
+            _price_key(row["unit_price"]),
+        )
+        if signature in seen:
+            continue
+        seen.add(signature)
+        candidates.append(row)
+    return candidates
 
 
 def create_generated_workbook(
@@ -150,24 +228,27 @@ def create_generated_workbook(
     for preview_row in preview_rows:
         row_number = int(preview_row["row_number"])
         selected_id = selected_candidate_ids.get(row_number)
-        if not selected_id:
-            continue
-
-        candidate = connection.execute(
-            "SELECT * FROM quotation_items WHERE id = ?",
-            (selected_id,),
-        ).fetchone()
-        if not candidate:
+        if selected_id is None:
             continue
 
         request_values = preview_row["values"]
-        output_values = build_output_row(
-            candidate,
-            request_values.get("quantity"),
-            request_values.get("description"),
-            request_values.get("oem"),
-            request_values.get("unit"),
-        )
+        if selected_id == BLANK_ROW_CANDIDATE_ID:
+            output_values = build_blank_output_row(request_values)
+        else:
+            candidate = connection.execute(
+                "SELECT * FROM quotation_items WHERE id = ?",
+                (selected_id,),
+            ).fetchone()
+            if not candidate:
+                continue
+
+            output_values = build_output_row(
+                candidate,
+                request_values.get("quantity"),
+                request_values.get("description"),
+                request_values.get("oem"),
+                request_values.get("unit"),
+            )
         output_values["no"] = generated_count + 1
         for column_index, (field, _) in enumerate(GENERATED_COLUMNS, start=1):
             worksheet.cell(row=output_row, column=column_index, value=output_values.get(field))
@@ -191,6 +272,20 @@ def create_generated_workbook(
     return stream, generated_count
 
 
+def build_blank_output_row(request_values: dict[str, Any]) -> dict[str, Any]:
+    quantity = whole_quantity(request_values.get("quantity"))
+    return {
+        "gts_no": request_values.get("gts_no") or None,
+        "description": request_values.get("description") or None,
+        "oem": request_values.get("oem") or None,
+        "photo": None,
+        "quantity": quantity,
+        "unit": request_values.get("unit") or None,
+        "total_price": None,
+        "comment": request_values.get("comment") or None,
+    }
+
+
 def build_output_row(
     candidate: Row,
     request_quantity: float | None,
@@ -200,6 +295,8 @@ def build_output_row(
 ) -> dict[str, Any]:
     output = {field: candidate[field] for field, _ in GENERATED_COLUMNS if field in candidate.keys()}
     output["photo"] = None
+    if _has_text(output.get("updated_at")):
+        output["updated_at"] = str(output["updated_at"])[:10]
     for field, request_value in (
         ("description", request_description),
         ("oem", request_oem),
@@ -207,12 +304,30 @@ def build_output_row(
     ):
         if _has_text(request_value):
             output[field] = request_value
-    output["quantity"] = request_quantity if request_quantity is not None else None
-    if request_quantity is not None and candidate["unit_price"] is not None:
-        output["total_price"] = float(request_quantity) * float(candidate["unit_price"])
+    output["quantity"] = whole_quantity(request_quantity)
+    if output["quantity"] is not None and candidate["unit_price"] is not None:
+        output["total_price"] = output["quantity"] * float(candidate["unit_price"])
     elif request_quantity is None:
         output["total_price"] = None
     return output
+
+
+def whole_quantity(value: Any) -> int | None:
+    if value in ("", None):
+        return None
+    return int(round(float(value)))
+
+
+def _price_key(value: Any) -> str:
+    if value in ("", None):
+        return ""
+    return f"{float(value):.4f}"
+
+
+def _text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _has_text(value: Any) -> bool:

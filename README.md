@@ -26,7 +26,7 @@ Implemented:
 - Full quotation upload parsing, preview, confirmation, and import
 - Full quotation import detects the header row from `No.` in column A and ignores the Photo column
 - Full quotation import reads columns by header name, so extra inserted columns are ignored
-- Upload preview flags factory, unit, and price changes against the latest historical quotation row
+- Upload preview requires manual choices for GTS, OEM, factory, and price changes, and warns on unit changes
 - Operation logging for full quotation uploads
 - Request-list upload, matching preview, manual candidate selection, and immediate Excel download
 - Generated quotation Excel includes a blank Photo column
@@ -45,7 +45,11 @@ See [BACKUP.md](BACKUP.md).
 
 ## Test Cases
 
-Automated tests live in `tests/`. Manual browser, LAN, and backup checks are listed in [TEST_CASES.md](TEST_CASES.md).
+Automated tests live in `tests/` and include the main upload-search-generate Excel workflow through the FastAPI app. Manual browser layout, LAN, and backup checks are listed in [TEST_CASES.md](TEST_CASES.md).
+
+```bash
+python3 -m pytest tests
+```
 
 ## Run Locally
 

@@ -10,21 +10,36 @@
     <header class="topbar">
       <a class="brand" href="/">GTS Internal Tool</a>
       {% if request.session.get("authenticated") %}
-        <form method="post" action="/logout">
-          <button class="secondary-button" type="submit">退出</button>
+        <nav class="topnav" aria-label="主要功能">
+          <a href="/upload">上传报价</a>
+          <a href="/generate">生成报价</a>
+          <a href="/search">查询数据库</a>
+        </nav>
+        <form class="logout-form" method="post" action="/logout">
+          <button class="secondary-button logout-button" type="submit">退出</button>
         </form>
       {% endif %}
     </header>
     <main class="page">
       {% if request.session.get("authenticated") and request.url.path != "/" %}
         <nav class="breadcrumb-bar" aria-label="当前位置">
-          <a class="return-link" href="/" aria-label="返回首页">
+          <a class="return-link" href="{{ return_url|default('/') }}" aria-label="返回上一级">
             <span class="return-icon" aria-hidden="true">↩</span>
             <span>返回</span>
           </a>
           <ol class="breadcrumb-list">
             <li><a href="/">首页</a></li>
-            <li aria-current="page">{% block page_name %}当前页面{% endblock %}</li>
+            {% if breadcrumbs is defined and breadcrumbs %}
+              {% for crumb in breadcrumbs %}
+                {% if loop.last %}
+                  <li aria-current="page">{{ crumb.label }}</li>
+                {% else %}
+                  <li><a href="{{ crumb.href }}">{{ crumb.label }}</a></li>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <li aria-current="page">{% block page_name %}当前页面{% endblock %}</li>
+            {% endif %}
           </ol>
         </nav>
       {% endif %}

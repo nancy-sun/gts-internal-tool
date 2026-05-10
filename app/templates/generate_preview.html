@@ -27,13 +27,15 @@
         </thead>
         <tbody>
           {% for row in rows %}
-            <tr>
+            <tr class="{% if row.status == 'multiple_candidates' %}multiple-candidates-row{% elif row.status == 'missing_identifier' %}missing-identifier-row{% endif %}">
               <td>{{ row.row_number }}</td>
               <td class="status-cell">
                 {% if row.status == "ready" %}
                   <span class="status-icon status-ready" title="可生成" aria-label="可生成">✓</span>
                 {% elif row.status == "multiple_candidates" %}
                   <span class="status-icon status-review" title="多候选，需确认" aria-label="多候选，需确认">!</span>
+                {% elif row.status == "missing_identifier" %}
+                  <span class="status-icon status-warning" title="GTS 和 OEM 都缺失" aria-label="GTS 和 OEM 都缺失">!</span>
                 {% elif row.status == "conflict" %}
                   <span class="status-icon status-warning" title="冲突" aria-label="冲突">×</span>
                 {% elif row.status == "unmatched" %}
@@ -55,7 +57,7 @@
                   {{ row.candidates[0].chinese_description or "" }}
                 {% endif %}
               </td>
-              <td>{{ row["values"]["quantity"] if row["values"]["quantity"] is not none else "" }}</td>
+              <td>{{ row["values"]["quantity"]|quantity }}</td>
               <td>
                 {% if row["values"]["unit"] %}
                   {{ row["values"]["unit"] }}
@@ -75,7 +77,7 @@
                 {% elif row.status == "no_quotation" %}
                   <p class="small-warning">产品已匹配，但没有历史报价。</p>
                 {% endif %}
-                {% if row.candidates %}
+                {% if row.candidates or row.status == "missing_identifier" %}
                   <label class="candidate-line">
                     <input
                       type="checkbox"
@@ -86,8 +88,11 @@
                     使用此行
                   </label>
                 {% endif %}
+                {% if row.status == "missing_identifier" %}
+                  <input type="hidden" name="candidate__{{ row.row_number }}" value="-1">
+                {% endif %}
                 {% for candidate in row.candidates %}
-                  <label class="candidate-line">
+                  <label class="candidate-line {% if row.status == 'multiple_candidates' %}candidate-line-review{% endif %}">
                     <input
                       type="radio"
                       name="candidate__{{ row.row_number }}"
@@ -98,6 +103,7 @@
                     {% if candidate.unit_price is not none %}¥{{ "%.2f"|format(candidate.unit_price) }}{% else %}无价格{% endif %} |
                     {{ candidate.updated_by }} |
                     {{ candidate.updated_at[:10] if candidate.updated_at else "" }}
+                    {% if candidate.comment %} | {{ candidate.comment }}{% endif %}
                   </label>
                 {% endfor %}
               </td>

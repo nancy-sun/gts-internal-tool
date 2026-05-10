@@ -8,8 +8,10 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
+from app.navigation import UPLOAD_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.excel_parser import iter_full_quotation_workbook_rows
 from app.services.import_full_quotation import build_import_preview, import_preview_rows
+from app.services.preview_tokens import preview_file_path
 from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
 from app.templating import templates
 
@@ -24,8 +26,13 @@ def upload_page(request: Request):
     if redirect:
         return redirect
     return templates.TemplateResponse(
+        request,
         "upload.html",
-        {"request": request, "error": None},
+        {
+            "request": request,
+            "error": None,
+            "breadcrumbs": breadcrumbs(UPLOAD_CRUMB),
+        },
     )
 
 
@@ -42,8 +49,13 @@ async def upload_preview(
     error = validate_xlsx_upload(excel_file, operator_name)
     if error:
         return templates.TemplateResponse(
+            request,
             "upload.html",
-            {"request": request, "error": error},
+            {
+                "request": request,
+                "error": error,
+                "breadcrumbs": breadcrumbs(UPLOAD_CRUMB),
+            },
             status_code=400,
         )
 
@@ -56,10 +68,12 @@ async def upload_preview(
     )
     if size_error:
         return templates.TemplateResponse(
+            request,
             "upload.html",
             {
                 "request": request,
                 "error": size_error,
+                "breadcrumbs": breadcrumbs(UPLOAD_CRUMB),
             },
             status_code=400,
         )
@@ -81,12 +95,15 @@ async def upload_preview(
     )
 
     return templates.TemplateResponse(
+        request,
         "upload_preview_loading.html",
         {
             "request": request,
             "token": token,
             "operator_name": operator_name.strip(),
             "file_name": safe_name,
+            "return_url": "/upload",
+            "breadcrumbs": child_breadcrumbs(UPLOAD_CRUMB, "导入预览"),
         },
     )
 
@@ -106,15 +123,18 @@ def upload_preview_stream(request: Request, token: str):
 
     def event_stream():
         payload = json.loads(path.read_text(encoding="utf-8"))
-        preview_rows = []
+        parsed_rows = []
         workbook_path = Path(payload["workbook_path"])
         try:
+            for parsed_row in iter_full_quotation_workbook_rows(workbook_path):
+                parsed_rows.append(parsed_row)
+                yield sse_event("loading", {"row_number": parsed_row.row_number})
+
             with get_connection() as connection:
-                for parsed_row in iter_full_quotation_workbook_rows(workbook_path):
-                    yield sse_event("loading", {"row_number": parsed_row.row_number})
-                    preview_row = build_import_preview(connection, [parsed_row])[0]
-                    preview_rows.append(preview_row)
-                    yield sse_event("row", preview_row)
+                preview_rows = build_import_preview(connection, parsed_rows)
+
+            for preview_row in preview_rows:
+                yield sse_event("row", preview_row)
 
             payload["rows"] = preview_rows
             path.write_text(
@@ -148,6 +168,7 @@ async def upload_confirm(request: Request, token: str = Form(...)):
     payload = json.loads(path.read_text(encoding="utf-8"))
     if preview_has_errors(payload["rows"]):
         return templates.TemplateResponse(
+            request,
             "upload_preview.html",
             {
                 "request": request,
@@ -158,13 +179,33 @@ async def upload_confirm(request: Request, token: str = Form(...)):
                 "has_warnings": preview_has_warnings(payload["rows"]),
                 "has_errors": True,
                 "error": "预览有错误，请修改 Excel 后再导入。",
+                "return_url": "/upload",
+                "breadcrumbs": child_breadcrumbs(UPLOAD_CRUMB, "导入预览"),
             },
             status_code=400,
         )
 
     form = await request.form()
     selected_updates = parse_selected_updates(form)
-    selected_quotation_changes = parse_selected_quotation_changes(form)
+    required_choices = parse_required_choices(form)
+    if missing_required_choices(payload["rows"], required_choices):
+        return templates.TemplateResponse(
+            request,
+            "upload_preview.html",
+            {
+                "request": request,
+                "token": token,
+                "operator_name": payload["operator_name"],
+                "file_name": payload["file_name"],
+                "rows": payload["rows"],
+                "has_warnings": preview_has_warnings(payload["rows"]),
+                "has_errors": False,
+                "error": "请先为 GTS、OEM、工厂、价格的差异选择保留旧值或使用新值。",
+                "return_url": "/upload",
+                "breadcrumbs": child_breadcrumbs(UPLOAD_CRUMB, "导入预览"),
+            },
+            status_code=400,
+        )
 
     with get_connection() as connection:
         result = import_preview_rows(
@@ -173,22 +214,25 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             operator_name=payload["operator_name"],
             file_name=payload["file_name"],
             selected_updates=selected_updates,
-            selected_quotation_changes=selected_quotation_changes,
+            required_choices=required_choices,
         )
         connection.commit()
 
     return templates.TemplateResponse(
+        request,
         "upload_result.html",
         {
             "request": request,
             "file_name": payload["file_name"],
             "result": result,
+            "return_url": "/upload",
+            "breadcrumbs": child_breadcrumbs(UPLOAD_CRUMB, "导入结果"),
         },
     )
 
 
 def preview_path(token: str) -> Path:
-    return UPLOAD_DIR / f"preview_{token}.json"
+    return preview_file_path(UPLOAD_DIR, "preview", token)
 
 
 def parse_selected_updates(form_items) -> set[tuple[int, str]]:
@@ -201,14 +245,24 @@ def parse_selected_updates(form_items) -> set[tuple[int, str]]:
     return selected
 
 
-def parse_selected_quotation_changes(form_items) -> set[int]:
-    selected = set()
-    for key in form_items:
-        if not key.startswith("apply_quotation_change__"):
+def parse_required_choices(form_items) -> dict[tuple[int, str], str]:
+    selected = {}
+    for key, value in form_items.multi_items():
+        if not key.startswith("required_choice__") or not value:
             continue
-        _, row_number = key.split("__", 1)
-        selected.add(int(row_number))
+        _, row_number, field = key.split("__", 2)
+        selected[(int(row_number), field)] = str(value)
     return selected
+
+
+def missing_required_choices(rows: list[dict], choices: dict[tuple[int, str], str]) -> bool:
+    for row in rows:
+        if row.get("errors"):
+            continue
+        for choice in row.get("required_choices") or []:
+            if choices.get((row["row_number"], choice["field"])) not in {"old", "new"}:
+                return True
+    return False
 
 
 def preview_has_warnings(rows: list[dict]) -> bool:
@@ -216,6 +270,7 @@ def preview_has_warnings(rows: list[dict]) -> bool:
         row.get("errors")
         or row.get("warnings")
         or row.get("quotation_warnings")
+        or row.get("required_choices")
         or row.get("product_changes")
         for row in rows
     )

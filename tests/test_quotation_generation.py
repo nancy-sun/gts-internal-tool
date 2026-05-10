@@ -2,7 +2,6 @@ import sqlite3
 
 from openpyxl import load_workbook
 
-from app.database import initialize_database
 from app.services.operation_logging import utc_now_text
 from app.services.quotation_generation import (
     GENERATED_COLUMNS,
@@ -12,6 +11,17 @@ from app.services.quotation_generation import (
     create_generated_workbook,
 )
 from app.services.request_parser import ParsedRequestRow
+
+
+class CountingConnection:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+        self.select_count = 0
+
+    def execute(self, sql: str, parameters=()):
+        if sql.lstrip().upper().startswith("SELECT"):
+            self.select_count += 1
+        return self.connection.execute(sql, parameters)
 
 
 def test_generated_columns_include_required_updated_fields():
@@ -42,6 +52,30 @@ def test_build_output_row_recalculates_total_price():
 
     assert output["quantity"] == 4
     assert output["total_price"] == 50
+    assert output["updated_at"] == now[:10]
+
+
+def test_build_output_row_uses_whole_number_quantity_for_export_and_total():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            id, product_id, unit_price, total_price, updated_by, updated_at,
+            created_by, created_at
+        )
+        VALUES (1, 1, 10, 999, 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    candidate = connection.execute("SELECT * FROM quotation_items WHERE id = 1").fetchone()
+
+    output = build_output_row(candidate, 3.4)
+
+    assert output["quantity"] == 3
+    assert output["total_price"] == 30
 
 
 def test_build_output_row_leaves_total_price_blank_without_request_quantity():
@@ -177,6 +211,107 @@ def test_build_generation_preview_marks_multiple_candidates():
 
     assert preview[0]["status"] == "multiple_candidates"
     assert preview[0]["candidates"][0]["id"] == 2
+
+
+def test_build_generation_preview_dedupes_same_gts_factory_unit_and_price_candidates():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTSTEST014', 'GTSTEST014', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            id, product_id, gts_no, gts_no_normalized, oem, oem_normalized,
+            factory, unit, unit_price, updated_by, updated_at, created_by, created_at
+        )
+        VALUES
+            (1, 1, 'GTSTEST014', 'GTSTEST014', '7482541385', '7482541385',
+             '鼎佳', 'pc', 600, 'Nancy Sun', '2026-05-09T17:25:33+00:00', 'Nancy Sun', ?),
+            (2, 1, 'GTSTEST014', 'GTSTEST014', '1482541385', '1482541385',
+             '鼎佳', 'pc', 600, 'Nancy Sun', '2026-05-09T19:50:06+00:00', 'Nancy Sun', ?)
+        """,
+        (now, now),
+    )
+    request_row = ParsedRequestRow(
+        row_number=17,
+        values={
+            "gts_no_normalized": "GTSTEST014",
+            "oem_normalized": "",
+            "gts_no": "GTSTEST014",
+            "oem": "",
+            "quantity": 10,
+            "unit": "",
+            "comment": "",
+        },
+        warnings=[],
+        errors=[],
+    )
+
+    preview = build_generation_preview(connection, [request_row])
+
+    assert preview[0]["status"] == "ready"
+    assert len(preview[0]["candidates"]) == 1
+    assert preview[0]["candidates"][0]["id"] == 2
+
+
+def test_build_generation_preview_uses_batch_lookups_for_repeated_products():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            id, product_id, gts_no, gts_no_normalized, factory, unit, unit_price,
+            updated_by, updated_at, created_by, created_at
+        )
+        VALUES (1, 1, 'GTS0001', 'GTS0001', 'Factory A', 'pc', 20,
+                'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    parsed_rows = [
+        ParsedRequestRow(
+            row_number=row_number,
+            values={
+                "gts_no_normalized": "GTS0001",
+                "oem_normalized": "",
+                "gts_no": "GTS0001",
+                "oem": "",
+                "quantity": 1,
+                "unit": "",
+                "comment": "",
+            },
+            warnings=[],
+            errors=[],
+        )
+        for row_number in (4, 5, 6)
+    ]
+    counting_connection = CountingConnection(connection)
+
+    preview = build_generation_preview(counting_connection, parsed_rows)
+
+    assert [row["product"]["id"] for row in preview] == [1, 1, 1]
+    assert [row["candidates"][0]["id"] for row in preview] == [1, 1, 1]
+    assert counting_connection.select_count == 2
 
 
 def test_build_generation_preview_matches_by_oem_when_gts_is_missing():
@@ -332,6 +467,7 @@ def test_create_generated_workbook_excludes_unchecked_rows_and_keeps_blank_photo
     assert worksheet["B3"].value == "GTS-1"
     assert worksheet["E3"].value is None
     assert worksheet["K3"].value == 30
+    assert worksheet["X3"].value == now[:10]
     assert worksheet.max_row == 3
     log = connection.execute("SELECT * FROM operation_logs").fetchone()
     assert log["action_type"] == "generate_quotation"

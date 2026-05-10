@@ -14,6 +14,7 @@ def login_page(request: Request):
     if request.session.get(SESSION_AUTH_KEY):
         return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
+        request,
         "login.html",
         {"request": request, "error": None},
     )
@@ -27,6 +28,7 @@ def login(request: Request, access_code: str = Form(...)):
         return RedirectResponse(url="/", status_code=303)
 
     return templates.TemplateResponse(
+        request,
         "login.html",
         {"request": request, "error": "访问码不正确。"},
         status_code=401,

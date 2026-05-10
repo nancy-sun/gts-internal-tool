@@ -19,6 +19,8 @@ def test_parse_request_workbook_accepts_only_gts_column(tmp_path: Path):
     assert rows[0].values["gts_no_normalized"] == "GTS100"
     assert rows[0].values["description"] == ""
     assert rows[0].values["oem"] == ""
+    assert rows[0].values["quantity"] is None
+    assert rows[0].warnings == ["未填写数量"]
 
 
 def test_parse_request_workbook_accepts_gts_and_description_with_extra_columns(tmp_path: Path):
