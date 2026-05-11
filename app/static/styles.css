@@ -633,15 +633,25 @@ button:disabled {
 }
 
 .edit-product-form {
-  display: grid;
-  grid-template-columns: 140px minmax(260px, 520px);
-  gap: 12px 14px;
-  align-items: center;
   width: min(720px, 100%);
   padding: 18px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.edit-product-fields,
+.edit-product-password-section {
+  display: grid;
+  grid-template-columns: 140px minmax(260px, 520px);
+  gap: 12px 14px;
+  align-items: center;
+}
+
+.edit-product-password-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 
 .edit-product-form label {
@@ -650,12 +660,19 @@ button:disabled {
 }
 
 .edit-product-form button {
-  grid-column: 2;
+  margin: 18px 0 0 154px;
   width: fit-content;
 }
 
 .table-action-link {
-  color: var(--accent-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #ffffff;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
@@ -663,7 +680,9 @@ button:disabled {
 
 .table-action-link:hover,
 .table-action-link:focus {
-  text-decoration: underline;
+  background: var(--accent-dark);
+  color: #ffffff;
+  outline: none;
 }
 
 .search-form label {
@@ -724,12 +743,12 @@ table {
 }
 
 .search-results-wrap {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .search-results-table {
   table-layout: fixed;
-  min-width: 0;
+  min-width: 1320px;
 }
 
 .logs-table-wrap {
@@ -777,6 +796,7 @@ th {
 }
 
 .search-results-table td {
+  max-height: 48px;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -796,7 +816,7 @@ th {
 
 .search-results-table th:nth-child(3),
 .search-results-table td:nth-child(3) {
-  width: 11%;
+  width: 10%;
 }
 
 .search-results-table th:nth-child(4),
@@ -807,7 +827,6 @@ th {
 .search-results-table th:nth-child(5),
 .search-results-table td:nth-child(5) {
   width: 8%;
-  white-space: nowrap;
 }
 
 .search-results-table th:nth-child(6),
@@ -833,7 +852,7 @@ th {
 
 .search-results-table th:nth-child(10),
 .search-results-table td:nth-child(10) {
-  width: 8%;
+  width: 7%;
 }
 
 .search-results-table th:nth-child(11),
@@ -843,7 +862,13 @@ th {
 
 .search-results-table th:nth-child(12),
 .search-results-table td:nth-child(12) {
-  width: 9%;
+  width: 8%;
+  white-space: nowrap;
+}
+
+.search-results-table th:nth-child(13),
+.search-results-table td:nth-child(13) {
+  width: 5%;
   white-space: nowrap;
 }
 

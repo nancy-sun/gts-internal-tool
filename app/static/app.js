@@ -30,6 +30,34 @@
 })();
 
 (function () {
+  var form = document.querySelector("[data-product-edit-form]");
+  if (!form) {
+    return;
+  }
+
+  var fields = Array.prototype.slice.call(
+    form.querySelectorAll("[data-product-edit-field]")
+  );
+  var submitButton = form.querySelector("[data-product-edit-submit]");
+  if (!fields.length || !submitButton) {
+    return;
+  }
+
+  fields.forEach(function (field) {
+    field.addEventListener("input", updateSubmitState);
+  });
+  updateSubmitState();
+
+  function updateSubmitState() {
+    submitButton.disabled = !fields.some(fieldChanged);
+  }
+
+  function fieldChanged(field) {
+    return field.value.trim() !== (field.getAttribute("data-original-value") || "").trim();
+  }
+})();
+
+(function () {
   var streamContainer = document.querySelector("[data-upload-preview-stream]");
   if (!streamContainer || !window.EventSource) {
     return;

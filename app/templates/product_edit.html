@@ -31,35 +31,39 @@
   {% endif %}
 
   {% if product %}
-    <form class="office-form edit-product-form" method="post" autocomplete="off">
+    <form class="office-form edit-product-form" method="post" autocomplete="off" data-product-edit-form>
       <input type="hidden" name="product_id" value="{{ product.id }}">
 
-      <label for="operator_name">操作人</label>
-      <input id="operator_name" name="operator_name" required autocomplete="off">
+      <div class="edit-product-fields">
+        <label for="operator_name">操作人</label>
+        <input id="operator_name" name="operator_name" required autocomplete="off">
 
-      <label for="gts_no">GTS</label>
-      <input id="gts_no" name="gts_no" value="{{ values.gts_no or '' }}" autocomplete="off">
+        <label for="gts_no">GTS</label>
+        <input id="gts_no" name="gts_no" value="{{ values.gts_no or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.gts_no or '' }}">
 
-      <label for="oem">OEM</label>
-      <input id="oem" name="oem" value="{{ values.oem or '' }}" autocomplete="off">
+        <label for="oem">OEM</label>
+        <input id="oem" name="oem" value="{{ values.oem or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.oem or '' }}">
 
-      <label for="description">英文描述</label>
-      <input id="description" name="description" value="{{ values.description or '' }}" autocomplete="off">
+        <label for="description">英文描述</label>
+        <input id="description" name="description" value="{{ values.description or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.description or '' }}">
 
-      <label for="hs_code">HS Code</label>
-      <input id="hs_code" name="hs_code" value="{{ values.hs_code or '' }}" autocomplete="off">
+        <label for="hs_code">HS Code</label>
+        <input id="hs_code" name="hs_code" value="{{ values.hs_code or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.hs_code or '' }}">
+      </div>
 
-      <label for="edit_password">确认密码</label>
-      <input
-        id="edit_password"
-        name="edit_password"
-        type="password"
-        required
-        autocomplete="new-password"
-        inputmode="numeric"
-      >
+      <div class="edit-product-password-section">
+        <label for="edit_password">密码</label>
+        <input
+          id="edit_password"
+          name="edit_password"
+          type="password"
+          required
+          autocomplete="new-password"
+          inputmode="numeric"
+        >
+      </div>
 
-      <button type="submit">保存修改</button>
+      <button type="submit" data-product-edit-submit disabled>保存修改</button>
     </form>
   {% else %}
     <p>找不到产品。</p>

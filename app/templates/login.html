@@ -7,6 +7,9 @@
   <section class="narrow-panel">
     <h1>办公室访问</h1>
     <form method="post" action="/login" class="form-stack">
+      <label for="operator_name">操作人</label>
+      <input id="operator_name" name="operator_name" autocomplete="name" required>
+
       <label for="access_code">共享访问码</label>
       <input id="access_code" name="access_code" type="password" autocomplete="current-password" required autofocus>
       {% if error %}

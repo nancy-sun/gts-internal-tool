@@ -88,6 +88,8 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert search_response.status_code == 200
     assert "GTS-TEST-001" in search_response.text
     assert "¥99.00" in search_response.text
+    assert 'href="/products/1/edit"' in search_response.text
+    assert "编辑" in search_response.text
 
     generate_response = app_client.post(
         "/generate/preview",
@@ -741,9 +743,12 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
 
     edit_page = app_client.get("/products/1/edit")
     assert edit_page.status_code == 200
+    assert "data-product-edit-form" in edit_page.text
     assert 'value="GTS-OLD-001"' in edit_page.text
+    assert 'data-original-value="GTS-OLD-001"' in edit_page.text
     assert 'value="OEM-OLD-001"' in edit_page.text
     assert 'value="Old product description"' in edit_page.text
+    assert "data-product-edit-submit disabled" in edit_page.text
 
     bad_password_response = app_client.post(
         "/products/1/edit",
@@ -758,6 +763,8 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     )
     assert bad_password_response.status_code == 400
     assert "确认密码不正确" in bad_password_response.text
+    assert 'value="GTS-NEW-001"' in bad_password_response.text
+    assert 'data-original-value="GTS-OLD-001"' in bad_password_response.text
 
     edit_response = app_client.post(
         "/products/1/edit",
@@ -859,6 +866,11 @@ def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pyt
     protected_response = client.get("/upload", follow_redirects=False)
     assert protected_response.status_code == 303
     assert protected_response.headers["location"] == "/login"
+
+    login_page = client.get("/login")
+    assert login_page.status_code == 200
+    assert "操作人" in login_page.text
+    assert 'name="operator_name"' in login_page.text
 
     bad_login_response = client.post("/login", data={"access_code": "wrong-code"})
     assert bad_login_response.status_code == 401
