@@ -738,6 +738,125 @@ def test_import_preview_rows_updates_only_selected_product_fields():
     assert log["row_count"] == 1
 
 
+def test_import_preview_rows_returns_post_upload_audit_summary():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    now = utc_now_text()
+    connection.execute(
+        """
+        INSERT INTO products (
+            id, gts_no, gts_no_normalized, oem, oem_normalized,
+            created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'OEM1', 'OEM1', 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    connection.execute(
+        """
+        INSERT INTO quotation_items (
+            product_id, gts_no, gts_no_normalized, oem, oem_normalized,
+            factory, unit, unit_price, created_by, created_at, updated_by, updated_at
+        )
+        VALUES (1, 'GTS0001', 'GTS0001', 'OEM1', 'OEM1',
+                'Factory A', 'pc', 10, 'Alice', ?, 'Alice', ?)
+        """,
+        (now, now),
+    )
+    preview_rows = [
+        {
+            "row_number": 4,
+            "errors": [],
+            "required_choices": [
+                {
+                    "field": "factory",
+                    "label": "工厂",
+                    "existing": "Factory A",
+                    "incoming": "Factory B",
+                },
+                {
+                    "field": "unit_price",
+                    "label": "价格",
+                    "existing": "¥10.00",
+                    "incoming": "¥12.50",
+                },
+            ],
+            "values": {
+                "gts_no": "GTS0001",
+                "gts_no_normalized": "GTS0001",
+                "oem": "OEM1",
+                "oem_normalized": "OEM1",
+                "factory": "Factory B",
+                "unit": "pc",
+                "unit_price": 12.5,
+            },
+        },
+        {
+            "row_number": 5,
+            "errors": [],
+            "values": {
+                "gts_no": "GTS0001",
+                "gts_no_normalized": "GTS0001",
+                "oem": "OEM1",
+                "oem_normalized": "OEM1",
+                "factory": "Factory A",
+                "unit": "pc",
+                "unit_price": 10,
+            },
+        },
+        {
+            "row_number": 6,
+            "errors": ["工厂不能为空。"],
+            "values": {},
+        },
+    ]
+
+    result = import_preview_rows(
+        connection,
+        preview_rows=preview_rows,
+        operator_name="Bob",
+        file_name="audit.xlsx",
+        selected_updates=set(),
+        required_choices={(4, "factory"): "new", (4, "unit_price"): "new"},
+    )
+
+    assert result["inserted_items"] == 1
+    assert result["confirmed_duplicates"] == 1
+    assert result["failed_rows"] == 1
+    assert result["audit"]["changes"] == [
+        {
+            "row_number": 4,
+            "field": "factory",
+            "label": "工厂",
+            "existing": "Factory A",
+            "incoming": "Factory B",
+            "decision": "使用新值",
+        },
+        {
+            "row_number": 4,
+            "field": "unit_price",
+            "label": "价格",
+            "existing": "¥10.00",
+            "incoming": "¥12.50",
+            "decision": "使用新值",
+        },
+    ]
+    assert result["audit"]["duplicates"] == [
+        {
+            "row_number": 5,
+            "gts_no": "GTS0001",
+            "oem": "OEM1",
+            "factory": "Factory A",
+            "unit": "pc",
+            "unit_price": "¥10.00",
+        }
+    ]
+    assert result["audit"]["failed"] == [
+        {"row_number": 6, "message": "工厂不能为空。"}
+    ]
+
+
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """

@@ -26,17 +26,21 @@ def import_preview_rows(
 
     for preview_row in preview_rows:
         if preview_row["errors"]:
+            result.failed_details.append(failed_row_detail(preview_row, "预览有错误"))
             result.failed_rows += 1
             continue
 
         values = dict(preview_row["values"])
         if missing_required_choice(preview_row, required_choices):
+            result.failed_details.append(failed_row_detail(preview_row, "缺少人工选择"))
             result.failed_rows += 1
             continue
+        result.change_details.extend(change_details_from_choices(preview_row, required_choices))
         apply_required_choices(values, preview_row, required_choices)
 
         product, conflict = find_product_for_import(connection, values)
         if conflict:
+            result.failed_details.append(failed_row_detail(preview_row, "GTS 和 OEM 匹配到不同产品"))
             result.failed_rows += 1
             continue
 
@@ -60,6 +64,7 @@ def import_preview_rows(
                 now=now,
             )
             result.confirmed_duplicates += 1
+            result.duplicate_details.append(duplicate_detail(preview_row))
             continue
 
         if product:
@@ -92,14 +97,22 @@ class ImportResult:
         self.inserted_items = 0
         self.failed_rows = 0
         self.confirmed_duplicates = 0
+        self.change_details: list[dict[str, str | int]] = []
+        self.duplicate_details: list[dict[str, str | int]] = []
+        self.failed_details: list[dict[str, str | int]] = []
 
-    def as_dict(self) -> dict[str, int]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "created_products": self.created_products,
             "updated_products": self.updated_products,
             "inserted_items": self.inserted_items,
             "failed_rows": self.failed_rows,
             "confirmed_duplicates": self.confirmed_duplicates,
+            "audit": {
+                "changes": self.change_details,
+                "duplicates": self.duplicate_details,
+                "failed": self.failed_details,
+            },
         }
 
 
@@ -144,6 +157,63 @@ def create_upload_log(
             f"失败行={result.failed_rows}"
         ),
     )
+
+
+def change_details_from_choices(
+    preview_row: dict[str, Any],
+    required_choices: dict[tuple[int, str], str],
+) -> list[dict[str, str | int]]:
+    details = []
+    for choice in preview_row.get("required_choices") or []:
+        selected = required_choices.get((preview_row["row_number"], choice["field"]))
+        if selected not in {"old", "new"}:
+            continue
+        details.append(
+                {
+                    "row_number": preview_row["row_number"],
+                    "field": choice["field"],
+                    "label": choice.get("label") or field_label(choice["field"]),
+                    "existing": choice["existing"],
+                    "incoming": choice["incoming"],
+                    "decision": "保留旧值" if selected == "old" else "使用新值",
+            }
+        )
+    return details
+
+
+def duplicate_detail(preview_row: dict[str, Any]) -> dict[str, str | int]:
+    values = preview_row.get("values") or {}
+    return {
+        "row_number": preview_row["row_number"],
+        "gts_no": _text(values.get("gts_no")),
+        "oem": _text(values.get("oem")),
+        "factory": _text(values.get("factory")),
+        "unit": _text(values.get("unit")),
+        "unit_price": format_price(values.get("unit_price")),
+    }
+
+
+def failed_row_detail(preview_row: dict[str, Any], fallback_message: str) -> dict[str, str | int]:
+    messages = [str(message) for message in preview_row.get("errors") or []]
+    return {
+        "row_number": preview_row["row_number"],
+        "message": "；".join(messages) if messages else fallback_message,
+    }
+
+
+def format_price(value: Any) -> str:
+    if value in ("", None):
+        return ""
+    return f"¥{float(value):.2f}"
+
+
+def field_label(field: str) -> str:
+    return {
+        "gts_no": "GTS",
+        "oem": "OEM",
+        "factory": "工厂",
+        "unit_price": "价格",
+    }.get(field, field)
 
 
 def selected_product_update_fields(

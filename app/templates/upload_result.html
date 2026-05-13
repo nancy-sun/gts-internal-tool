@@ -32,6 +32,92 @@
     </div>
   </div>
 
+  {% if result.audit.changes or result.audit.duplicates or result.audit.failed %}
+    <section class="table-section">
+      <h2>导入审核</h2>
+
+      {% if result.audit.changes %}
+        <h3>人工确认的变化</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>行</th>
+                <th>字段</th>
+                <th>旧值</th>
+                <th>新值</th>
+                <th>选择</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for change in result.audit.changes %}
+                <tr>
+                  <td>{{ change.row_number }}</td>
+                  <td>{{ change.label }}</td>
+                  <td>{{ change.existing }}</td>
+                  <td>{{ change.incoming }}</td>
+                  <td>{{ change.decision }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if result.audit.duplicates %}
+        <h3>确认重复报价</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>行</th>
+                <th>GTS</th>
+                <th>OEM</th>
+                <th>工厂</th>
+                <th>单位</th>
+                <th>价格</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for duplicate in result.audit.duplicates %}
+                <tr>
+                  <td>{{ duplicate.row_number }}</td>
+                  <td>{{ duplicate.gts_no }}</td>
+                  <td>{{ duplicate.oem }}</td>
+                  <td>{{ duplicate.factory }}</td>
+                  <td>{{ duplicate.unit }}</td>
+                  <td>{{ duplicate.unit_price }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if result.audit.failed %}
+        <h3>失败行</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>行</th>
+                <th>原因</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for failed in result.audit.failed %}
+                <tr>
+                  <td>{{ failed.row_number }}</td>
+                  <td>{{ failed.message }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
   <div class="form-actions">
     <a class="text-link" href="/upload">继续上传</a>
     <a class="text-link" href="/logs">查看操作记录</a>
