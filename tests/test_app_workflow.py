@@ -228,6 +228,12 @@ def test_page_breadcrumbs_include_parent_pages(app_client: TestClient) -> None:
     assert search_page.status_code == 200
     assert_breadcrumb(search_page.text, ["首页", "查询数据库"])
 
+    data_quality_page = app_client.get("/data-quality")
+    assert data_quality_page.status_code == 200
+    assert_breadcrumb(data_quality_page.text, ["首页", "数据检查"])
+    assert "缺少 HS Code" in data_quality_page.text
+    assert "没有历史报价" in data_quality_page.text
+
     logs_page = app_client.get("/logs")
     assert logs_page.status_code == 200
     assert_breadcrumb(logs_page.text, ["首页", "操作记录"])

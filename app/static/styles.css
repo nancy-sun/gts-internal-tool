@@ -717,6 +717,15 @@ button:disabled {
   font-size: 20px;
 }
 
+.empty-state {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
 .table-wrap {
   overflow-x: auto;
   background: var(--surface);
@@ -825,6 +834,11 @@ table {
   min-width: 0;
 }
 
+.data-quality-table {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+
 .upload-preview-table {
   table-layout: fixed;
   min-width: 1180px;
@@ -909,6 +923,30 @@ th {
 .logs-table td {
   padding: 8px 9px;
   font-size: 13px;
+}
+
+.data-quality-table th,
+.data-quality-table td {
+  padding: 8px 9px;
+  font-size: 13px;
+}
+
+.data-quality-table th {
+  white-space: nowrap;
+}
+
+.data-quality-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.data-quality-table th:nth-child(1),
+.data-quality-table td:nth-child(1),
+.data-quality-table th:nth-child(7),
+.data-quality-table td:nth-child(7),
+.data-quality-table th:nth-child(8),
+.data-quality-table td:nth-child(8) {
+  white-space: nowrap;
 }
 
 .logs-table th {

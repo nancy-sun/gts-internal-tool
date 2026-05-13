@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}数据检查 - GTS Internal Tool{% endblock %}
+{% block page_name %}数据检查{% endblock %}
+
+{% macro quality_table(rows) %}
+  {% if rows %}
+    <div class="table-wrap data-quality-wrap">
+      <table class="data-quality-table">
+        <thead>
+          <tr>
+            <th>GTS</th>
+            <th>OEM</th>
+            <th>英文描述</th>
+            <th>品名</th>
+            <th>HS Code</th>
+            <th>更新人</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.gts_no or "" }}</td>
+              <td>{{ row.oem or "" }}</td>
+              <td>{{ row.description or "" }}</td>
+              <td>{{ row.chinese_description or "" }}</td>
+              <td>{{ row.hs_code or "" }}</td>
+              <td>{{ row.updated_by or "" }}</td>
+              <td>{{ row.updated_at[:10] if row.updated_at else "" }}</td>
+              <td><a class="table-action-link" href="/products/{{ row.id }}/edit">编辑</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">没有需要处理的数据。</p>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>数据检查</h1>
+  </section>
+
+  <div class="summary-grid">
+    <div>
+      <strong>{{ report.missing_hs_code|length }}</strong>
+      <span>缺少 HS Code</span>
+    </div>
+    <div>
+      <strong>{{ report.missing_oem|length }}</strong>
+      <span>缺少 OEM</span>
+    </div>
+    <div>
+      <strong>{{ report.missing_description|length }}</strong>
+      <span>缺少英文描述</span>
+    </div>
+    <div>
+      <strong>{{ report.without_quotation|length }}</strong>
+      <span>没有历史报价</span>
+    </div>
+  </div>
+
+  <section class="table-section">
+    <h2>缺少 HS Code</h2>
+    {{ quality_table(report.missing_hs_code) }}
+  </section>
+
+  <section class="table-section">
+    <h2>缺少 OEM</h2>
+    {{ quality_table(report.missing_oem) }}
+  </section>
+
+  <section class="table-section">
+    <h2>缺少英文描述</h2>
+    {{ quality_table(report.missing_description) }}
+  </section>
+
+  <section class="table-section">
+    <h2>没有历史报价</h2>
+    {{ quality_table(report.without_quotation) }}
+  </section>
+{% endblock %}
