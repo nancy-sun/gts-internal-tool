@@ -21,6 +21,7 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "55123511")
     monkeypatch.setenv("DATABASE_PATH", str(database_path))
 
     from app.config import get_settings
@@ -139,6 +140,9 @@ def test_office_workflow_upload_search_generate_download_and_log(
     )
 
     assert download_response.status_code == 200
+    assert "filename*=UTF-8''Nancy-%E8%AF%A2%E4%BB%B7-" in download_response.headers[
+        "content-disposition"
+    ]
     assert not (app_client.upload_path / f"generate_preview_{generate_token}.json").exists()
     workbook = load_workbook(BytesIO(download_response.content))
     worksheet = workbook.active
@@ -273,6 +277,30 @@ def test_upload_preview_stream_replaces_loading_rows_one_by_one(app_client: Test
         'event: loading\ndata: {"row_number": 5}'
     )
     assert first_loading_index < first_row_index < second_loading_index
+
+
+def test_upload_preview_stream_returns_friendly_error_for_bad_workbook(
+    app_client: TestClient,
+) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "bad.xlsx",
+                BytesIO(b"not a real workbook"),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert upload_response.status_code == 200
+
+    token = extract_token(upload_response.text)
+    stream_response = app_client.get(f"/upload/preview/stream/{token}")
+
+    assert stream_response.status_code == 200
+    assert "预览加载失败，请检查 Excel 文件格式后重新上传。" in stream_response.text
+    assert "File is not a zip file" not in stream_response.text
 
 
 def test_upload_preview_reports_missing_required_fields(app_client: TestClient) -> None:
@@ -447,7 +475,7 @@ def test_generate_download_allows_missing_quantity_and_leaves_total_blank(
     assert worksheet["K3"].value is None
 
 
-def test_generate_preview_and_download_allow_rows_without_gts_or_oem(
+def test_generate_preview_refuses_when_all_rows_have_no_gts_or_oem(
     app_client: TestClient,
 ) -> None:
     generate_response = app_client.post(
@@ -467,29 +495,8 @@ def test_generate_preview_and_download_allow_rows_without_gts_or_oem(
         },
     )
 
-    assert generate_response.status_code == 200
-    assert "GTS 和 OEM 都缺失" in generate_response.text
-    assert 'class="missing-identifier-row"' in generate_response.text
-
-    generate_token = extract_token(generate_response.text)
-    download_response = app_client.post(
-        "/generate/download",
-        data={
-            "token": generate_token,
-            "include__2": "1",
-            "candidate__2": "-1",
-            "include__3": "1",
-            "candidate__3": "-1",
-        },
-    )
-
-    assert download_response.status_code == 200
-    workbook = load_workbook(BytesIO(download_response.content))
-    worksheet = workbook.active
-    assert worksheet["C3"].value == "Only description"
-    assert worksheet["H3"].value is None
-    assert worksheet["H4"].value == 5
-    assert worksheet["V4"].value == "No GTS or OEM"
+    assert generate_response.status_code == 400
+    assert "需求文件中没有可识别的 GTS 或 OEM" in generate_response.text
 
 
 def test_generate_preview_allows_mixed_valid_and_invalid_request_rows(
@@ -681,6 +688,9 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
         data={"token": generate_token},
     )
     assert download_response.status_code == 200
+    assert download_response.headers["content-disposition"].startswith(
+        'attachment; filename="Nancy-hs-'
+    )
     assert not (
         app_client.upload_path / f"hs_generate_preview_{generate_token}.json"
     ).exists()
@@ -855,6 +865,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
 def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "55123511")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "auth-test.sqlite3"))
 
     from app.config import get_settings

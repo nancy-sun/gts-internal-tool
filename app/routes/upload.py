@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -22,6 +23,8 @@ from app.templating import templates
 
 router = APIRouter()
 UPLOAD_DIR = BASE_DIR / "uploads"
+logger = logging.getLogger(__name__)
+UPLOAD_PREVIEW_ERROR = "预览加载失败，请检查 Excel 文件格式后重新上传。"
 
 
 @router.get("/upload")
@@ -155,8 +158,9 @@ def upload_preview_stream(request: Request, token: str):
                     "has_errors": preview_has_errors(preview_rows),
                 },
             )
-        except Exception as exc:
-            yield sse_event("preview_error", {"message": str(exc)})
+        except Exception:
+            logger.exception("Upload preview failed for token %s", token)
+            yield sse_event("preview_error", {"message": UPLOAD_PREVIEW_ERROR})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 

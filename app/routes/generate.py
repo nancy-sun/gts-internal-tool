@@ -9,9 +9,11 @@ from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import GENERATE_CRUMB, breadcrumbs, child_breadcrumbs
+from app.services.download_names import attachment_header, dated_download_name
 from app.services.quotation_generation import (
     build_generation_preview,
     create_generated_workbook,
+    request_rows_have_any_identifier,
 )
 from app.services.preview_tokens import preview_file_path, remove_preview_file
 from app.services.request_parser import parse_request_workbook
@@ -86,6 +88,17 @@ async def generate_preview(
     workbook_path = UPLOAD_DIR / f"{token}_{safe_name}"
     workbook_path.write_bytes(contents)
     parsed_rows = parse_request_workbook(workbook_path)
+    if not request_rows_have_any_identifier(parsed_rows):
+        return templates.TemplateResponse(
+            request,
+            "generate.html",
+            {
+                "request": request,
+                "error": "需求文件中没有可识别的 GTS 或 OEM，请修改后重新上传。",
+                "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
+            },
+            status_code=400,
+        )
 
     with get_connection() as connection:
         preview_rows = build_generation_preview(connection, parsed_rows)
@@ -129,7 +142,7 @@ async def generate_download(request: Request, token: str = Form(...)):
     selected_candidate_ids = parse_selected_candidates(form)
     payload = json.loads(path.read_text(encoding="utf-8"))
     with get_connection() as connection:
-        stream, generated_count = create_generated_workbook(
+        stream, _ = create_generated_workbook(
             connection,
             preview_rows=payload["rows"],
             selected_candidate_ids=selected_candidate_ids,
@@ -139,8 +152,8 @@ async def generate_download(request: Request, token: str = Form(...)):
         connection.commit()
     remove_preview_file(path)
 
-    download_name = "internal_quotation.xlsx"
-    headers = {"Content-Disposition": f'attachment; filename="{download_name}"'}
+    download_name = dated_download_name(payload["operator_name"], "询价")
+    headers = {"Content-Disposition": attachment_header(download_name)}
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -313,7 +313,7 @@ def test_import_preview_rows_updates_required_oem_choice_even_when_quote_is_dupl
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
-    now = utc_now_text()
+    old_timestamp = "2026-01-01T00:00:00+00:00"
     connection.execute(
         """
         INSERT INTO products (
@@ -323,7 +323,7 @@ def test_import_preview_rows_updates_required_oem_choice_even_when_quote_is_dupl
         VALUES (1, 'GTSTEST014', 'GTSTEST014', '7482541385', '7482541385',
                 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     connection.execute(
         """
@@ -334,7 +334,7 @@ def test_import_preview_rows_updates_required_oem_choice_even_when_quote_is_dupl
         VALUES (1, 'GTSTEST014', 'GTSTEST014', '7482541385', '7482541385',
                 '鼎佳', 'pc', 600, 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     preview_rows = [
         {
@@ -370,11 +370,16 @@ def test_import_preview_rows_updates_required_oem_choice_even_when_quote_is_dupl
 
     product = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
     item_count = connection.execute("SELECT COUNT(*) AS c FROM quotation_items").fetchone()["c"]
+    quotation_item = connection.execute(
+        "SELECT updated_by, updated_at FROM quotation_items WHERE id = 1"
+    ).fetchone()
     assert result["updated_products"] == 1
-    assert result["skipped_duplicates"] == 1
+    assert result["confirmed_duplicates"] == 1
     assert item_count == 1
     assert product["oem"] == "1482541385"
     assert product["oem_normalized"] == "1482541385"
+    assert quotation_item["updated_by"] == "Nancy Sun"
+    assert quotation_item["updated_at"] != old_timestamp
 
 
 def test_preview_has_errors_is_true_for_gts_oem_product_conflict():
@@ -422,11 +427,11 @@ def test_preview_has_errors_is_true_for_gts_oem_product_conflict():
     ]
 
 
-def test_import_preview_rows_skips_exact_duplicate_quotation_item():
+def test_import_preview_rows_refreshes_exact_duplicate_quotation_item():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
-    now = utc_now_text()
+    old_timestamp = "2026-01-01T00:00:00+00:00"
     connection.execute(
         """
         INSERT INTO products (
@@ -436,7 +441,7 @@ def test_import_preview_rows_skips_exact_duplicate_quotation_item():
         VALUES (1, 'GTSTEST001', 'GTSTEST001', '5010225393', '5010225393',
                 'Existing description', 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     connection.execute(
         """
@@ -447,7 +452,7 @@ def test_import_preview_rows_skips_exact_duplicate_quotation_item():
         VALUES (1, 'GTSTEST001', 'GTSTEST001', '5010225393', '5010225393',
                 '欧达', 'pc', 999, 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     preview_rows = [
         {
@@ -477,18 +482,23 @@ def test_import_preview_rows_skips_exact_duplicate_quotation_item():
 
     product = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
     item_count = connection.execute("SELECT COUNT(*) AS c FROM quotation_items").fetchone()["c"]
+    quotation_item = connection.execute(
+        "SELECT updated_by, updated_at FROM quotation_items WHERE id = 1"
+    ).fetchone()
     assert result["inserted_items"] == 0
     assert result["updated_products"] == 0
-    assert result["skipped_duplicates"] == 1
+    assert result["confirmed_duplicates"] == 1
     assert item_count == 1
     assert product["description"] == "Existing description"
+    assert quotation_item["updated_by"] == "Bob"
+    assert quotation_item["updated_at"] != old_timestamp
 
 
-def test_import_preview_rows_skips_duplicate_when_same_gts_factory_unit_and_price_with_different_oem():
+def test_import_preview_rows_refreshes_duplicate_when_same_gts_factory_unit_and_price_with_different_oem():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
-    now = utc_now_text()
+    old_timestamp = "2026-01-01T00:00:00+00:00"
     connection.execute(
         """
         INSERT INTO products (
@@ -498,7 +508,7 @@ def test_import_preview_rows_skips_duplicate_when_same_gts_factory_unit_and_pric
         VALUES (1, 'GTSTEST014', 'GTSTEST014', '7482541385', '7482541385',
                 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     connection.execute(
         """
@@ -509,7 +519,7 @@ def test_import_preview_rows_skips_duplicate_when_same_gts_factory_unit_and_pric
         VALUES (1, 'GTSTEST014', 'GTSTEST014', '7482541385', '7482541385',
                 '鼎佳', 'pc', 600, 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     preview_rows = [
         {
@@ -536,9 +546,14 @@ def test_import_preview_rows_skips_duplicate_when_same_gts_factory_unit_and_pric
     )
 
     item_count = connection.execute("SELECT COUNT(*) AS c FROM quotation_items").fetchone()["c"]
+    quotation_item = connection.execute(
+        "SELECT updated_by, updated_at FROM quotation_items WHERE id = 1"
+    ).fetchone()
     assert result["inserted_items"] == 0
-    assert result["skipped_duplicates"] == 1
+    assert result["confirmed_duplicates"] == 1
     assert item_count == 1
+    assert quotation_item["updated_by"] == "Nancy Sun"
+    assert quotation_item["updated_at"] != old_timestamp
 
 
 def test_import_preview_rows_imports_unit_warning_without_required_choice():
@@ -599,11 +614,11 @@ def test_import_preview_rows_imports_unit_warning_without_required_choice():
     assert latest_unit == "SET"
 
 
-def test_import_preview_rows_applies_required_old_price_choice_and_skips_duplicate():
+def test_import_preview_rows_applies_required_old_price_choice_and_refreshes_duplicate():
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     initialize_test_schema(connection)
-    now = utc_now_text()
+    old_timestamp = "2026-01-01T00:00:00+00:00"
     connection.execute(
         """
         INSERT INTO products (
@@ -611,7 +626,7 @@ def test_import_preview_rows_applies_required_old_price_choice_and_skips_duplica
         )
         VALUES (1, 'GTS0001', 'GTS0001', 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     connection.execute(
         """
@@ -621,7 +636,7 @@ def test_import_preview_rows_applies_required_old_price_choice_and_skips_duplica
         )
         VALUES (1, 'GTS0001', 'GTS0001', 'Factory A', 'PCS', 10, 'Alice', ?, 'Alice', ?)
         """,
-        (now, now),
+        (old_timestamp, old_timestamp),
     )
     preview_rows = [
         {
@@ -659,10 +674,15 @@ def test_import_preview_rows_applies_required_old_price_choice_and_skips_duplica
     latest_price = connection.execute(
         "SELECT unit_price FROM quotation_items ORDER BY id DESC LIMIT 1"
     ).fetchone()["unit_price"]
+    quotation_item = connection.execute(
+        "SELECT updated_by, updated_at FROM quotation_items WHERE id = 1"
+    ).fetchone()
     assert result["inserted_items"] == 0
-    assert result["skipped_duplicates"] == 1
+    assert result["confirmed_duplicates"] == 1
     assert item_count == 1
     assert latest_price == 10
+    assert quotation_item["updated_by"] == "Bob"
+    assert quotation_item["updated_at"] != old_timestamp
 
 
 def test_import_preview_rows_updates_only_selected_product_fields():

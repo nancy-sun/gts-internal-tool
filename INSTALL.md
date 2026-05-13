@@ -100,11 +100,13 @@ Manual product edits require a separate confirmation password. The password is n
 3. Change:
 
 ```text
-PRODUCT_EDIT_PASSWORD=55123511
+PRODUCT_EDIT_PASSWORD=your-edit-password
 ```
 
 4. Save `.env`.
 5. Start the app again.
+
+`PRODUCT_EDIT_PASSWORD` must be set in `.env`. It is not cached in the browser and is not committed to git because `.env` is ignored.
 
 ## Backup Setup
 

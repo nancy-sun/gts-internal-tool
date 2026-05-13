@@ -1,0 +1,28 @@
+GENERATED_COLUMNS = [
+    ("no", "No."),
+    ("gts_no", "GTS No."),
+    ("description", "Description"),
+    ("oem", "OEM"),
+    ("photo", "Photo"),
+    ("factory", "Factory"),
+    ("chinese_description", "Chinese Description"),
+    ("quantity", "Quantity"),
+    ("unit", "Unit"),
+    ("unit_price", "Unit Price"),
+    ("total_price", "Total Price"),
+    ("item_per_package", "Item/Package"),
+    ("packages", "Packages"),
+    ("weight_per_package", "Weight / Package"),
+    ("gross_weight", "G.W."),
+    ("length", "Length"),
+    ("width", "Width"),
+    ("height", "Height"),
+    ("measurements_volume", "Measurements / Volume"),
+    ("packaging", "Packaging"),
+    ("expected_delivery", "Expected Delivery"),
+    ("comment", "Comment"),
+    ("updated_by", "Updated By"),
+    ("updated_at", "Updated At"),
+]
+
+BLANK_ROW_CANDIDATE_ID = -1

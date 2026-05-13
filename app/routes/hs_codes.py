@@ -10,6 +10,7 @@ from app.auth import require_auth
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import HS_CRUMB, breadcrumbs, child_breadcrumbs
+from app.services.download_names import attachment_header, dated_download_name
 from app.services.hs_codes import (
     build_hs_generate_preview,
     build_hs_upload_preview,
@@ -245,7 +246,11 @@ async def hs_generate_download(request: Request, token: str = Form(...)):
     return StreamingResponse(
         stream,
         media_type=EXCEL_MEDIA_TYPE,
-        headers={"Content-Disposition": 'attachment; filename="hs_codes.xlsx"'},
+        headers={
+            "Content-Disposition": attachment_header(
+                dated_download_name(payload["operator_name"], "hs")
+            )
+        },
     )
 
 
