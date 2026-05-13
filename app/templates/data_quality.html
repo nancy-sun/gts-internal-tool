@@ -45,7 +45,7 @@
     <h1>数据检查</h1>
   </section>
 
-  <div class="summary-grid">
+  <div class="summary-grid data-quality-summary">
     <div>
       <strong>{{ report.missing_hs_code|length }}</strong>
       <span>缺少 HS Code</span>
@@ -64,22 +64,22 @@
     </div>
   </div>
 
-  <section class="table-section">
+  <section class="table-section data-quality-section">
     <h2>缺少 HS Code</h2>
     {{ quality_table(report.missing_hs_code) }}
   </section>
 
-  <section class="table-section">
+  <section class="table-section data-quality-section">
     <h2>缺少 OEM</h2>
     {{ quality_table(report.missing_oem) }}
   </section>
 
-  <section class="table-section">
+  <section class="table-section data-quality-section">
     <h2>缺少英文描述</h2>
     {{ quality_table(report.missing_description) }}
   </section>
 
-  <section class="table-section">
+  <section class="table-section data-quality-section">
     <h2>没有历史报价</h2>
     {{ quality_table(report.without_quotation) }}
   </section>

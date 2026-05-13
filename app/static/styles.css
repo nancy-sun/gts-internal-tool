@@ -624,6 +624,18 @@ button:disabled {
   color: var(--muted);
 }
 
+.data-quality-summary {
+  margin-bottom: 30px;
+}
+
+.data-quality-section {
+  margin-top: 34px;
+}
+
+.data-quality-section + .data-quality-section {
+  margin-top: 42px;
+}
+
 .search-form {
   display: grid;
   grid-template-columns: 160px minmax(180px, 1fr) 120px;
