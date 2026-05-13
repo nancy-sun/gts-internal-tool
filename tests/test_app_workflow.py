@@ -90,7 +90,8 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert "GTS-TEST-001" in search_response.text
     assert "¥99.00" in search_response.text
     assert 'href="/products/1/edit"' in search_response.text
-    assert "编辑" in search_response.text
+    assert "编辑产品" in search_response.text
+    assert "历史报价 1 条" in search_response.text
 
     generate_response = app_client.post(
         "/generate/preview",

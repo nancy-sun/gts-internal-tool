@@ -1,4 +1,5 @@
 from sqlite3 import Connection, Row
+from typing import Any
 
 from app.services.normalization import normalize_gts_no, normalize_oem
 
@@ -70,3 +71,38 @@ def search_catalogue(
     if rows and rows[0]["search_rank"] == 0:
         return [row for row in rows if row["search_rank"] == 0], warnings
     return rows, warnings
+
+
+def group_search_results(rows: list[Row]) -> list[dict[str, Any]]:
+    grouped_results: list[dict[str, Any]] = []
+    products_by_id: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        product_id = int(row["product_id"])
+        product = products_by_id.get(product_id)
+        if not product:
+            product = {
+                "product_id": product_id,
+                "gts_no": row["product_gts_no"],
+                "oem": row["product_oem"],
+                "description": row["product_description"],
+                "chinese_description": row["product_chinese_description"],
+                "hs_code": row["product_hs_code"],
+                "quotations": [],
+            }
+            products_by_id[product_id] = product
+            grouped_results.append(product)
+
+        if row["quotation_item_id"] is not None:
+            product["quotations"].append(
+                {
+                    "quotation_item_id": row["quotation_item_id"],
+                    "factory": row["factory"],
+                    "unit_price": row["unit_price"],
+                    "packaging": row["packaging"],
+                    "expected_delivery": row["expected_delivery"],
+                    "comment": row["comment"],
+                    "updated_by": row["updated_by"],
+                    "updated_at": row["updated_at"],
+                }
+            )
+    return grouped_results

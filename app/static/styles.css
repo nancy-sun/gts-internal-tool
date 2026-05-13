@@ -746,9 +746,74 @@ table {
   overflow-x: auto;
 }
 
+.grouped-search-results {
+  display: grid;
+  gap: 14px;
+}
+
+.product-result {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.product-result-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.product-result-fields {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(120px, 1fr) minmax(150px, 1.1fr) minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(100px, 0.8fr);
+  gap: 10px 14px;
+  min-width: 0;
+}
+
+.product-result-fields > div {
+  min-width: 0;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.product-result-fields strong {
+  display: block;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.quotation-history {
+  padding: 0 14px 14px;
+}
+
+.quotation-history summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quotation-history .search-results-wrap {
+  margin-top: 4px;
+}
+
 .search-results-table {
   table-layout: fixed;
-  min-width: 1320px;
+  min-width: 980px;
 }
 
 .logs-table-wrap {
@@ -837,38 +902,6 @@ th {
 .search-results-table th:nth-child(7),
 .search-results-table td:nth-child(7) {
   width: 7%;
-  white-space: nowrap;
-}
-
-.search-results-table th:nth-child(8),
-.search-results-table td:nth-child(8) {
-  width: 8%;
-}
-
-.search-results-table th:nth-child(9),
-.search-results-table td:nth-child(9) {
-  width: 7%;
-}
-
-.search-results-table th:nth-child(10),
-.search-results-table td:nth-child(10) {
-  width: 7%;
-}
-
-.search-results-table th:nth-child(11),
-.search-results-table td:nth-child(11) {
-  width: 6%;
-}
-
-.search-results-table th:nth-child(12),
-.search-results-table td:nth-child(12) {
-  width: 8%;
-  white-space: nowrap;
-}
-
-.search-results-table th:nth-child(13),
-.search-results-table td:nth-child(13) {
-  width: 5%;
   white-space: nowrap;
 }
 

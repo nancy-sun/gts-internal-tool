@@ -1,6 +1,6 @@
 import sqlite3
 
-from app.services.search import search_catalogue
+from app.services.search import group_search_results, search_catalogue
 
 
 def test_search_gts_matches_partial_suffix_and_orders_by_relevance():
@@ -99,6 +99,41 @@ def test_search_returns_product_hs_code():
     assert rows[0]["product_hs_code"] == "87089910"
 
 
+def test_group_search_results_shows_one_product_with_quotation_history():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    initialize_test_schema(connection)
+    insert_product(connection, 1, "GTS-1", "GTS1", "2026-01-01T00:00:00+00:00")
+    insert_quotation(
+        connection,
+        1,
+        1,
+        "2026-01-02T00:00:00+00:00",
+        factory="Factory A",
+        unit_price=10,
+    )
+    insert_quotation(
+        connection,
+        2,
+        1,
+        "2026-01-03T00:00:00+00:00",
+        factory="Factory B",
+        unit_price=12.5,
+    )
+
+    rows, _ = search_catalogue(connection, field="gts_no", query="GTS1")
+    products = group_search_results(rows)
+
+    assert len(products) == 1
+    assert products[0]["product_id"] == 1
+    assert products[0]["gts_no"] == "GTS-1"
+    assert [
+        quotation["factory"]
+        for quotation in products[0]["quotations"]
+    ] == ["Factory B", "Factory A"]
+    assert products[0]["quotations"][0]["unit_price"] == 12.5
+
+
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -171,13 +206,14 @@ def insert_quotation(
     product_id: int,
     updated_at: str,
     factory: str | None = None,
+    unit_price: float | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO quotation_items (
-            id, product_id, factory, updated_by, updated_at
+            id, product_id, factory, unit_price, updated_by, updated_at
         )
-        VALUES (?, ?, ?, 'Tester', ?)
+        VALUES (?, ?, ?, ?, 'Tester', ?)
         """,
-        (quotation_id, product_id, factory, updated_at),
+        (quotation_id, product_id, factory, unit_price, updated_at),
     )
