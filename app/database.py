@@ -42,6 +42,9 @@ def initialize_database() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 supplier_name TEXT NOT NULL,
                 supplier_name_normalized TEXT,
+                supplier_full_name TEXT,
+                supplier_short_name TEXT,
+                aliases_text TEXT,
                 contact_person TEXT,
                 phone TEXT,
                 wechat TEXT,
@@ -51,6 +54,10 @@ def initialize_database() -> None:
                 factory_or_trader TEXT,
                 quality_level TEXT,
                 price_level TEXT,
+                quality_rating INTEGER,
+                price_rating INTEGER,
+                cooperation_rating INTEGER,
+                cooperation_notes TEXT,
                 notes TEXT,
                 created_by TEXT NOT NULL,
                 created_at TEXT NOT NULL,
@@ -60,6 +67,28 @@ def initialize_database() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_suppliers_supplier_name_normalized
             ON suppliers(supplier_name_normalized);
+
+            CREATE TABLE IF NOT EXISTS supplier_aliases (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_id INTEGER NOT NULL,
+                alias_name TEXT NOT NULL,
+                alias_name_normalized TEXT NOT NULL,
+                alias_type TEXT,
+                source TEXT,
+                created_by TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_supplier_aliases_normalized
+            ON supplier_aliases(alias_name_normalized);
+
+            CREATE INDEX IF NOT EXISTS idx_supplier_aliases_supplier_id
+            ON supplier_aliases(supplier_id);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_aliases_supplier_alias_unique
+            ON supplier_aliases(supplier_id, alias_name_normalized);
 
             CREATE TABLE IF NOT EXISTS quotation_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,6 +147,13 @@ def initialize_database() -> None:
         )
         ensure_column(connection, "products", "hs_code", "TEXT")
         ensure_column(connection, "quotation_items", "supplier_id", "INTEGER")
+        ensure_column(connection, "suppliers", "supplier_full_name", "TEXT")
+        ensure_column(connection, "suppliers", "supplier_short_name", "TEXT")
+        ensure_column(connection, "suppliers", "aliases_text", "TEXT")
+        ensure_column(connection, "suppliers", "quality_rating", "INTEGER")
+        ensure_column(connection, "suppliers", "price_rating", "INTEGER")
+        ensure_column(connection, "suppliers", "cooperation_rating", "INTEGER")
+        ensure_column(connection, "suppliers", "cooperation_notes", "TEXT")
 
 
 def ensure_column(

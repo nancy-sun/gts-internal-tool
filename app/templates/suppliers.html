@@ -13,6 +13,7 @@
     <input id="q" name="q" value="{{ query }}" autocomplete="off" placeholder="供应商 / 城市 / 产品范围">
     <button type="submit">查询</button>
     <a class="table-action-link" href="/suppliers/new">新增供应商</a>
+    <a class="table-action-link" href="/suppliers/candidates">供应商候选</a>
   </form>
 
   <section class="table-section">
@@ -21,14 +22,15 @@
         <thead>
           <tr>
             <th>供应商</th>
+            <th>全称</th>
+            <th>简称</th>
+            <th>别名</th>
             <th>联系人</th>
-            <th>电话</th>
-            <th>微信</th>
             <th>城市</th>
             <th>产品范围</th>
-            <th>类型</th>
-            <th>质量</th>
-            <th>价格</th>
+            <th>质量评分</th>
+            <th>价格评分</th>
+            <th>配合评分</th>
             <th>更新人</th>
             <th>更新时间</th>
             <th>操作</th>
@@ -38,21 +40,22 @@
           {% for supplier in suppliers %}
             <tr>
               <td>{{ supplier.supplier_name }}</td>
+              <td>{{ supplier.supplier_full_name or "" }}</td>
+              <td>{{ supplier.supplier_short_name or "" }}</td>
+              <td>{{ supplier.aliases_text or "" }}</td>
               <td>{{ supplier.contact_person or "" }}</td>
-              <td>{{ supplier.phone or "" }}</td>
-              <td>{{ supplier.wechat or "" }}</td>
               <td>{{ supplier.city or "" }}</td>
               <td>{{ supplier.product_scope or "" }}</td>
-              <td>{{ supplier.factory_or_trader or "" }}</td>
-              <td>{{ supplier.quality_level or "" }}</td>
-              <td>{{ supplier.price_level or "" }}</td>
+              <td>{{ supplier.quality_rating or "未评分" }}</td>
+              <td>{{ supplier.price_rating or "未评分" }}</td>
+              <td>{{ supplier.cooperation_rating or "未评分" }}</td>
               <td>{{ supplier.updated_by or "" }}</td>
               <td>{{ supplier.updated_at[:10] if supplier.updated_at else "" }}</td>
               <td><a class="table-action-link" href="/suppliers/{{ supplier.id }}/edit">编辑</a></td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="12">暂无供应商。</td>
+              <td colspan="13">暂无供应商。</td>
             </tr>
           {% endfor %}
         </tbody>

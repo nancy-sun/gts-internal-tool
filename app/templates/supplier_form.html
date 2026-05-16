@@ -28,7 +28,19 @@
       <input id="operator_name" name="operator_name" required autocomplete="off" value="{{ operator_name or '' }}">
 
       <label for="supplier_name">供应商名称</label>
-      <input id="supplier_name" name="supplier_name" required autocomplete="off" value="{{ values.supplier_name or '' }}">
+      <input id="supplier_name" name="supplier_name" autocomplete="off" value="{{ values.supplier_name or '' }}">
+
+      <label for="supplier_full_name">供应商全称</label>
+      <input id="supplier_full_name" name="supplier_full_name" required autocomplete="off" value="{{ values.supplier_full_name or '' }}">
+
+      <label for="supplier_short_name">供应商简称</label>
+      <input id="supplier_short_name" name="supplier_short_name" autocomplete="off" value="{{ values.supplier_short_name or '' }}">
+
+      <label for="aliases_text">别名</label>
+      <div>
+        <textarea id="aliases_text" name="aliases_text" rows="3">{{ values.aliases_text or '' }}</textarea>
+        <p class="help-text">多个名称请用中文逗号，或英文逗号, 分隔。例如：中际，宝威流体，威佰昇</p>
+      </div>
 
       <label for="contact_person">联系人</label>
       <input id="contact_person" name="contact_person" autocomplete="off" value="{{ values.contact_person or '' }}">
@@ -56,6 +68,39 @@
 
       <label for="price_level">价格等级</label>
       <input id="price_level" name="price_level" autocomplete="off" value="{{ values.price_level or '' }}">
+
+      <label for="quality_rating">质量评分</label>
+      <div>
+        <select id="quality_rating" name="quality_rating">
+          {% for rating in ["", "1", "2", "3", "4", "5"] %}
+            <option value="{{ rating }}" {% if values.quality_rating|string == rating %}selected{% endif %}>{{ rating or "未评分" }}</option>
+          {% endfor %}
+        </select>
+        <p class="help-text">1=质量问题频繁，3=普通可用，5=稳定少问题。</p>
+      </div>
+
+      <label for="price_rating">价格评分</label>
+      <div>
+        <select id="price_rating" name="price_rating">
+          {% for rating in ["", "1", "2", "3", "4", "5"] %}
+            <option value="{{ rating }}" {% if values.price_rating|string == rating %}selected{% endif %}>{{ rating or "未评分" }}</option>
+          {% endfor %}
+        </select>
+        <p class="help-text">1=很贵，3=市场正常，5=价格很有竞争力。</p>
+      </div>
+
+      <label for="cooperation_rating">配合评分</label>
+      <div>
+        <select id="cooperation_rating" name="cooperation_rating">
+          {% for rating in ["", "1", "2", "3", "4", "5"] %}
+            <option value="{{ rating }}" {% if values.cooperation_rating|string == rating %}selected{% endif %}>{{ rating or "未评分" }}</option>
+          {% endfor %}
+        </select>
+        <p class="help-text">1=不推荐，3=需要跟进，5=沟通快、交期准、货品正确。</p>
+      </div>
+
+      <label for="cooperation_notes">配合备注</label>
+      <textarea id="cooperation_notes" name="cooperation_notes" rows="3">{{ values.cooperation_notes or '' }}</textarea>
 
       <label for="notes">备注</label>
       <textarea id="notes" name="notes" rows="4">{{ values.notes or '' }}</textarea>

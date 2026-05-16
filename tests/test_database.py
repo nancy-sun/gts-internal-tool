@@ -36,6 +36,9 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
         "id",
         "supplier_name",
         "supplier_name_normalized",
+        "supplier_full_name",
+        "supplier_short_name",
+        "aliases_text",
         "contact_person",
         "phone",
         "wechat",
@@ -45,6 +48,10 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
         "factory_or_trader",
         "quality_level",
         "price_level",
+        "quality_rating",
+        "price_rating",
+        "cooperation_rating",
+        "cooperation_notes",
         "notes",
         "created_by",
         "created_at",
@@ -53,4 +60,19 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
     }.issubset(supplier_columns)
     assert "supplier_id" in quotation_columns
     assert "idx_suppliers_supplier_name_normalized" in indexes
+    alias_columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(supplier_aliases)").fetchall()
+    }
+    assert {
+        "id",
+        "supplier_id",
+        "alias_name",
+        "alias_name_normalized",
+        "alias_type",
+        "source",
+        "created_by",
+        "created_at",
+        "updated_at",
+    }.issubset(alias_columns)
     get_settings.cache_clear()
