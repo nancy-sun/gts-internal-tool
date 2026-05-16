@@ -20,6 +20,7 @@ The automated tests cover:
 - Generate download creates a real Excel file, keeps uploaded request description, fills missing OEM/unit from system data, recalculates total price, and writes generation logs.
 - HS Code upload matches products by normalized GTS, overwrites existing HS Code values, displays HS Code in product search, exports `GTS`/`OEM`/`HS Code` in uploaded row order, and writes HS Code logs.
 - Core service behavior: normalization, Excel parsing, matching, conflicts, duplicate quotation confirmation date refresh, latest candidate selection, generated columns, backup copying, and operation log creation.
+- UI regression checks cover dashboard navigation, upload preview streaming controls, grouped search result markup, data quality sections, and critical table layout CSS selectors.
 
 ## Browser UI
 
