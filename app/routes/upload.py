@@ -18,7 +18,12 @@ from app.services.import_full_quotation import (
     import_preview_rows,
 )
 from app.services.preview_tokens import preview_file_path, remove_preview_file
-from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
+from app.services.upload_validation import (
+    sanitize_upload_filename,
+    validate_full_quotation_workbook,
+    validate_upload_size,
+    validate_xlsx_upload,
+)
 from app.templating import templates
 
 
@@ -89,9 +94,22 @@ async def upload_preview(
             },
             status_code=400,
         )
+    workbook_error = validate_full_quotation_workbook(contents)
+    if workbook_error:
+        return templates.TemplateResponse(
+            request,
+            "upload.html",
+            {
+                "request": request,
+                "error": workbook_error,
+                "operator_name": operator_name,
+                "breadcrumbs": breadcrumbs(UPLOAD_CRUMB),
+            },
+            status_code=400,
+        )
 
     token = uuid4().hex
-    safe_name = Path(excel_file.filename or "quotation.xlsx").name
+    safe_name = sanitize_upload_filename(excel_file.filename, default="quotation.xlsx")
     workbook_path = UPLOAD_DIR / f"{token}_{safe_name}"
     workbook_path.write_bytes(contents)
 

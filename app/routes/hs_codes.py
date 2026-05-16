@@ -21,7 +21,12 @@ from app.services.hs_codes import (
     save_hs_upload_preview,
 )
 from app.services.preview_tokens import preview_file_path, remove_preview_file
-from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
+from app.services.upload_validation import (
+    sanitize_upload_filename,
+    validate_upload_size,
+    validate_workbook_contents,
+    validate_xlsx_upload,
+)
 from app.templating import templates
 
 
@@ -362,9 +367,15 @@ async def save_uploaded_workbook(
     )
     if size_error:
         return SavedWorkbook(error=size_error, file_name="", path=None)
+    workbook_error = validate_workbook_contents(contents)
+    if workbook_error:
+        return SavedWorkbook(error=workbook_error, file_name="", path=None)
 
     token = uuid4().hex
-    safe_name = Path(excel_file.filename or workflow.fallback_file_name).name
+    safe_name = sanitize_upload_filename(
+        excel_file.filename,
+        default=workflow.fallback_file_name,
+    )
     workbook_path = UPLOAD_DIR / f"{token}_{safe_name}"
     workbook_path.write_bytes(contents)
     return SavedWorkbook(error=None, file_name=safe_name, path=workbook_path)

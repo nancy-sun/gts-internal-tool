@@ -17,7 +17,12 @@ from app.services.quotation_generation import (
 )
 from app.services.preview_tokens import preview_file_path, remove_preview_file
 from app.services.request_parser import parse_request_workbook
-from app.services.upload_validation import validate_upload_size, validate_xlsx_upload
+from app.services.upload_validation import (
+    sanitize_upload_filename,
+    validate_request_list_workbook,
+    validate_upload_size,
+    validate_xlsx_upload,
+)
 from app.templating import templates
 
 
@@ -86,9 +91,22 @@ async def generate_preview(
             },
             status_code=400,
         )
+    workbook_error = validate_request_list_workbook(contents)
+    if workbook_error:
+        return templates.TemplateResponse(
+            request,
+            "generate.html",
+            {
+                "request": request,
+                "error": workbook_error,
+                "operator_name": operator_name,
+                "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
+            },
+            status_code=400,
+        )
 
     token = uuid4().hex
-    safe_name = Path(request_file.filename or "request.xlsx").name
+    safe_name = sanitize_upload_filename(request_file.filename, default="request.xlsx")
     workbook_path = UPLOAD_DIR / f"{token}_{safe_name}"
     workbook_path.write_bytes(contents)
     parsed_rows = parse_request_workbook(workbook_path)

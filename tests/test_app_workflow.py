@@ -311,14 +311,9 @@ def test_upload_preview_stream_returns_friendly_error_for_bad_workbook(
             )
         },
     )
-    assert upload_response.status_code == 200
-
-    token = extract_token(upload_response.text)
-    stream_response = app_client.get(f"/upload/preview/stream/{token}")
-
-    assert stream_response.status_code == 200
-    assert "预览加载失败，请检查 Excel 文件格式后重新上传。" in stream_response.text
-    assert "File is not a zip file" not in stream_response.text
+    assert upload_response.status_code == 400
+    assert "Excel 文件无法读取，请确认文件是有效的 .xlsx 工作簿。" in upload_response.text
+    assert "File is not a zip file" not in upload_response.text
 
 
 def test_upload_preview_reports_missing_required_fields(app_client: TestClient) -> None:

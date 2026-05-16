@@ -185,10 +185,20 @@ def iter_full_quotation_workbook_rows(
 
 
 def resolve_header_row(worksheet, template: dict[str, Any]) -> int:
+    detected_row = find_configured_header_row(worksheet, template)
+    if detected_row is not None:
+        return detected_row
+    alias_header_row = find_alias_header_row(worksheet, template)
+    if alias_header_row is not None:
+        return alias_header_row
+    return int(template["header_row"])
+
+
+def find_configured_header_row(worksheet, template: dict[str, Any]) -> int | None:
     detect_column = template.get("detect_header_from_column")
     header_label = template.get("header_label")
     if not detect_column or not header_label:
-        return int(template["header_row"])
+        return None
 
     column_index = column_index_from_string(detect_column)
     wanted = normalize_header_label(header_label)
@@ -199,10 +209,7 @@ def resolve_header_row(worksheet, template: dict[str, Any]) -> int:
         value = worksheet.cell(row=row, column=column_index).value
         if normalize_header_label(value) == wanted:
             return row
-    alias_header_row = find_alias_header_row(worksheet, template)
-    if alias_header_row is not None:
-        return alias_header_row
-    return int(template["header_row"])
+    return None
 
 
 def find_alias_header_row(worksheet, template: dict[str, Any]) -> int | None:
