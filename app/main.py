@@ -16,12 +16,14 @@ from app.routes import (
     search,
     upload,
 )
+from app.services.temp_cleanup import cleanup_stale_preview_files
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     ensure_local_directories()
     initialize_database()
+    cleanup_stale_preview_files()
 
     app = FastAPI(title=settings.app_name)
     app.add_middleware(
