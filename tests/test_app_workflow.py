@@ -985,6 +985,121 @@ def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
     assert 'name="operator_name" required autocomplete="off" value="Bob"' in edit_page.text
 
 
+def test_supplier_create_edit_search_and_import_linking(
+    app_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    create_response = app_client.post(
+        "/suppliers/new",
+        data={
+            "operator_name": "Nancy",
+            "supplier_name": "Factory A",
+            "contact_person": "Alice",
+            "phone": "123",
+            "wechat": "alice-wx",
+            "city": "Ningbo",
+            "province": "Zhejiang",
+            "product_scope": "Mirror",
+            "factory_or_trader": "工厂",
+            "quality_level": "A",
+            "price_level": "中",
+            "notes": "Initial",
+            "edit_password": "55123511",
+        },
+    )
+    assert create_response.status_code == 200
+    assert "Factory A" in create_response.text
+    assert "Alice" in create_response.text
+
+    search_supplier_response = app_client.get("/suppliers", params={"q": "Mirror"})
+    assert search_supplier_response.status_code == 200
+    assert "Factory A" in search_supplier_response.text
+    assert "Ningbo" in search_supplier_response.text
+
+    edit_response = app_client.post(
+        "/suppliers/1/edit",
+        data={
+            "operator_name": "Nancy",
+            "supplier_name": "Factory A Updated",
+            "contact_person": "Alice",
+            "phone": "456",
+            "wechat": "alice-wx",
+            "city": "Ningbo",
+            "province": "Zhejiang",
+            "product_scope": "Mirror, Lamp",
+            "factory_or_trader": "工厂",
+            "quality_level": "A",
+            "price_level": "中",
+            "notes": "Updated",
+            "edit_password": "55123511",
+        },
+    )
+    assert edit_response.status_code == 200
+    assert "供应商资料已保存" in edit_response.text
+    assert "Factory A Updated" in edit_response.text
+
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "supplier-link.xlsx",
+                build_quotation_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-SUP-001",
+                            "oem": "OEM-SUP-001",
+                            "factory": "Factory A Updated",
+                            "unit": "pc",
+                            "unit_price": 88,
+                        },
+                        {
+                            "gts_no": "GTS-SUP-002",
+                            "oem": "OEM-SUP-002",
+                            "factory": "Unlinked Factory",
+                            "unit": "pc",
+                            "unit_price": 99,
+                        },
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert upload_response.status_code == 200
+    token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{token}")
+    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    assert confirm_response.status_code == 200
+
+    with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
+        connection.row_factory = sqlite3.Row
+        linked = connection.execute(
+            """
+            SELECT q.supplier_id, s.supplier_name
+            FROM quotation_items q
+            LEFT JOIN suppliers s ON s.id = q.supplier_id
+            WHERE q.gts_no_normalized = 'GTSSUP001'
+            """
+        ).fetchone()
+        fallback = connection.execute(
+            """
+            SELECT supplier_id, factory
+            FROM quotation_items
+            WHERE gts_no_normalized = 'GTSSUP002'
+            """
+        ).fetchone()
+    assert linked["supplier_id"] == 1
+    assert linked["supplier_name"] == "Factory A Updated"
+    assert fallback["supplier_id"] is None
+    assert fallback["factory"] == "Unlinked Factory"
+
+    linked_search = app_client.get("/search", params={"field": "gts_no", "q": "GTSSUP001"})
+    fallback_search = app_client.get("/search", params={"field": "gts_no", "q": "GTSSUP002"})
+    assert "Factory A Updated" in linked_search.text
+    assert "Unlinked Factory" in fallback_search.text
+
+
 def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")

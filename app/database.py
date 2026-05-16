@@ -38,9 +38,33 @@ def initialize_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_products_oem_normalized
             ON products(oem_normalized);
 
+            CREATE TABLE IF NOT EXISTS suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_name TEXT NOT NULL,
+                supplier_name_normalized TEXT,
+                contact_person TEXT,
+                phone TEXT,
+                wechat TEXT,
+                city TEXT,
+                province TEXT,
+                product_scope TEXT,
+                factory_or_trader TEXT,
+                quality_level TEXT,
+                price_level TEXT,
+                notes TEXT,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_by TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_suppliers_supplier_name_normalized
+            ON suppliers(supplier_name_normalized);
+
             CREATE TABLE IF NOT EXISTS quotation_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product_id INTEGER NOT NULL,
+                supplier_id INTEGER,
                 no TEXT,
                 gts_no TEXT,
                 gts_no_normalized TEXT,
@@ -68,7 +92,8 @@ def initialize_database() -> None:
                 created_at TEXT NOT NULL,
                 updated_by TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
-                FOREIGN KEY(product_id) REFERENCES products(id)
+                FOREIGN KEY(product_id) REFERENCES products(id),
+                FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
             );
 
             CREATE INDEX IF NOT EXISTS idx_quotation_items_product_id
@@ -92,6 +117,7 @@ def initialize_database() -> None:
             """
         )
         ensure_column(connection, "products", "hs_code", "TEXT")
+        ensure_column(connection, "quotation_items", "supplier_id", "INTEGER")
 
 
 def ensure_column(

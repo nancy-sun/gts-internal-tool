@@ -10,6 +10,7 @@ from openpyxl.utils import get_column_letter
 
 from app.services.operation_logging import create_operation_log
 from app.services.quotation_columns import BLANK_ROW_CANDIDATE_ID, GENERATED_COLUMNS
+from app.services.suppliers import supplier_link_available
 
 
 def create_generated_workbook(
@@ -85,10 +86,24 @@ def build_selected_output_row(
     if selected_id == BLANK_ROW_CANDIDATE_ID:
         return build_blank_output_row(request_values)
 
-    candidate = connection.execute(
-        "SELECT * FROM quotation_items WHERE id = ?",
-        (selected_id,),
-    ).fetchone()
+    if supplier_link_available(connection):
+        candidate_query = """
+            SELECT
+                q.*,
+                s.supplier_name
+            FROM quotation_items q
+            LEFT JOIN suppliers s ON s.id = q.supplier_id
+            WHERE q.id = ?
+        """
+    else:
+        candidate_query = """
+            SELECT
+                q.*,
+                NULL AS supplier_name
+            FROM quotation_items q
+            WHERE q.id = ?
+        """
+    candidate = connection.execute(candidate_query, (selected_id,)).fetchone()
     if not candidate:
         return None
     product = connection.execute(
@@ -132,6 +147,8 @@ def build_output_row(
     if product:
         for field in ("gts_no", "description", "oem"):
             output[field] = product[field]
+    if "supplier_name" in candidate.keys() and _has_text(candidate["supplier_name"]):
+        output["factory"] = candidate["supplier_name"]
     output["photo"] = None
     if _has_text(output.get("updated_at")):
         output["updated_at"] = str(output["updated_at"])[:10]

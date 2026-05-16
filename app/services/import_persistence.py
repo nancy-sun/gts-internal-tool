@@ -9,6 +9,7 @@ from app.services.import_preview import (
 )
 from app.services.normalization import normalize_gts_no, normalize_oem
 from app.services.operation_logging import create_operation_log, utc_now_text
+from app.services.suppliers import find_supplier_by_name, supplier_link_available
 
 
 def import_preview_rows(
@@ -429,10 +430,19 @@ def create_quotation_item(
     operator_name: str,
     now: str,
 ) -> None:
+    supplier_id = None
+    include_supplier_id = supplier_link_available(connection)
+    if include_supplier_id:
+        supplier = find_supplier_by_name(connection, values.get("factory") or "")
+        supplier_id = supplier["id"] if supplier else None
+    supplier_column = "supplier_id," if include_supplier_id else ""
+    supplier_placeholder = "?," if include_supplier_id else ""
+    supplier_values = (supplier_id,) if include_supplier_id else ()
     connection.execute(
-        """
+        f"""
         INSERT INTO quotation_items (
             product_id,
+            {supplier_column}
             no,
             gts_no,
             gts_no_normalized,
@@ -461,10 +471,11 @@ def create_quotation_item(
             updated_by,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, {supplier_placeholder} ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             product_id,
+            *supplier_values,
             values.get("no"),
             values.get("gts_no"),
             values.get("gts_no_normalized"),

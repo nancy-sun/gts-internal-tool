@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "new" %}新增供应商{% else %}编辑供应商{% endif %} - GTS Internal Tool{% endblock %}
+{% block page_name %}{% if mode == "new" %}新增供应商{% else %}编辑供应商{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact-heading">
+    <h1>{% if mode == "new" %}新增供应商{% else %}编辑供应商{% endif %}</h1>
+  </section>
+
+  {% if success %}
+    <div class="notice success-notice">
+      <p>{{ success }}</p>
+    </div>
+  {% endif %}
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="office-form edit-product-form" method="post" autocomplete="off">
+    <div class="edit-product-fields">
+      <label for="operator_name">操作人</label>
+      <input id="operator_name" name="operator_name" required autocomplete="off" value="{{ operator_name or '' }}">
+
+      <label for="supplier_name">供应商名称</label>
+      <input id="supplier_name" name="supplier_name" required autocomplete="off" value="{{ values.supplier_name or '' }}">
+
+      <label for="contact_person">联系人</label>
+      <input id="contact_person" name="contact_person" autocomplete="off" value="{{ values.contact_person or '' }}">
+
+      <label for="phone">电话</label>
+      <input id="phone" name="phone" autocomplete="off" value="{{ values.phone or '' }}">
+
+      <label for="wechat">微信</label>
+      <input id="wechat" name="wechat" autocomplete="off" value="{{ values.wechat or '' }}">
+
+      <label for="city">城市</label>
+      <input id="city" name="city" autocomplete="off" value="{{ values.city or '' }}">
+
+      <label for="province">省份</label>
+      <input id="province" name="province" autocomplete="off" value="{{ values.province or '' }}">
+
+      <label for="product_scope">产品范围</label>
+      <input id="product_scope" name="product_scope" autocomplete="off" value="{{ values.product_scope or '' }}">
+
+      <label for="factory_or_trader">工厂/贸易商</label>
+      <input id="factory_or_trader" name="factory_or_trader" autocomplete="off" value="{{ values.factory_or_trader or '' }}">
+
+      <label for="quality_level">质量等级</label>
+      <input id="quality_level" name="quality_level" autocomplete="off" value="{{ values.quality_level or '' }}">
+
+      <label for="price_level">价格等级</label>
+      <input id="price_level" name="price_level" autocomplete="off" value="{{ values.price_level or '' }}">
+
+      <label for="notes">备注</label>
+      <textarea id="notes" name="notes" rows="4">{{ values.notes or '' }}</textarea>
+    </div>
+
+    <div class="edit-product-password-section">
+      <label for="edit_password">密码</label>
+      <input
+        id="edit_password"
+        name="edit_password"
+        type="password"
+        required
+        autocomplete="new-password"
+      >
+    </div>
+
+    <button type="submit">保存</button>
+  </form>
+{% endblock %}

@@ -21,6 +21,10 @@ class Settings:
         self.database_path = os.getenv("DATABASE_PATH", "data/gts_catalogue.sqlite3")
         self.max_upload_size_mb = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10"))
         self.product_edit_password = os.getenv("PRODUCT_EDIT_PASSWORD", "")
+        self.supplier_edit_password = os.getenv(
+            "SUPPLIER_EDIT_PASSWORD",
+            self.product_edit_password,
+        )
 
         if not self.shared_access_code:
             raise RuntimeError("SHARED_ACCESS_CODE must be set in .env")

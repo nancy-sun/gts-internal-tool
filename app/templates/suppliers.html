@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}供应商 - GTS Internal Tool{% endblock %}
+{% block page_name %}供应商{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>供应商</h1>
+  </section>
+
+  <form method="get" action="/suppliers" class="search-form">
+    <label for="q">关键词</label>
+    <input id="q" name="q" value="{{ query }}" autocomplete="off" placeholder="供应商 / 城市 / 产品范围">
+    <button type="submit">查询</button>
+    <a class="table-action-link" href="/suppliers/new">新增供应商</a>
+  </form>
+
+  <section class="table-section">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>供应商</th>
+            <th>联系人</th>
+            <th>电话</th>
+            <th>微信</th>
+            <th>城市</th>
+            <th>产品范围</th>
+            <th>类型</th>
+            <th>质量</th>
+            <th>价格</th>
+            <th>更新人</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for supplier in suppliers %}
+            <tr>
+              <td>{{ supplier.supplier_name }}</td>
+              <td>{{ supplier.contact_person or "" }}</td>
+              <td>{{ supplier.phone or "" }}</td>
+              <td>{{ supplier.wechat or "" }}</td>
+              <td>{{ supplier.city or "" }}</td>
+              <td>{{ supplier.product_scope or "" }}</td>
+              <td>{{ supplier.factory_or_trader or "" }}</td>
+              <td>{{ supplier.quality_level or "" }}</td>
+              <td>{{ supplier.price_level or "" }}</td>
+              <td>{{ supplier.updated_by or "" }}</td>
+              <td>{{ supplier.updated_at[:10] if supplier.updated_at else "" }}</td>
+              <td><a class="table-action-link" href="/suppliers/{{ supplier.id }}/edit">编辑</a></td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="12">暂无供应商。</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

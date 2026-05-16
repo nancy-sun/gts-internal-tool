@@ -82,7 +82,7 @@
                       <tbody>
                         {% for quotation in product.quotations %}
                           <tr>
-                            <td>{{ quotation.factory or "" }}</td>
+                            <td>{{ quotation.supplier_display_name or quotation.factory or "" }}</td>
                             <td>{% if quotation.unit_price is not none %}¥{{ "%.2f"|format(quotation.unit_price) }}{% endif %}</td>
                             <td>{{ quotation.packaging or "" }}</td>
                             <td>{{ quotation.expected_delivery or "" }}</td>

@@ -9,6 +9,7 @@ from app.services.lookup_helpers import (
     unique_text_values,
 )
 from app.services.request_parser import ParsedRequestRow
+from app.services.suppliers import supplier_link_available
 
 
 @dataclass(frozen=True)
@@ -214,11 +215,20 @@ def fetch_quotation_candidates_by_product_id(
 
     ordered_ids = sorted(product_ids)
     placeholders = ", ".join("?" for _ in ordered_ids)
+    if supplier_link_available(connection):
+        supplier_select = "s.supplier_name"
+        supplier_join = "LEFT JOIN suppliers s ON s.id = q.supplier_id"
+    else:
+        supplier_select = "NULL AS supplier_name"
+        supplier_join = ""
     rows = connection.execute(
         f"""
-        SELECT *
-        FROM quotation_items
-        WHERE product_id IN ({placeholders})
+        SELECT
+            q.*,
+            {supplier_select}
+        FROM quotation_items q
+        {supplier_join}
+        WHERE q.product_id IN ({placeholders})
         ORDER BY product_id, updated_at DESC, id DESC
         """,
         ordered_ids,
