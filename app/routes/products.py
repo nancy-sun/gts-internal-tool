@@ -3,7 +3,7 @@ from hmac import compare_digest
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.auth import require_auth
+from app.auth import get_session_operator_name, require_auth, set_session_operator_name
 from app.config import get_settings
 from app.database import get_connection
 from app.navigation import SEARCH_CRUMB
@@ -49,6 +49,7 @@ async def product_edit_submit(
     if redirect:
         return redirect
 
+    operator_name = set_session_operator_name(request, operator_name)
     values = {
         "gts_no": gts_no,
         "oem": oem,
@@ -76,6 +77,7 @@ async def product_edit_submit(
                 values=values,
                 errors=errors,
                 warnings=validation.warnings,
+                operator_name=operator_name,
                 status_code=400,
             )
 
@@ -104,6 +106,7 @@ def render_product_edit(
     values: dict,
     errors: list[str],
     warnings: list[str],
+    operator_name: str | None = None,
     success: str | None = None,
     status_code: int = 200,
 ):
@@ -114,6 +117,11 @@ def render_product_edit(
             "request": request,
             "product": product,
             "values": values,
+            "operator_name": (
+                get_session_operator_name(request)
+                if operator_name is None
+                else operator_name
+            ),
             "errors": errors,
             "warnings": warnings,
             "success": success,

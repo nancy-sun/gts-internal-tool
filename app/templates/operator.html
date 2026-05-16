@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}操作人 - GTS Internal Tool{% endblock %}
+{% block page_name %}操作人{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>操作人</h1>
+    <p>此名称只保存在当前浏览器会话中，用于自动填写上传、生成和编辑页面。</p>
+  </section>
+
+  <section class="narrow-panel">
+    <form method="post" action="/operator" class="form-stack">
+      <label for="operator_name">操作人</label>
+      <input id="operator_name" name="operator_name" autocomplete="name" value="{{ operator_name or '' }}" required autofocus>
+
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+      {% if success %}
+        <p class="success-text">{{ success }}</p>
+      {% endif %}
+
+      <button type="submit">保存</button>
+    </form>
+  </section>
+{% endblock %}

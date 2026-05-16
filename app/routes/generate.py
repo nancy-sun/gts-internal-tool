@@ -5,7 +5,7 @@ from uuid import uuid4
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 
-from app.auth import require_auth
+from app.auth import get_session_operator_name, require_auth, set_session_operator_name
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import GENERATE_CRUMB, breadcrumbs, child_breadcrumbs
@@ -36,6 +36,7 @@ def generate_page(request: Request):
         {
             "request": request,
             "error": None,
+            "operator_name": get_session_operator_name(request),
             "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
         },
     )
@@ -51,6 +52,7 @@ async def generate_preview(
     if redirect:
         return redirect
 
+    operator_name = set_session_operator_name(request, operator_name)
     error = validate_xlsx_upload(request_file, operator_name)
     if error:
         return templates.TemplateResponse(
@@ -59,6 +61,7 @@ async def generate_preview(
             {
                 "request": request,
                 "error": error,
+                "operator_name": operator_name,
                 "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
             },
             status_code=400,
@@ -78,6 +81,7 @@ async def generate_preview(
             {
                 "request": request,
                 "error": size_error,
+                "operator_name": operator_name,
                 "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
             },
             status_code=400,
@@ -95,6 +99,7 @@ async def generate_preview(
             {
                 "request": request,
                 "error": "需求文件中没有可识别的 GTS 或 OEM，请修改后重新上传。",
+                "operator_name": operator_name,
                 "breadcrumbs": breadcrumbs(GENERATE_CRUMB),
             },
             status_code=400,
@@ -104,7 +109,7 @@ async def generate_preview(
         preview_rows = build_generation_preview(connection, parsed_rows)
 
     payload = {
-        "operator_name": operator_name.strip(),
+        "operator_name": operator_name,
         "file_name": safe_name,
         "rows": preview_rows,
     }
@@ -119,7 +124,7 @@ async def generate_preview(
         {
             "request": request,
             "token": token,
-            "operator_name": operator_name.strip(),
+            "operator_name": operator_name,
             "file_name": safe_name,
             "rows": preview_rows,
             "return_url": "/generate",

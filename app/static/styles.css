@@ -112,6 +112,32 @@ body {
   margin: 0 0 0 auto;
 }
 
+.operator-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 34px;
+  max-width: 220px;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid #bdd6ce;
+  border-radius: 999px;
+  background: #eaf3f0;
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-chip:hover,
+.operator-chip:focus {
+  border-color: var(--accent);
+  background: #dcece7;
+  outline: none;
+}
+
 .logout-button {
   min-height: 34px;
   padding: 0 12px;
@@ -411,6 +437,11 @@ button:focus {
 
 .error {
   color: var(--danger);
+  font-weight: 700;
+}
+
+.success-text {
+  color: var(--accent-dark);
   font-weight: 700;
 }
 

@@ -13,7 +13,7 @@
   <form class="form-stack" method="post" action="/hs-codes/upload/preview" enctype="multipart/form-data">
     <label>
       操作员姓名
-      <input name="operator_name" required autocomplete="name">
+      <input name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}">
     </label>
     <label>
       Excel 文件

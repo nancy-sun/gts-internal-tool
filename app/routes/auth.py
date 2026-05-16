@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.auth import SESSION_AUTH_KEY
+from app.auth import SESSION_AUTH_KEY, set_session_operator_name
 from app.config import get_settings
 from app.templating import templates
 
@@ -16,21 +16,30 @@ def login_page(request: Request):
     return templates.TemplateResponse(
         request,
         "login.html",
-        {"request": request, "error": None},
+        {"request": request, "error": None, "operator_name": ""},
     )
 
 
 @router.post("/login")
-def login(request: Request, access_code: str = Form(...)):
+def login(
+    request: Request,
+    access_code: str = Form(...),
+    operator_name: str = Form(""),
+):
     settings = get_settings()
     if access_code == settings.shared_access_code:
         request.session[SESSION_AUTH_KEY] = True
+        set_session_operator_name(request, operator_name)
         return RedirectResponse(url="/", status_code=303)
 
     return templates.TemplateResponse(
         request,
         "login.html",
-        {"request": request, "error": "访问码不正确。"},
+        {
+            "request": request,
+            "error": "访问码不正确。",
+            "operator_name": operator_name.strip(),
+        },
         status_code=401,
     )
 

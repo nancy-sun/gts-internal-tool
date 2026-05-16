@@ -36,7 +36,7 @@
 
       <div class="edit-product-fields">
         <label for="operator_name">操作人</label>
-        <input id="operator_name" name="operator_name" required autocomplete="off">
+        <input id="operator_name" name="operator_name" required autocomplete="off" value="{{ operator_name or '' }}">
 
         <label for="gts_no">GTS</label>
         <input id="gts_no" name="gts_no" value="{{ values.gts_no or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.gts_no or '' }}">

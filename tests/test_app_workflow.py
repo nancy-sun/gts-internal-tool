@@ -869,6 +869,67 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     assert "编辑产品" in logs_response.text
 
 
+def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
+    app_client: TestClient,
+) -> None:
+    operator_response = app_client.post("/operator", data={"operator_name": "Alice"})
+    assert operator_response.status_code == 200
+    assert "操作人已保存" in operator_response.text
+    assert "操作人：Alice" in operator_response.text
+
+    upload_page = app_client.get("/upload")
+    assert upload_page.status_code == 200
+    assert 'name="operator_name" required autocomplete="name" value="Alice"' in upload_page.text
+
+    generate_page = app_client.get("/generate")
+    assert generate_page.status_code == 200
+    assert 'name="operator_name" required autocomplete="name" value="Alice"' in generate_page.text
+
+    hs_upload_page = app_client.get("/hs-codes/upload")
+    assert hs_upload_page.status_code == 200
+    assert 'name="operator_name" required autocomplete="name" value="Alice"' in hs_upload_page.text
+
+    hs_generate_page = app_client.get("/hs-codes/generate")
+    assert hs_generate_page.status_code == 200
+    assert 'name="operator_name" required autocomplete="name" value="Alice"' in hs_generate_page.text
+
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Bob"},
+        files={
+            "excel_file": (
+                "operator-session.xlsx",
+                build_quotation_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-OP-001",
+                            "oem": "OEM-OP-001",
+                            "factory": "Factory A",
+                            "unit": "pc",
+                            "unit_price": 12,
+                        }
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert upload_response.status_code == 200
+    upload_token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{upload_token}")
+    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    assert confirm_response.status_code == 200
+
+    updated_upload_page = app_client.get("/upload")
+    assert updated_upload_page.status_code == 200
+    assert "操作人：Bob" in updated_upload_page.text
+    assert 'name="operator_name" required autocomplete="name" value="Bob"' in updated_upload_page.text
+
+    edit_page = app_client.get("/products/1/edit")
+    assert edit_page.status_code == 200
+    assert 'name="operator_name" required autocomplete="off" value="Bob"' in edit_page.text
+
+
 def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
@@ -893,6 +954,17 @@ def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pyt
     bad_login_response = client.post("/login", data={"access_code": "wrong-code"})
     assert bad_login_response.status_code == 401
     assert "访问码不正确" in bad_login_response.text
+
+    good_login_response = client.post(
+        "/login",
+        data={"access_code": ACCESS_CODE, "operator_name": "Nancy"},
+        follow_redirects=False,
+    )
+    assert good_login_response.status_code == 303
+
+    home_response = client.get("/")
+    assert home_response.status_code == 200
+    assert "操作人：Nancy" in home_response.text
 
 
 def build_quotation_workbook(rows: list[dict]) -> BytesIO:

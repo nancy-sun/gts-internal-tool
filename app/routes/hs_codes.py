@@ -6,7 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 
-from app.auth import require_auth
+from app.auth import get_session_operator_name, require_auth, set_session_operator_name
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import HS_CRUMB, breadcrumbs, child_breadcrumbs
@@ -94,9 +94,16 @@ async def hs_upload_preview(
     if redirect:
         return redirect
 
+    operator_name = set_session_operator_name(request, operator_name)
     error = validate_xlsx_upload(excel_file, operator_name)
     if error:
-        return hs_form_response(request, UPLOAD_WORKFLOW, error=error, status_code=400)
+        return hs_form_response(
+            request,
+            UPLOAD_WORKFLOW,
+            error=error,
+            operator_name=operator_name,
+            status_code=400,
+        )
 
     workbook_result = await save_uploaded_workbook(excel_file, UPLOAD_WORKFLOW)
     if workbook_result.error or workbook_result.path is None:
@@ -104,6 +111,7 @@ async def hs_upload_preview(
             request,
             UPLOAD_WORKFLOW,
             error=workbook_result.error or "Excel 上传失败。",
+            operator_name=operator_name,
             status_code=400,
         )
 
@@ -186,9 +194,16 @@ async def hs_generate_preview(
     if redirect:
         return redirect
 
+    operator_name = set_session_operator_name(request, operator_name)
     error = validate_xlsx_upload(excel_file, operator_name)
     if error:
-        return hs_form_response(request, GENERATE_WORKFLOW, error=error, status_code=400)
+        return hs_form_response(
+            request,
+            GENERATE_WORKFLOW,
+            error=error,
+            operator_name=operator_name,
+            status_code=400,
+        )
 
     workbook_result = await save_uploaded_workbook(excel_file, GENERATE_WORKFLOW)
     if workbook_result.error or workbook_result.path is None:
@@ -196,6 +211,7 @@ async def hs_generate_preview(
             request,
             GENERATE_WORKFLOW,
             error=workbook_result.error or "Excel 上传失败。",
+            operator_name=operator_name,
             status_code=400,
         )
 
@@ -259,6 +275,7 @@ def hs_form_response(
     workflow: HsWorkflow,
     *,
     error: str | None = None,
+    operator_name: str | None = None,
     status_code: int = 200,
 ):
     return templates.TemplateResponse(
@@ -267,6 +284,11 @@ def hs_form_response(
         {
             "request": request,
             "error": error,
+            "operator_name": (
+                get_session_operator_name(request)
+                if operator_name is None
+                else operator_name
+            ),
             "breadcrumbs": child_breadcrumbs(HS_CRUMB, workflow.label),
             "return_url": "/hs-codes",
         },
