@@ -10,6 +10,7 @@ from app.auth import get_session_operator_name, require_auth, set_session_operat
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import HS_CRUMB, breadcrumbs, child_breadcrumbs
+from app.services.backup import BackupError, create_auto_backup
 from app.services.download_names import attachment_header, dated_download_name
 from app.services.hs_codes import (
     build_hs_generate_preview,
@@ -150,12 +151,37 @@ async def hs_upload_confirm(request: Request, token: str = Form(...)):
         return RedirectResponse(url="/hs-codes/upload", status_code=303)
 
     payload = read_preview_payload(path)
+    try:
+        auto_backup_path = create_auto_backup("hs_code_update")
+    except BackupError as exc:
+        context = {
+            "request": request,
+            "token": token,
+            "operator_name": payload["operator_name"],
+            "file_name": payload["file_name"],
+            "rows": payload["rows"],
+            "has_errors": preview_has_errors(payload["rows"]),
+            "error": str(exc),
+            "breadcrumbs": hs_child_page_breadcrumbs(
+                UPLOAD_WORKFLOW,
+                "上传预览",
+            ),
+            "return_url": "/hs-codes/upload",
+        }
+        return templates.TemplateResponse(
+            request,
+            UPLOAD_WORKFLOW.preview_template,
+            context,
+            status_code=500,
+        )
+
     with get_connection() as connection:
         result = save_hs_upload_preview(
             connection,
             preview_rows=payload["rows"],
             operator_name=payload["operator_name"],
             file_name=payload["file_name"],
+            auto_backup_path=str(auto_backup_path),
         )
         connection.commit()
     remove_preview_file(path)

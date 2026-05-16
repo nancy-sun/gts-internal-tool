@@ -27,11 +27,13 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     from app.config import get_settings
     from app.main import create_app
     from app.routes import generate, hs_codes, upload
+    from app.services import backup as backup_service
 
     get_settings.cache_clear()
     monkeypatch.setattr(upload, "UPLOAD_DIR", upload_path)
     monkeypatch.setattr(generate, "UPLOAD_DIR", upload_path)
     monkeypatch.setattr(hs_codes, "UPLOAD_DIR", upload_path)
+    monkeypatch.setattr(backup_service, "AUTO_BACKUP_DIR", upload_path / "auto-backups")
 
     client = TestClient(create_app())
     client.upload_path = upload_path
@@ -43,7 +45,13 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_office_workflow_upload_search_generate_download_and_log(
     app_client: TestClient,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from app.services import backup as backup_service
+
+    auto_backup_dir = tmp_path / "auto-backups"
+    monkeypatch.setattr(backup_service, "AUTO_BACKUP_DIR", auto_backup_dir)
+
     upload_response = app_client.post(
         "/upload/preview",
         data={"operator_name": "Nancy"},
@@ -84,6 +92,8 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert confirm_response.status_code == 200
     assert "新增产品" in confirm_response.text
     assert not (app_client.upload_path / f"preview_{upload_token}.json").exists()
+    backup_files = list(auto_backup_dir.glob("*_full_quotation_import.sqlite3"))
+    assert len(backup_files) == 1
 
     search_response = app_client.get("/search", params={"field": "gts_no", "q": "test001"})
     assert search_response.status_code == 200
@@ -168,6 +178,7 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert_breadcrumb(logs_response.text, ["首页", "操作记录"])
     assert "上传完整报价单" in logs_response.text
     assert "生成报价单" in logs_response.text
+    assert str(backup_files[0]) in logs_response.text
 
 
 def test_page_breadcrumbs_include_parent_pages(app_client: TestClient) -> None:
@@ -345,6 +356,55 @@ def test_upload_preview_reports_missing_required_fields(app_client: TestClient) 
     confirm_response = app_client.post("/upload/confirm", data={"token": token})
     assert confirm_response.status_code == 400
     assert "预览有错误，请修改 Excel 后再导入。" in confirm_response.text
+
+
+def test_upload_confirm_stops_before_import_when_auto_backup_fails(
+    app_client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.routes import upload as upload_route
+    from app.services.backup import BackupError
+
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "backup-failure.xlsx",
+                build_quotation_workbook(
+                    [
+                        {
+                            "gts_no": "GTS-BACKUP-FAIL",
+                            "oem": "OEM-BACKUP-FAIL",
+                            "factory": "Factory A",
+                            "unit": "pc",
+                            "unit_price": 10,
+                        }
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert upload_response.status_code == 200
+    token = extract_token(upload_response.text)
+    stream_response = app_client.get(f"/upload/preview/stream/{token}")
+    assert '"has_errors": false' in stream_response.text
+
+    def fail_backup(reason: str):
+        raise BackupError("自动备份失败，请检查 backups/auto 文件夹权限。")
+
+    monkeypatch.setattr(upload_route, "create_auto_backup", fail_backup)
+    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+
+    assert confirm_response.status_code == 500
+    assert "自动备份失败" in confirm_response.text
+    with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
+        product_count = connection.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+        log_count = connection.execute("SELECT COUNT(*) FROM operation_logs").fetchone()[0]
+    assert product_count == 0
+    assert log_count == 0
 
 
 def test_generate_preview_highlights_multiple_candidates_and_shows_comments(

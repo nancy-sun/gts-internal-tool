@@ -27,6 +27,22 @@ python3 scripts/backup.py
 
 The command prints the created backup folder path.
 
+## Automatic Database Backup
+
+Before confirming a full quotation import or HS Code bulk update, the app creates a database-only backup in:
+
+```text
+backups/auto/
+```
+
+File name format:
+
+```text
+YYYYMMDD_HHMMSS_reason.sqlite3
+```
+
+If this automatic backup fails, the import or HS Code update stops and no database rows are written. Manual backups are still recommended because they also copy uploads, generated files, and config.
+
 ## Temporary Upload Cleanup
 
 Uploaded Excel files are temporary. The database is the saved business record after an upload is confirmed or a quotation is generated.

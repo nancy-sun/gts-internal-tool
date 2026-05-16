@@ -10,6 +10,7 @@ from app.auth import get_session_operator_name, require_auth, set_session_operat
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import UPLOAD_CRUMB, breadcrumbs, child_breadcrumbs
+from app.services.backup import BackupError, create_auto_backup
 from app.services.excel_parser import iter_full_quotation_workbook_rows
 from app.services.import_full_quotation import (
     build_import_lookup_context,
@@ -221,6 +222,27 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             status_code=400,
         )
 
+    try:
+        auto_backup_path = create_auto_backup("full_quotation_import")
+    except BackupError as exc:
+        return templates.TemplateResponse(
+            request,
+            "upload_preview.html",
+            {
+                "request": request,
+                "token": token,
+                "operator_name": payload["operator_name"],
+                "file_name": payload["file_name"],
+                "rows": payload["rows"],
+                "has_warnings": preview_has_warnings(payload["rows"]),
+                "has_errors": False,
+                "error": str(exc),
+                "return_url": "/upload",
+                "breadcrumbs": child_breadcrumbs(UPLOAD_CRUMB, "导入预览"),
+            },
+            status_code=500,
+        )
+
     with get_connection() as connection:
         result = import_preview_rows(
             connection,
@@ -229,6 +251,7 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             file_name=payload["file_name"],
             selected_updates=selected_updates,
             required_choices=required_choices,
+            auto_backup_path=str(auto_backup_path),
         )
         connection.commit()
     remove_preview_file(path)

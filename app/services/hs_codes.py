@@ -300,6 +300,7 @@ def save_hs_upload_preview(
     preview_rows: list[dict[str, Any]],
     operator_name: str,
     file_name: str,
+    auto_backup_path: str | None = None,
 ) -> dict[str, int]:
     updated = 0
     failed = 0
@@ -317,13 +318,16 @@ def save_hs_upload_preview(
         )
         updated += 1
 
+    note = f"更新 HS Code={updated}; 失败行={failed}"
+    if auto_backup_path:
+        note = f"{note}; 自动备份={auto_backup_path}"
     create_operation_log(
         connection,
         operator_name=operator_name,
         action_type="update_hs_code",
         file_name=file_name,
         row_count=updated,
-        note=f"更新 HS Code={updated}; 失败行={failed}",
+        note=note,
     )
     return {"updated": updated, "failed": failed}
 

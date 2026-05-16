@@ -1,8 +1,10 @@
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 import sqlite3
 
+import app.services.backup as auto_backup
 import scripts.backup as backup
+from app.config import get_settings
 
 
 def test_create_backup_copies_database_uploads_generated_and_config(tmp_path: Path, monkeypatch):
@@ -41,3 +43,36 @@ def test_create_backup_copies_database_uploads_generated_and_config(tmp_path: Pa
     assert (backup_dir / "uploads" / "upload.xlsx").read_text(encoding="utf-8") == "upload"
     assert (backup_dir / "generated" / "quote.xlsx").read_text(encoding="utf-8") == "generated"
     assert (backup_dir / "config" / "quotation_template.json").read_text(encoding="utf-8") == "{}"
+
+
+def test_create_auto_backup_uses_timestamp_and_safe_reason(
+    tmp_path: Path,
+    monkeypatch,
+):
+    database_file = tmp_path / "gts.sqlite3"
+    backup_dir = tmp_path / "auto-backups"
+    with sqlite3.connect(database_file) as connection:
+        connection.execute("CREATE TABLE backup_test (value TEXT)")
+        connection.execute("INSERT INTO backup_test (value) VALUES ('auto')")
+
+    class FixedDatetime:
+        @classmethod
+        def now(cls):
+            return datetime(2026, 5, 16, 14, 25, 30)
+
+    monkeypatch.setenv("SHARED_ACCESS_CODE", "test-access-code")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "55123511")
+    monkeypatch.setenv("DATABASE_PATH", str(database_file))
+    get_settings.cache_clear()
+    monkeypatch.setattr(auto_backup, "AUTO_BACKUP_DIR", backup_dir)
+    monkeypatch.setattr(auto_backup, "datetime", FixedDatetime)
+
+    backup_file = auto_backup.create_auto_backup("full quotation import!")
+
+    assert backup_file.parent == backup_dir
+    assert backup_file.name == "20260516_142530_full-quotation-import.sqlite3"
+    with sqlite3.connect(backup_file) as connection:
+        value = connection.execute("SELECT value FROM backup_test").fetchone()[0]
+    assert value == "auto"
+    get_settings.cache_clear()

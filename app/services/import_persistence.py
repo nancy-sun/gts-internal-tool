@@ -19,6 +19,7 @@ def import_preview_rows(
     file_name: str,
     selected_updates: set[tuple[int, str]],
     required_choices: dict[tuple[int, str], str] | None = None,
+    auto_backup_path: str | None = None,
 ) -> dict[str, int]:
     required_choices = required_choices or {}
     result = ImportResult()
@@ -86,7 +87,7 @@ def import_preview_rows(
         create_quotation_item(connection, product_id, values, operator_name, now)
         result.inserted_items += 1
 
-    create_upload_log(connection, operator_name, file_name, result)
+    create_upload_log(connection, operator_name, file_name, result, auto_backup_path)
     return result.as_dict()
 
 
@@ -143,19 +144,23 @@ def create_upload_log(
     operator_name: str,
     file_name: str,
     result: ImportResult,
+    auto_backup_path: str | None,
 ) -> None:
+    note = (
+        f"新增产品={result.created_products}; "
+        f"更新产品={result.updated_products}; "
+        f"确认重复报价={result.confirmed_duplicates}; "
+        f"失败行={result.failed_rows}"
+    )
+    if auto_backup_path:
+        note = f"{note}; 自动备份={auto_backup_path}"
     create_operation_log(
         connection,
         operator_name=operator_name,
         action_type="upload_full_quotation",
         file_name=file_name,
         row_count=result.inserted_items,
-        note=(
-            f"新增产品={result.created_products}; "
-            f"更新产品={result.updated_products}; "
-            f"确认重复报价={result.confirmed_duplicates}; "
-            f"失败行={result.failed_rows}"
-        ),
+        note=note,
     )
 
 

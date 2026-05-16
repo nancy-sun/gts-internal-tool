@@ -8,6 +8,9 @@
     <h1>HS Code 上传预览</h1>
     <p>文件：{{ file_name }}　操作员：{{ operator_name }}</p>
   </section>
+  {% if error %}
+    <p class="error">{{ error }}</p>
+  {% endif %}
 
   <form class="preview-page-form" method="post" action="/hs-codes/upload/confirm">
     <input type="hidden" name="token" value="{{ token }}">
