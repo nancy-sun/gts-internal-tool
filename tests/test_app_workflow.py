@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from io import BytesIO
@@ -88,7 +89,7 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert 'event: complete' in stream_response.text
     assert '"has_errors": false' in stream_response.text
 
-    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
     assert "新增产品" in confirm_response.text
     assert not (app_client.upload_path / f"preview_{upload_token}.json").exists()
@@ -102,6 +103,8 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert 'href="/products/1/edit"' in search_response.text
     assert "编辑产品" in search_response.text
     assert "历史报价 1 条" in search_response.text
+    assert '<details class="quotation-history">' in search_response.text
+    assert '<details class="quotation-history" open>' not in search_response.text
 
     generate_response = app_client.post(
         "/generate/preview",
@@ -213,7 +216,7 @@ def test_page_breadcrumbs_include_parent_pages(app_client: TestClient) -> None:
     upload_token = extract_token(upload_preview.text)
     stream_response = app_client.get(f"/upload/preview/stream/{upload_token}")
     assert stream_response.status_code == 200
-    upload_result = app_client.post("/upload/confirm", data={"token": upload_token})
+    upload_result = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert upload_result.status_code == 200
     assert_breadcrumb(upload_result.text, ["首页", "上传完整报价单", "导入结果"])
 
@@ -344,13 +347,255 @@ def test_upload_preview_reports_missing_required_fields(app_client: TestClient) 
     stream_response = app_client.get(f"/upload/preview/stream/{token}")
     assert stream_response.status_code == 200
     assert '"has_errors": true' in stream_response.text
-    assert "工厂不能为空" in stream_response.text
     assert "单位不能为空" in stream_response.text
     assert "单价不能为空" in stream_response.text
 
     confirm_response = app_client.post("/upload/confirm", data={"token": token})
     assert confirm_response.status_code == 400
     assert "预览有错误，请修改 Excel 后再导入。" in confirm_response.text
+
+
+def test_upload_preview_groups_repeated_factory_and_blocks_until_resolved(
+    app_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "repeated-factory.xlsx",
+                build_quotation_workbook(
+                    [
+                        {"gts_no": "GTS-REP-001", "factory": "Same Factory", "unit": "pc", "unit_price": 10},
+                        {"gts_no": "GTS-REP-002", "factory": "Same Factory", "unit": "pc", "unit_price": 20},
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    token = extract_token(upload_response.text)
+    stream_response = app_client.get(f"/upload/preview/stream/{token}")
+    payload = preview_payload(app_client, token)
+
+    assert stream_response.status_code == 200
+    assert payload["supplier_matches"][0]["status"] == "pending_unmatched"
+    assert payload["supplier_matches"][0]["occurrence_count"] == 2
+    assert len(payload["supplier_matches"]) == 1
+
+    blocked_response = app_client.post("/upload/confirm", data={"token": token})
+    assert blocked_response.status_code == 400
+    assert "还有未处理的供应商" in blocked_response.text
+
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, token)
+    assert confirm_response.status_code == 200
+    with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
+        supplier_ids = [
+            row[0]
+            for row in connection.execute(
+                "SELECT supplier_id FROM quotation_items ORDER BY gts_no"
+            ).fetchall()
+        ]
+    assert supplier_ids[0] == supplier_ids[1]
+    assert supplier_ids[0] is not None
+
+
+def test_batch_create_same_short_name_merges_multiple_factory_groups(
+    app_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "same-supplier-different-factory.xlsx",
+                build_quotation_workbook(
+                    [
+                        {"gts_no": "GTS-MERGE-001", "factory": "Factory Alias A", "unit": "pc", "unit_price": 10},
+                        {"gts_no": "GTS-MERGE-002", "factory": "Factory Alias B", "unit": "pc", "unit_price": 20},
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{token}")
+    payload = preview_payload(app_client, token)
+    matches = payload["supplier_matches"]
+
+    assert len(matches) == 2
+    response = app_client.post(
+        "/upload/preview/supplier/batch",
+        data={
+            "token": token,
+            "operator_name": "Nancy",
+            f"action__{matches[0]['key']}": "create",
+            f"supplier_short_name__{matches[0]['key']}": "Merged Supplier",
+            f"action__{matches[1]['key']}": "create",
+            f"supplier_short_name__{matches[1]['key']}": "Merged Supplier",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    resolved_payload = preview_payload(app_client, token)
+    assert [
+        row["values"]["factory"] for row in resolved_payload["rows"]
+    ] == ["Merged Supplier", "Merged Supplier"]
+    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    assert confirm_response.status_code == 200
+
+    with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
+        supplier_count = connection.execute("SELECT COUNT(*) FROM suppliers").fetchone()[0]
+        quotation_rows = connection.execute(
+            "SELECT factory, supplier_id FROM quotation_items ORDER BY gts_no"
+        ).fetchall()
+        aliases_text = connection.execute(
+            "SELECT aliases_text FROM suppliers WHERE supplier_short_name = 'Merged Supplier'"
+        ).fetchone()[0]
+    assert supplier_count == 1
+    assert quotation_rows[0][1] == quotation_rows[1][1]
+    assert quotation_rows[0][0] == "Merged Supplier"
+    assert quotation_rows[1][0] == "Merged Supplier"
+    assert aliases_text == ""
+
+
+def test_blank_factory_group_requires_resolution_and_import_fills_factory(
+    app_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "blank-factory.xlsx",
+                build_quotation_workbook(
+                    [
+                        {"gts_no": "GTS-BLANK-001", "factory": "", "unit": "pc", "unit_price": 10},
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{token}")
+    payload = preview_payload(app_client, token)
+    blank_match = payload["supplier_matches"][0]
+
+    assert blank_match["status"] == "blank_pending"
+    assert blank_match["display_factory"] == "空白供应商"
+
+    create_missing_name_response = app_client.post(
+        "/upload/preview/supplier/batch",
+        data={
+            "token": token,
+            "operator_name": "Nancy",
+            f"action__{blank_match['key']}": "create",
+        },
+    )
+    assert create_missing_name_response.status_code == 400
+    assert "请填写供应商简称" in create_missing_name_response.text
+
+    create_response = app_client.post(
+        "/upload/preview/supplier/batch",
+        data={
+            "token": token,
+            "operator_name": "Nancy",
+            f"action__{blank_match['key']}": "create",
+            f"supplier_short_name__{blank_match['key']}": "Blank Factory Short",
+        },
+        follow_redirects=False,
+    )
+    assert create_response.status_code == 303
+    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    assert confirm_response.status_code == 200
+    with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
+        row = connection.execute(
+            "SELECT factory, supplier_id FROM quotation_items WHERE gts_no_normalized = 'GTSBLANK001'"
+        ).fetchone()
+    assert row[0] == "Blank Factory Short"
+    assert row[1] is not None
+
+
+def test_supplier_full_short_and_alias_auto_match_in_upload_preview(
+    app_client: TestClient,
+) -> None:
+    create_supplier_for_test(
+        app_client,
+        full_name="Auto Full Name",
+        short_name="Auto Short",
+        aliases_text="Auto Alias",
+    )
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "auto-match-suppliers.xlsx",
+                build_quotation_workbook(
+                    [
+                        {"gts_no": "GTS-FULL", "factory": "Auto Full Name", "unit": "pc", "unit_price": 10},
+                        {"gts_no": "GTS-SHORT", "factory": "Auto Short", "unit": "pc", "unit_price": 11},
+                        {"gts_no": "GTS-ALIAS", "factory": "Auto Alias", "unit": "pc", "unit_price": 12},
+                    ]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{token}")
+    payload = preview_payload(app_client, token)
+
+    assert [match["status"] for match in payload["supplier_matches"]] == [
+        "auto_matched",
+        "auto_matched",
+        "auto_matched",
+    ]
+    assert app_client.post("/upload/confirm", data={"token": token}).status_code == 200
+
+
+def test_ambiguous_supplier_blocks_until_selected(app_client: TestClient) -> None:
+    create_supplier_for_test(app_client, full_name="Ambiguous One", short_name="Ambiguous One", aliases_text="Shared Supplier")
+    create_supplier_for_test(app_client, full_name="Ambiguous Two", short_name="Ambiguous Two", aliases_text="Shared Supplier")
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "ambiguous-supplier.xlsx",
+                build_quotation_workbook(
+                    [{"gts_no": "GTS-AMB-001", "factory": "Shared Supplier", "unit": "pc", "unit_price": 10}]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{token}")
+    payload = preview_payload(app_client, token)
+    match = payload["supplier_matches"][0]
+
+    assert match["status"] == "ambiguous_pending"
+    assert len(match["candidate_suppliers"]) == 2
+    assert app_client.post("/upload/confirm", data={"token": token}).status_code == 400
+
+    response = app_client.post(
+        "/upload/preview/supplier/batch",
+        data={
+            "token": token,
+            "operator_name": "Nancy",
+            f"action__{match['key']}": "ambiguous",
+            f"supplier_id__{match['key']}": match["candidate_suppliers"][0]["id"],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert app_client.post("/upload/confirm", data={"token": token}).status_code == 200
 
 
 def test_upload_confirm_stops_before_import_when_auto_backup_fails(
@@ -390,6 +635,7 @@ def test_upload_confirm_stops_before_import_when_auto_backup_fails(
     def fail_backup(reason: str):
         raise BackupError("自动备份失败，请检查 backups/auto 文件夹权限。")
 
+    resolve_all_unmatched_suppliers(app_client, token)
     monkeypatch.setattr(upload_route, "create_auto_backup", fail_backup)
     confirm_response = app_client.post("/upload/confirm", data={"token": token})
 
@@ -397,9 +643,11 @@ def test_upload_confirm_stops_before_import_when_auto_backup_fails(
     assert "自动备份失败" in confirm_response.text
     with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
         product_count = connection.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-        log_count = connection.execute("SELECT COUNT(*) FROM operation_logs").fetchone()[0]
+        upload_log_count = connection.execute(
+            "SELECT COUNT(*) FROM operation_logs WHERE action_type = 'upload_full_quotation'"
+        ).fetchone()[0]
     assert product_count == 0
-    assert log_count == 0
+    assert upload_log_count == 0
 
 
 def test_generate_preview_highlights_multiple_candidates_and_shows_comments(
@@ -442,10 +690,7 @@ def test_generate_preview_highlights_multiple_candidates_and_shows_comments(
     upload_token = extract_token(upload_response.text)
     stream_response = app_client.get(f"/upload/preview/stream/{upload_token}")
     assert '"has_errors": false' in stream_response.text
-    confirm_response = app_client.post(
-        "/upload/confirm",
-        data={"token": upload_token},
-    )
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
 
     generate_response = app_client.post(
@@ -500,7 +745,7 @@ def test_generate_download_allows_missing_quantity_and_leaves_total_blank(
     upload_token = extract_token(upload_response.text)
     stream_response = app_client.get(f"/upload/preview/stream/{upload_token}")
     assert '"has_errors": false' in stream_response.text
-    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
 
     generate_response = app_client.post(
@@ -591,7 +836,7 @@ def test_generate_preview_allows_mixed_valid_and_invalid_request_rows(
     upload_token = extract_token(upload_response.text)
     stream_response = app_client.get(f"/upload/preview/stream/{upload_token}")
     assert '"has_errors": false' in stream_response.text
-    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
 
     generate_response = app_client.post(
@@ -672,7 +917,7 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
     )
     upload_token = extract_token(upload_response.text)
     app_client.get(f"/upload/preview/stream/{upload_token}")
-    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
 
     hs_upload_response = app_client.post(
@@ -810,7 +1055,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     )
     upload_token = extract_token(upload_response.text)
     app_client.get(f"/upload/preview/stream/{upload_token}")
-    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
 
     edit_page = app_client.get("/products/1/edit")
@@ -974,7 +1219,7 @@ def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
     assert upload_response.status_code == 200
     upload_token = extract_token(upload_response.text)
     app_client.get(f"/upload/preview/stream/{upload_token}")
-    confirm_response = app_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
 
     updated_upload_page = app_client.get("/upload")
@@ -1013,6 +1258,8 @@ def test_supplier_create_edit_search_and_import_linking(
     assert create_response.status_code == 200
     assert "Factory A" in create_response.text
     assert "Alice" in create_response.text
+    assert 'class="supplier-detail-form"' not in create_response.text
+    assert 'href="/suppliers/1/edit?mode=edit"' in create_response.text
 
     duplicate_short_name_response = app_client.post(
         "/suppliers/new",
@@ -1030,6 +1277,13 @@ def test_supplier_create_edit_search_and_import_linking(
     assert search_supplier_response.status_code == 200
     assert "Factory A" in search_supplier_response.text
     assert "Ningbo" in search_supplier_response.text
+    assert "更多" in search_supplier_response.text
+    assert "<th>联系人</th>" not in search_supplier_response.text
+    assert "<th>质量评分</th>" not in search_supplier_response.text
+    assert "缺供应商信息" in search_supplier_response.text
+    assert "缺评分" in search_supplier_response.text
+    assert "data-status-tag-supplier-info" in search_supplier_response.text
+    assert "data-status-tag-rating" in search_supplier_response.text
 
     edit_response = app_client.post(
         "/suppliers/1/edit",
@@ -1051,8 +1305,15 @@ def test_supplier_create_edit_search_and_import_linking(
         },
     )
     assert edit_response.status_code == 200
-    assert "供应商资料已保存" in edit_response.text
     assert "Factory A Updated" in edit_response.text
+    assert 'class="supplier-detail-form"' not in edit_response.text
+
+    edit_form = app_client.get("/suppliers/1/edit", params={"mode": "edit"})
+    assert edit_form.status_code == 200
+    assert 'class="supplier-detail-form"' in edit_form.text
+    assert "首页" in edit_form.text
+    assert "供应商" in edit_form.text
+    assert "Factory A Updated" in edit_form.text
 
     upload_response = app_client.post(
         "/upload/preview",
@@ -1085,6 +1346,7 @@ def test_supplier_create_edit_search_and_import_linking(
     assert upload_response.status_code == 200
     token = extract_token(upload_response.text)
     app_client.get(f"/upload/preview/stream/{token}")
+    resolve_all_unmatched_suppliers(app_client, token)
     confirm_response = app_client.post("/upload/confirm", data={"token": token})
     assert confirm_response.status_code == 200
 
@@ -1100,15 +1362,17 @@ def test_supplier_create_edit_search_and_import_linking(
         ).fetchone()
         fallback = connection.execute(
             """
-            SELECT supplier_id, factory
-            FROM quotation_items
+            SELECT q.supplier_id, q.factory, s.supplier_short_name
+            FROM quotation_items q
+            LEFT JOIN suppliers s ON s.id = q.supplier_id
             WHERE gts_no_normalized = 'GTSSUP002'
             """
         ).fetchone()
     assert linked["supplier_id"] == 1
     assert linked["supplier_short_name"] == "Factory A Updated"
-    assert fallback["supplier_id"] is None
+    assert fallback["supplier_id"] is not None
     assert fallback["factory"] == "Unlinked Factory"
+    assert fallback["supplier_short_name"] == "Unlinked Factory"
 
     linked_search = app_client.get("/search", params={"field": "gts_no", "q": "GTSSUP001"})
     fallback_search = app_client.get("/search", params={"field": "gts_no", "q": "GTSSUP002"})
@@ -1262,6 +1526,54 @@ def extract_token(html: str) -> str:
     match = re.search(r'name="token" value="([^"]+)"', html)
     assert match is not None
     return match.group(1)
+
+
+def preview_payload(client: TestClient, token: str) -> dict:
+    return json.loads((client.upload_path / f"preview_{token}.json").read_text())
+
+
+def confirm_upload_after_creating_suppliers(client: TestClient, token: str):
+    resolve_all_unmatched_suppliers(client, token)
+    return client.post("/upload/confirm", data={"token": token})
+
+
+def resolve_all_unmatched_suppliers(client: TestClient, token: str) -> None:
+    payload = preview_payload(client, token)
+    data = {"token": token, "operator_name": payload["operator_name"]}
+    for match in payload.get("supplier_matches") or []:
+        if match["status"] not in {"pending_unmatched", "blank_pending", "ambiguous_pending"}:
+            continue
+        factory = match.get("factory") or f"Blank Supplier {match['key']}"
+        data[f"action__{match['key']}"] = "create"
+        data[f"supplier_short_name__{match['key']}"] = factory
+    if len(data) == 2:
+        return
+    response = client.post(
+        "/upload/preview/supplier/batch",
+        data=data,
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
+def create_supplier_for_test(
+    client: TestClient,
+    *,
+    full_name: str,
+    short_name: str,
+    aliases_text: str = "",
+) -> None:
+    response = client.post(
+        "/suppliers/new",
+        data={
+            "operator_name": "Nancy",
+            "supplier_full_name": full_name,
+            "supplier_short_name": short_name,
+            "aliases_text": aliases_text,
+            "edit_password": "55123511",
+        },
+    )
+    assert response.status_code == 200
 
 
 def fetch_single_candidate_id(database_path: Path) -> int:

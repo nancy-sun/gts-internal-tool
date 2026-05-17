@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ values.supplier_short_name or values.supplier_full_name }} - GTS Internal Tool{% endblock %}
+{% block page_name %}供应商{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact-heading supplier-detail-heading">
+    <div>
+      <h1>{{ values.supplier_short_name or values.supplier_full_name }}</h1>
+      <p>{{ values.supplier_full_name or "" }}</p>
+    </div>
+    <a class="table-action-link" href="/suppliers/{{ supplier.id }}/edit?mode=edit">编辑</a>
+  </section>
+
+  <section class="table-section supplier-detail-section">
+    <div class="supplier-detail-list">
+      <div class="supplier-detail-row">
+        <span>供应商全称</span>
+        <strong>{{ values.supplier_full_name or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>供应商简称</span>
+        <strong>{{ values.supplier_short_name or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>别名</span>
+        <strong>{{ values.aliases_text or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>联系人</span>
+        <strong>{{ values.contact_person or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>电话</span>
+        <strong>{{ values.phone or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>微信</span>
+        <strong>{{ values.wechat or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>城市</span>
+        <strong>{{ values.city or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>省份</span>
+        <strong>{{ values.province or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>产品范围</span>
+        <strong>{{ values.product_scope or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>工厂/贸易商</span>
+        <strong>{{ values.factory_or_trader or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>质量评分</span>
+        <strong>{{ values.quality_rating or "未评分" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>价格评分</span>
+        <strong>{{ values.price_rating or "未评分" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>配合评分</span>
+        <strong>{{ values.cooperation_rating or "未评分" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>备注</span>
+        <strong>{{ values.notes or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row supplier-status-row">
+        <span>资料状态</span>
+        <strong>
+          {% if missing_tags %}
+            {% for tag in missing_tags %}
+              <span class="data-status-tag data-status-tag-{{ tag.kind }}">{{ tag.label }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="success-text">完整</span>
+          {% endif %}
+        </strong>
+      </div>
+    </div>
+  </section>
+{% endblock %}

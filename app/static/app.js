@@ -1,4 +1,128 @@
 (function () {
+  var forms = Array.prototype.slice.call(document.querySelectorAll("form"));
+  forms.forEach(function (form) {
+    var requiredFields = requiredControls(form);
+    if (!requiredFields.length) {
+      return;
+    }
+
+    var managedSubmitButtons = submitButtons(form).filter(function (button) {
+      return !button.disabled && !button.hasAttribute("data-product-edit-submit")
+        && !button.hasAttribute("data-supplier-batch-submit")
+        && !button.hasAttribute("data-upload-preview-confirm");
+    });
+
+    form.addEventListener("submit", function (event) {
+      markInvalidControls(form);
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        focusFirstInvalidControl(form);
+      }
+    });
+
+    requiredFields.forEach(function (field) {
+      field.addEventListener("input", function () {
+        updateControlValidationState(field);
+        updateManagedSubmitButtons();
+      });
+      field.addEventListener("change", function () {
+        updateControlValidationState(field);
+        updateManagedSubmitButtons();
+      });
+      field.addEventListener("blur", function () {
+        markControlGroupValidated(field);
+        updateControlValidationState(field);
+      });
+      updateControlValidationState(field);
+    });
+
+    updateManagedSubmitButtons();
+
+    function updateManagedSubmitButtons() {
+      if (!managedSubmitButtons.length) {
+        return;
+      }
+      var ready = formRequiredFieldsReady(form);
+      managedSubmitButtons.forEach(function (button) {
+        button.disabled = !ready;
+      });
+    }
+  });
+
+  function requiredControls(form) {
+    return Array.prototype.slice.call(
+      form.querySelectorAll("input[required], select[required], textarea[required]")
+    ).filter(function (field) {
+      return field.type !== "hidden" && !field.disabled;
+    });
+  }
+
+  function submitButtons(form) {
+    return Array.prototype.slice.call(
+      form.querySelectorAll('button[type="submit"], input[type="submit"]')
+    );
+  }
+
+  function formRequiredFieldsReady(form) {
+    return requiredControls(form).every(function (field) {
+      if (field.type === "radio") {
+        return Boolean(form.querySelector('input[name="' + cssEscape(field.name) + '"]:checked'));
+      }
+      if (field.type === "checkbox") {
+        return field.checked;
+      }
+      return Boolean((field.value || "").trim()) && field.checkValidity();
+    });
+  }
+
+  function markInvalidControls(form) {
+    requiredControls(form).forEach(function (field) {
+      markControlGroupValidated(field);
+      updateControlValidationState(field);
+    });
+  }
+
+  function markControlGroupValidated(field) {
+    if (field.type !== "radio") {
+      field.classList.add("was-validated");
+      return;
+    }
+    Array.prototype.slice.call(
+      field.form.querySelectorAll('input[name="' + cssEscape(field.name) + '"]')
+    ).forEach(function (control) {
+      control.classList.add("was-validated");
+    });
+  }
+
+  function updateControlValidationState(field) {
+    var fields = field.type === "radio"
+      ? Array.prototype.slice.call(field.form.querySelectorAll('input[name="' + cssEscape(field.name) + '"]'))
+      : [field];
+    var invalid = !field.checkValidity();
+    var shouldShowInvalid = fields.some(function (control) {
+      return control.classList.contains("was-validated");
+    });
+    fields.forEach(function (control) {
+      control.classList.toggle("is-invalid", shouldShowInvalid && invalid);
+    });
+  }
+
+  function focusFirstInvalidControl(form) {
+    var invalid = form.querySelector(".is-invalid, :invalid");
+    if (invalid && typeof invalid.focus === "function") {
+      invalid.focus();
+    }
+  }
+
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+      return window.CSS.escape(value);
+    }
+    return String(value).replace(/"/g, '\\"');
+  }
+})();
+
+(function () {
   var storageKey = "gts_operator_name";
   var operatorInputs = Array.prototype.slice.call(
     document.querySelectorAll('input[name="operator_name"]')
@@ -119,11 +243,20 @@
   updateSubmitState();
 
   function updateSubmitState() {
-    submitButton.disabled = !fields.some(fieldChanged);
+    submitButton.disabled = !fields.some(fieldChanged) || !requiredFieldsReady(form);
   }
 
   function fieldChanged(field) {
     return field.value.trim() !== (field.getAttribute("data-original-value") || "").trim();
+  }
+
+  function requiredFieldsReady(formElement) {
+    var requiredFields = Array.prototype.slice.call(
+      formElement.querySelectorAll("input[required], select[required], textarea[required]")
+    );
+    return requiredFields.every(function (field) {
+      return Boolean((field.value || "").trim()) && field.checkValidity();
+    });
   }
 })();
 
@@ -134,6 +267,8 @@
   }
 
   var streamUrl = streamContainer.getAttribute("data-upload-preview-stream");
+  var previewTokenInput = document.querySelector('input[name="token"]');
+  var previewToken = previewTokenInput ? previewTokenInput.value : "";
   var tableBody = document.querySelector("[data-upload-preview-body]");
   var headerRow = document.querySelector("[data-upload-preview-header]");
   var confirmButton = document.querySelector("[data-upload-preview-confirm]");
@@ -186,6 +321,14 @@
     eventSource.close();
     enqueueRender(function () {
       stopConfirmLoading();
+      if (data.has_supplier_pending && previewToken) {
+        if (progressText) {
+          progressText.textContent = "请先处理供应商匹配，正在打开匹配页面...";
+          progressText.classList.add("status-warning");
+        }
+        window.location.href = "/upload/preview/" + previewToken;
+        return;
+      }
       if (confirmButton && data.has_errors) {
         confirmButton.disabled = true;
       } else if (confirmButton) {
@@ -458,4 +601,73 @@
       event.preventDefault();
     }
   });
+})();
+
+(function () {
+  var batchForm = document.querySelector("[data-supplier-batch-form]");
+  if (batchForm) {
+    var batchSubmit = batchForm.querySelector("[data-supplier-batch-submit]");
+    batchForm.addEventListener("input", updateBatchState);
+    batchForm.addEventListener("change", updateBatchState);
+    updateBatchState();
+
+    function updateBatchState() {
+      if (!batchSubmit) {
+        return;
+      }
+      batchSubmit.disabled = !batchFormReady(batchForm);
+    }
+  }
+
+  var supplierForms = Array.prototype.slice.call(
+    document.querySelectorAll("[data-supplier-link-form], [data-supplier-create-form]")
+  );
+
+  supplierForms.forEach(function (form) {
+    var submitButton = form.querySelector(
+      "[data-supplier-link-submit], [data-supplier-create-submit]"
+    );
+    if (!submitButton) {
+      return;
+    }
+    form.addEventListener("input", updateState);
+    form.addEventListener("change", updateState);
+    updateState();
+
+    function updateState() {
+      submitButton.disabled = !formIsReady(form);
+    }
+  });
+
+  function formIsReady(form) {
+    var requiredFields = Array.prototype.slice.call(
+      form.querySelectorAll("input[required], select[required], textarea[required]")
+    );
+    return requiredFields.every(function (field) {
+      if (field.type === "radio") {
+        return Boolean(form.querySelector('input[name="' + field.name + '"]:checked'));
+      }
+      return Boolean((field.value || "").trim());
+    });
+  }
+
+  function batchFormReady(form) {
+    var rows = Array.prototype.slice.call(form.querySelectorAll("[data-supplier-batch-row]"));
+    return rows.every(function (row) {
+      var action = row.querySelector('input[name^="action__"]:checked')
+        || row.querySelector('input[type="hidden"][name^="action__"]');
+      if (!action || !action.value) {
+        return false;
+      }
+      if (action.value === "existing" || action.value === "ambiguous") {
+        var supplier = row.querySelector('select[name^="supplier_id__"], input[type="radio"][name^="supplier_id__"]:checked');
+        return Boolean(supplier && supplier.value);
+      }
+      if (action.value === "create") {
+        var shortName = row.querySelector('input[name^="supplier_short_name__"]');
+        return Boolean(shortName && shortName.value.trim());
+      }
+      return false;
+    });
+  }
 })();

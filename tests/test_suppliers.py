@@ -11,9 +11,7 @@ from app.services.suppliers import (
     add_alias_text_alias,
     clean_aliases_text,
     create_supplier,
-    create_supplier_from_candidate,
     get_supplier,
-    link_supplier_candidate,
     match_supplier_by_name,
     normalize_supplier_name,
     parse_rating,
@@ -292,42 +290,6 @@ def test_removed_alias_no_longer_matches_but_full_and_short_names_still_match(
     assert import_factory_row(supplier_connection, "宝威流体", "GTS-REMOVED") is None
     assert import_factory_row(supplier_connection, "中际", "GTS-FULL2") == supplier_id
     assert import_factory_row(supplier_connection, "中际短名", "GTS-SHORT2") == supplier_id
-
-
-def test_supplier_candidate_link_and_create_preserve_factory_text(supplier_connection):
-    supplier_id = create_supplier(
-        supplier_connection,
-        values={"supplier_full_name": "中际", "aliases_text": ""},
-        operator_name="Nancy",
-    )
-    insert_unlinked_quotation(supplier_connection, "宝威流体", "GTS-CAND-1")
-
-    linked_count = link_supplier_candidate(
-        supplier_connection,
-        factory_name="宝威流体",
-        supplier_id=supplier_id,
-        operator_name="Nancy",
-        action_type="supplier_candidate_linked",
-    )
-
-    row = supplier_connection.execute(
-        "SELECT supplier_id, factory FROM quotation_items WHERE gts_no = 'GTS-CAND-1'"
-    ).fetchone()
-    assert linked_count == 1
-    assert row["supplier_id"] == supplier_id
-    assert row["factory"] == "宝威流体"
-
-    insert_unlinked_quotation(supplier_connection, "新供应商", "GTS-CAND-2")
-    new_supplier_id = create_supplier_from_candidate(
-        supplier_connection,
-        factory_name="新供应商",
-        operator_name="Nancy",
-    )
-    new_row = supplier_connection.execute(
-        "SELECT supplier_id, factory FROM quotation_items WHERE gts_no = 'GTS-CAND-2'"
-    ).fetchone()
-    assert new_row["supplier_id"] == new_supplier_id
-    assert new_row["factory"] == "新供应商"
 
 
 def fetch_aliases(connection: sqlite3.Connection, supplier_id: int) -> dict[str, sqlite3.Row]:

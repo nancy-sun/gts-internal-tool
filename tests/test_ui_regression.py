@@ -51,6 +51,17 @@ def test_layout_css_keeps_table_pages_stable() -> None:
     assert ".search-results-table" in css
     assert ".data-quality-table" in css
     assert ".table-section + .table-section" in css
+    assert "input.is-invalid" in css
+    assert "select.is-invalid" in css
+
+
+def test_app_js_has_generic_required_form_validation() -> None:
+    script = Path("app/static/app.js").read_text(encoding="utf-8")
+
+    assert "formRequiredFieldsReady" in script
+    assert "markInvalidControls" in script
+    assert "focusFirstInvalidControl" in script
+    assert "data-product-edit-submit" in script
 
 
 def test_dashboard_keeps_primary_navigation_cards(ui_client: TestClient) -> None:

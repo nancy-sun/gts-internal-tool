@@ -6,17 +6,14 @@ from fastapi.responses import RedirectResponse
 from app.auth import get_session_operator_name, require_auth, set_session_operator_name
 from app.config import get_settings
 from app.database import get_connection
-from app.navigation import SUPPLIERS_CRUMB, breadcrumbs
+from app.navigation import SUPPLIERS_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.suppliers import (
-    SUPPLIER_FIELDS,
-    create_supplier_from_candidate,
     create_supplier,
     get_supplier,
-    link_supplier_candidate,
     list_suppliers,
-    list_supplier_candidates,
     supplier_form_values,
     supplier_form_values_from_db,
+    supplier_display_name,
     update_supplier,
     validate_supplier_short_name_unique,
     validate_supplier_values,
@@ -28,20 +25,29 @@ router = APIRouter()
 
 
 @router.get("/suppliers")
-def suppliers_page(request: Request, q: str = ""):
+def suppliers_page(request: Request, q: str = "", status: str = "all"):
     redirect = require_auth(request)
     if redirect:
         return redirect
 
     with get_connection() as connection:
         suppliers = list_suppliers(connection, query=q)
+    supplier_rows = [
+        {"supplier": supplier, "missing_tags": supplier_missing_tags(supplier)}
+        for supplier in suppliers
+    ]
+    incomplete_count = sum(1 for row in supplier_rows if row["missing_tags"])
+    if status == "incomplete":
+        supplier_rows = [row for row in supplier_rows if row["missing_tags"]]
     return templates.TemplateResponse(
         request,
         "suppliers.html",
         {
             "request": request,
-            "suppliers": suppliers,
+            "supplier_rows": supplier_rows,
             "query": q,
+            "status": status,
+            "incomplete_count": incomplete_count,
             "breadcrumbs": breadcrumbs(SUPPLIERS_CRUMB),
             "return_url": "/",
         },
@@ -78,12 +84,9 @@ def supplier_create_submit(
     province: str = Form(""),
     product_scope: str = Form(""),
     factory_or_trader: str = Form(""),
-    quality_level: str = Form(""),
-    price_level: str = Form(""),
     quality_rating: str = Form(""),
     price_rating: str = Form(""),
     cooperation_rating: str = Form(""),
-    cooperation_notes: str = Form(""),
     notes: str = Form(""),
 ):
     redirect = require_auth(request)
@@ -121,69 +124,28 @@ def supplier_create_submit(
     return RedirectResponse(url=f"/suppliers/{supplier_id}/edit", status_code=303)
 
 
-@router.get("/suppliers/candidates")
-def supplier_candidates_page(request: Request):
-    redirect = require_auth(request)
-    if redirect:
-        return redirect
-
-    with get_connection() as connection:
-        candidates = list_supplier_candidates(connection)
-        suppliers = list_suppliers(connection, limit=1000)
-    return templates.TemplateResponse(
-        request,
-        "supplier_candidates.html",
-        {
-            "request": request,
-            "candidates": candidates,
-            "suppliers": suppliers,
-            "operator_name": get_session_operator_name(request),
-            "breadcrumbs": [SUPPLIERS_CRUMB, {"label": "供应商候选", "href": ""}],
-            "return_url": "/suppliers",
-        },
+def supplier_missing_tags(supplier) -> list[dict[str, str]]:
+    tags = []
+    supplier_info_fields = (
+        "supplier_full_name",
+        "supplier_short_name",
+        "aliases_text",
+        "city",
+        "product_scope",
     )
-
-
-@router.post("/suppliers/candidates")
-def supplier_candidate_submit(
-    request: Request,
-    operator_name: str = Form(...),
-    factory_name: str = Form(...),
-    action: str = Form(...),
-    supplier_id: int = Form(0),
-):
-    redirect = require_auth(request)
-    if redirect:
-        return redirect
-
-    operator_name = set_session_operator_name(request, operator_name)
-    if action == "create":
-        with get_connection() as connection:
-            create_supplier_from_candidate(
-                connection,
-                factory_name=factory_name,
-                operator_name=operator_name,
-            )
-            connection.commit()
-    elif action in {"link", "resolve"} and supplier_id:
-        with get_connection() as connection:
-            link_supplier_candidate(
-                connection,
-                factory_name=factory_name,
-                supplier_id=supplier_id,
-                operator_name=operator_name,
-                action_type=(
-                    "supplier_ambiguous_match_resolved"
-                    if action == "resolve"
-                    else "supplier_candidate_linked"
-                ),
-            )
-            connection.commit()
-    return RedirectResponse(url="/suppliers/candidates", status_code=303)
+    if any(not (supplier[field] or "").strip() for field in supplier_info_fields):
+        tags.append({"label": "缺供应商信息", "kind": "supplier-info"})
+    contact_fields = ("contact_person", "phone", "wechat")
+    if any(not (supplier[field] or "").strip() for field in contact_fields):
+        tags.append({"label": "缺联系方式", "kind": "contact"})
+    rating_fields = ("quality_rating", "price_rating", "cooperation_rating")
+    if any(supplier[field] is None for field in rating_fields):
+        tags.append({"label": "缺评分", "kind": "rating"})
+    return tags
 
 
 @router.get("/suppliers/{supplier_id}/edit")
-def supplier_edit_page(request: Request, supplier_id: int):
+def supplier_edit_page(request: Request, supplier_id: int, mode: str = "view"):
     redirect = require_auth(request)
     if redirect:
         return redirect
@@ -193,6 +155,13 @@ def supplier_edit_page(request: Request, supplier_id: int):
         values = supplier_form_values_from_db(connection, supplier) if supplier else {}
     if not supplier:
         return RedirectResponse(url="/suppliers", status_code=303)
+    if mode != "edit":
+        return render_supplier_detail(
+            request,
+            supplier=supplier,
+            values=values,
+            operator_name=get_session_operator_name(request),
+        )
     return render_supplier_form(
         request,
         supplier=supplier,
@@ -218,12 +187,9 @@ def supplier_edit_submit(
     province: str = Form(""),
     product_scope: str = Form(""),
     factory_or_trader: str = Form(""),
-    quality_level: str = Form(""),
-    price_level: str = Form(""),
     quality_rating: str = Form(""),
     price_rating: str = Form(""),
     cooperation_rating: str = Form(""),
-    cooperation_notes: str = Form(""),
     notes: str = Form(""),
 ):
     redirect = require_auth(request)
@@ -267,13 +233,31 @@ def supplier_edit_submit(
         supplier = get_supplier(connection, supplier_id)
         values = supplier_form_values_from_db(connection, supplier)
 
-    return render_supplier_form(
+    return RedirectResponse(url=f"/suppliers/{supplier_id}/edit", status_code=303)
+
+
+def render_supplier_detail(
+    request: Request,
+    *,
+    supplier,
+    values: dict[str, str],
+    operator_name: str,
+    status_code: int = 200,
+):
+    display_name = supplier_display_name(supplier)
+    return templates.TemplateResponse(
         request,
-        supplier=supplier,
-        values=values,
-        mode="edit",
-        success="供应商资料已保存。",
-        operator_name=operator_name,
+        "supplier_detail.html",
+        {
+            "request": request,
+            "supplier": supplier,
+            "values": values,
+            "operator_name": operator_name,
+            "missing_tags": supplier_missing_tags(supplier),
+            "breadcrumbs": child_breadcrumbs(SUPPLIERS_CRUMB, display_name),
+            "return_url": "/suppliers",
+        },
+        status_code=status_code,
     )
 
 
@@ -288,7 +272,7 @@ def render_supplier_form(
     success: str | None = None,
     status_code: int = 200,
 ):
-    page_label = "新增供应商" if mode == "new" else "编辑供应商"
+    page_label = "新增供应商" if mode == "new" else supplier_display_name(supplier)
     return templates.TemplateResponse(
         request,
         "supplier_form.html",
@@ -296,12 +280,11 @@ def render_supplier_form(
             "request": request,
             "supplier": supplier,
             "values": values,
-            "fields": SUPPLIER_FIELDS,
             "mode": mode,
             "operator_name": operator_name,
             "errors": errors or [],
             "success": success,
-            "breadcrumbs": [SUPPLIERS_CRUMB, {"label": page_label, "href": ""}],
+            "breadcrumbs": child_breadcrumbs(SUPPLIERS_CRUMB, page_label),
             "return_url": "/suppliers",
         },
         status_code=status_code,

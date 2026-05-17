@@ -10,6 +10,7 @@ from app.services.import_preview import (
 from app.services.normalization import normalize_gts_no, normalize_oem
 from app.services.operation_logging import create_operation_log, utc_now_text
 from app.services.suppliers import find_supplier_by_name, supplier_link_available
+from app.services.upload_supplier_resolution import supplier_match_key
 
 
 def import_preview_rows(
@@ -21,8 +22,10 @@ def import_preview_rows(
     selected_updates: set[tuple[int, str]],
     required_choices: dict[tuple[int, str], str] | None = None,
     auto_backup_path: str | None = None,
+    supplier_resolutions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, int]:
     required_choices = required_choices or {}
+    supplier_resolutions = supplier_resolutions or {}
     result = ImportResult()
     now = utc_now_text()
 
@@ -39,6 +42,7 @@ def import_preview_rows(
             continue
         result.change_details.extend(change_details_from_choices(preview_row, required_choices))
         apply_required_choices(values, preview_row, required_choices)
+        apply_supplier_resolution(values, preview_row, supplier_resolutions)
 
         product, conflict = find_product_for_import(connection, values)
         if conflict:
@@ -64,6 +68,7 @@ def import_preview_rows(
                 quotation_item_id=duplicate_item["id"],
                 operator_name=operator_name,
                 now=now,
+                supplier_id=values.get("supplier_id"),
             )
             result.confirmed_duplicates += 1
             result.duplicate_details.append(duplicate_detail(preview_row))
@@ -373,16 +378,29 @@ def refresh_quotation_item_confirmation(
     quotation_item_id: int,
     operator_name: str,
     now: str,
+    supplier_id: int | None = None,
 ) -> None:
-    connection.execute(
-        """
-        UPDATE quotation_items
-        SET updated_by = ?,
-            updated_at = ?
-        WHERE id = ?
-        """,
-        (operator_name, now, quotation_item_id),
-    )
+    if supplier_id and supplier_link_available(connection):
+        connection.execute(
+            """
+            UPDATE quotation_items
+            SET supplier_id = COALESCE(supplier_id, ?),
+                updated_by = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (supplier_id, operator_name, now, quotation_item_id),
+        )
+    else:
+        connection.execute(
+            """
+            UPDATE quotation_items
+            SET updated_by = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (operator_name, now, quotation_item_id),
+        )
 
 
 def create_product(
@@ -430,9 +448,9 @@ def create_quotation_item(
     operator_name: str,
     now: str,
 ) -> None:
-    supplier_id = None
+    supplier_id = values.get("supplier_id")
     include_supplier_id = supplier_link_available(connection)
-    if include_supplier_id:
+    if include_supplier_id and not supplier_id:
         supplier = find_supplier_by_name(connection, values.get("factory") or "")
         supplier_id = supplier["id"] if supplier else None
     supplier_column = "supplier_id," if include_supplier_id else ""
@@ -511,3 +529,17 @@ def _text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def apply_supplier_resolution(
+    values: dict[str, Any],
+    preview_row: dict[str, Any],
+    supplier_resolutions: dict[str, dict[str, Any]],
+) -> None:
+    key = preview_row.get("supplier_match_key") or supplier_match_key(values.get("factory"))
+    resolution = supplier_resolutions.get(key)
+    if not resolution:
+        return
+    values["supplier_id"] = resolution.get("supplier_id")
+    if resolution.get("force_factory_value_for_import") or not _text(values.get("factory")):
+        values["factory"] = resolution.get("factory_value_for_import")

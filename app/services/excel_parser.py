@@ -35,7 +35,8 @@ QUOTATION_FIELDS = [
 ]
 
 NUMERIC_FIELDS = {"quantity", "unit_price", "total_price"}
-REQUIRED_UPLOAD_FIELDS = {"factory", "unit", "unit_price"}
+REQUIRED_UPLOAD_HEADERS = {"factory", "unit", "unit_price"}
+REQUIRED_UPLOAD_VALUE_FIELDS = {"unit", "unit_price"}
 
 HEADER_ALIASES = {
     "no": ["No.", "No", "Item No."],
@@ -135,7 +136,7 @@ def iter_full_quotation_workbook_rows(
         max_rows = int(template.get("max_rows", 300))
         columns = resolve_columns(worksheet, header_row, template)
         missing_required_headers = [
-            field for field in REQUIRED_UPLOAD_FIELDS if field not in columns
+            field for field in REQUIRED_UPLOAD_HEADERS if field not in columns
         ]
 
         for row_number in range(start_row, start_row + max_rows):
@@ -168,7 +169,7 @@ def iter_full_quotation_workbook_rows(
 
             if not gts_no_normalized and not oem_normalized:
                 errors.append("每行必须填写 GTS 或 OEM。")
-            for field in REQUIRED_UPLOAD_FIELDS:
+            for field in REQUIRED_UPLOAD_VALUE_FIELDS:
                 if field in missing_required_headers:
                     continue
                 if values.get(field) in ("", None):

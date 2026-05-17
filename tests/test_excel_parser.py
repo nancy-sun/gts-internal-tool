@@ -342,6 +342,5 @@ def test_parse_full_quotation_workbook_errors_when_required_values_blank(tmp_pat
     rows = parse_full_quotation_workbook(path)
 
     assert len(rows) == 1
-    assert "工厂不能为空。" in rows[0].errors
     assert "单位不能为空。" in rows[0].errors
     assert "单价不能为空。" in rows[0].errors
