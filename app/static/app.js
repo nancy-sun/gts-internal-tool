@@ -1,31 +1,101 @@
 (function () {
   var storageKey = "gts_operator_name";
-  var operatorInput = document.querySelector('input[name="operator_name"]');
+  var operatorInputs = Array.prototype.slice.call(
+    document.querySelectorAll('input[name="operator_name"]')
+  );
 
-  if (!operatorInput || !window.localStorage) {
+  if (!operatorInputs.length || !window.localStorage) {
     return;
   }
 
   var savedName = window.localStorage.getItem(storageKey);
-  if (savedName && !operatorInput.value) {
-    operatorInput.value = savedName;
-  }
-
-  operatorInput.addEventListener("input", function () {
-    var value = operatorInput.value.trim();
-    if (value) {
-      window.localStorage.setItem(storageKey, value);
+  operatorInputs.forEach(function (operatorInput) {
+    if (savedName && !operatorInput.value) {
+      operatorInput.value = savedName;
     }
-  });
 
-  var form = operatorInput.form;
-  if (form) {
-    form.addEventListener("submit", function () {
+    operatorInput.addEventListener("input", function () {
       var value = operatorInput.value.trim();
       if (value) {
         window.localStorage.setItem(storageKey, value);
       }
     });
+
+    var form = operatorInput.form;
+    if (form) {
+      form.addEventListener("submit", function () {
+        var value = operatorInput.value.trim();
+        if (value) {
+          window.localStorage.setItem(storageKey, value);
+        }
+      });
+    }
+  });
+})();
+
+(function () {
+  var menuButton = document.querySelector("[data-operator-menu-button]");
+  var menu = document.querySelector(".operator-menu");
+  var modal = document.querySelector("[data-operator-modal]");
+  var modalInput = document.querySelector("[data-operator-modal-input]");
+  var openButton = document.querySelector("[data-operator-modal-open]");
+  var closeButtons = Array.prototype.slice.call(
+    document.querySelectorAll("[data-operator-modal-close]")
+  );
+
+  if (menuButton && menu) {
+    menuButton.addEventListener("click", function () {
+      var isOpen = menu.classList.toggle("is-open");
+      menuButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    document.addEventListener("click", function (event) {
+      if (!menu.contains(event.target)) {
+        menu.classList.remove("is-open");
+        menuButton.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  if (!modal || !openButton) {
+    return;
+  }
+
+  openButton.addEventListener("click", function () {
+    if (menu) {
+      menu.classList.remove("is-open");
+    }
+    if (menuButton) {
+      menuButton.setAttribute("aria-expanded", "false");
+    }
+    modal.hidden = false;
+    if (modalInput) {
+      modalInput.focus();
+      modalInput.select();
+    }
+  });
+
+  closeButtons.forEach(function (button) {
+    button.addEventListener("click", closeModal);
+  });
+
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.hidden) {
+      closeModal();
+    }
+  });
+
+  function closeModal() {
+    modal.hidden = true;
+    if (menuButton) {
+      menuButton.focus();
+    }
   }
 })();
 

@@ -18,6 +18,7 @@ from app.services.suppliers import (
     supplier_form_values,
     supplier_form_values_from_db,
     update_supplier,
+    validate_supplier_short_name_unique,
     validate_supplier_values,
 )
 from app.templating import templates
@@ -67,7 +68,6 @@ def supplier_create_submit(
     request: Request,
     operator_name: str = Form(...),
     edit_password: str = Form(""),
-    supplier_name: str = Form(""),
     supplier_full_name: str = Form(""),
     supplier_short_name: str = Form(""),
     aliases_text: str = Form(""),
@@ -95,18 +95,23 @@ def supplier_create_submit(
     errors = validate_supplier_values(values, operator_name)
     if not compare_digest(edit_password, get_settings().supplier_edit_password):
         errors.append("密码不正确。")
-    if errors:
-        return render_supplier_form(
-            request,
-            supplier=None,
-            values=values,
-            mode="new",
-            errors=errors,
-            operator_name=operator_name,
-            status_code=400,
-        )
-
     with get_connection() as connection:
+        errors.extend(
+            validate_supplier_short_name_unique(
+                connection,
+                values.get("supplier_short_name", ""),
+            )
+        )
+        if errors:
+            return render_supplier_form(
+                request,
+                supplier=None,
+                values=values,
+                mode="new",
+                errors=errors,
+                operator_name=operator_name,
+                status_code=400,
+            )
         supplier_id = create_supplier(
             connection,
             values=values,
@@ -203,7 +208,6 @@ def supplier_edit_submit(
     supplier_id: int,
     operator_name: str = Form(...),
     edit_password: str = Form(""),
-    supplier_name: str = Form(""),
     supplier_full_name: str = Form(""),
     supplier_short_name: str = Form(""),
     aliases_text: str = Form(""),
@@ -236,6 +240,13 @@ def supplier_edit_submit(
         supplier = get_supplier(connection, supplier_id)
         if not supplier:
             return RedirectResponse(url="/suppliers", status_code=303)
+        errors.extend(
+            validate_supplier_short_name_unique(
+                connection,
+                values.get("supplier_short_name", ""),
+                supplier_id=supplier_id,
+            )
+        )
         if errors:
             return render_supplier_form(
                 request,

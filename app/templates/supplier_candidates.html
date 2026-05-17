@@ -41,13 +41,13 @@
                   {% if candidate.status == "matched" %}
                     <input type="hidden" name="action" value="link">
                     <input type="hidden" name="supplier_id" value="{{ candidate.suppliers[0].id }}">
-                    <button type="submit">关联 {{ candidate.suppliers[0].supplier_name }}</button>
+                    <button type="submit">关联 {{ candidate.suppliers[0].supplier_short_name or candidate.suppliers[0].supplier_full_name }}</button>
                   {% elif candidate.status == "ambiguous" %}
                     <input type="hidden" name="action" value="resolve">
                     <select name="supplier_id" required>
                       <option value="">选择供应商</option>
                       {% for supplier in candidate.suppliers %}
-                        <option value="{{ supplier.id }}">{{ supplier.supplier_name }}</option>
+                        <option value="{{ supplier.id }}">{{ supplier.supplier_short_name or supplier.supplier_full_name }}</option>
                       {% endfor %}
                     </select>
                     <button type="submit">确认关联</button>

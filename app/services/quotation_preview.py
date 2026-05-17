@@ -216,10 +216,15 @@ def fetch_quotation_candidates_by_product_id(
     ordered_ids = sorted(product_ids)
     placeholders = ", ".join("?" for _ in ordered_ids)
     if supplier_link_available(connection):
-        supplier_select = "s.supplier_name"
+        supplier_select = """
+            COALESCE(
+                NULLIF(TRIM(s.supplier_short_name), ''),
+                NULLIF(TRIM(s.supplier_full_name), '')
+            ) AS supplier_display_name
+        """
         supplier_join = "LEFT JOIN suppliers s ON s.id = q.supplier_id"
     else:
-        supplier_select = "NULL AS supplier_name"
+        supplier_select = "NULL AS supplier_display_name"
         supplier_join = ""
     rows = connection.execute(
         f"""

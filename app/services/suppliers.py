@@ -10,9 +10,9 @@ from app.services.operation_logging import create_operation_log, utc_now_text
 
 
 SUPPLIER_FIELDS = (
-    "supplier_name",
     "supplier_full_name",
     "supplier_short_name",
+    "supplier_short_name_normalized",
     "aliases_text",
     "contact_person",
     "phone",
@@ -98,10 +98,9 @@ def list_suppliers(
         SELECT DISTINCT s.*
         FROM suppliers s
         LEFT JOIN supplier_aliases a ON a.supplier_id = s.id
-        WHERE s.supplier_name_normalized LIKE ?
-           OR s.supplier_name LIKE ?
-           OR s.supplier_full_name LIKE ?
+        WHERE s.supplier_full_name LIKE ?
            OR s.supplier_short_name LIKE ?
+           OR s.supplier_short_name_normalized LIKE ?
            OR s.city LIKE ?
            OR s.product_scope LIKE ?
            OR a.alias_name_normalized LIKE ?
@@ -110,10 +109,9 @@ def list_suppliers(
         LIMIT ?
         """,
         (
+            like_query,
+            like_query,
             normalized_like_query,
-            like_query,
-            like_query,
-            like_query,
             like_query,
             like_query,
             normalized_like_query,
@@ -140,10 +138,10 @@ def match_supplier_by_name(connection: Connection, supplier_name: str) -> Suppli
         SELECT DISTINCT s.*
         FROM suppliers s
         LEFT JOIN supplier_aliases a ON a.supplier_id = s.id
-        WHERE s.supplier_name_normalized = ?
-           OR a.alias_name_normalized = ?
+        WHERE a.alias_name_normalized = ?
            OR lower(trim(COALESCE(s.supplier_full_name, ''))) = ?
            OR lower(trim(COALESCE(s.supplier_short_name, ''))) = ?
+           OR s.supplier_short_name_normalized = ?
         ORDER BY s.updated_at DESC, s.id DESC
         """,
         (normalized_name, normalized_name, normalized_name, normalized_name),
@@ -192,10 +190,9 @@ def create_supplier(
     cursor = connection.execute(
         """
         INSERT INTO suppliers (
-            supplier_name,
-            supplier_name_normalized,
             supplier_full_name,
             supplier_short_name,
+            supplier_short_name_normalized,
             aliases_text,
             contact_person,
             phone,
@@ -216,13 +213,12 @@ def create_supplier(
             updated_by,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            prepared["supplier_name"],
-            normalize_supplier_name(prepared["supplier_name"]),
             prepared["supplier_full_name"],
             prepared["supplier_short_name"],
+            prepared["supplier_short_name_normalized"],
             prepared["aliases_text"],
             prepared["contact_person"],
             prepared["phone"],
@@ -251,7 +247,7 @@ def create_supplier(
         operator_name=operator_name,
         action_type="create_supplier",
         row_count=1,
-        note=f"供应商={prepared['supplier_name']}",
+        note=f"供应商={supplier_display_name(prepared)}",
     )
     return supplier_id
 
@@ -270,10 +266,9 @@ def update_supplier(
     connection.execute(
         """
         UPDATE suppliers
-        SET supplier_name = ?,
-            supplier_name_normalized = ?,
-            supplier_full_name = ?,
+        SET supplier_full_name = ?,
             supplier_short_name = ?,
+            supplier_short_name_normalized = ?,
             aliases_text = ?,
             contact_person = ?,
             phone = ?,
@@ -294,10 +289,9 @@ def update_supplier(
         WHERE id = ?
         """,
         (
-            prepared["supplier_name"],
-            normalize_supplier_name(prepared["supplier_name"]),
             prepared["supplier_full_name"],
             prepared["supplier_short_name"],
+            prepared["supplier_short_name_normalized"],
             prepared["aliases_text"],
             prepared["contact_person"],
             prepared["phone"],
@@ -324,7 +318,7 @@ def update_supplier(
         operator_name=operator_name,
         action_type="edit_supplier",
         row_count=1,
-        note=f"供应商={prepared['supplier_name']}",
+        note=f"供应商={supplier_display_name(prepared)}",
     )
     if old_ratings != supplier_ratings(get_supplier(connection, supplier_id)):
         create_operation_log(
@@ -332,7 +326,7 @@ def update_supplier(
             operator_name=operator_name,
             action_type="supplier_rating_changed",
             row_count=1,
-            note=f"供应商={prepared['supplier_name']}",
+            note=f"供应商={supplier_display_name(prepared)}",
         )
 
 
@@ -345,10 +339,8 @@ def supplier_form_values(form_values: dict[str, Any] | Row | None = None) -> dic
             values[field] = "" if value in ("", None) else int(value)
         else:
             values[field] = _text(value)
-    if not values.get("supplier_full_name") and values.get("supplier_name"):
-        values["supplier_full_name"] = values["supplier_name"]
     values["aliases_text"] = clean_aliases_text(values.get("aliases_text") or "")
-    values["supplier_name"] = supplier_name_from_values(values)
+    values["supplier_short_name_normalized"] = normalize_supplier_name(values.get("supplier_short_name"))
     return values
 
 
@@ -373,8 +365,10 @@ def validate_supplier_values(values: dict[str, Any], operator_name: str) -> list
     errors = []
     if not operator_name.strip():
         errors.append("请填写操作人。")
-    if not _text(values.get("supplier_full_name")) and not _text(values.get("supplier_name")):
+    if not _text(values.get("supplier_full_name")):
         errors.append("请填写供应商全称。")
+    if not _text(values.get("supplier_short_name")):
+        errors.append("请填写供应商简称。")
     for field in RATING_FIELDS:
         try:
             parse_rating(values.get(field))
@@ -393,16 +387,12 @@ def prepare_supplier_values(values: dict[str, Any]) -> dict[str, Any]:
     for field in SUPPLIER_FIELDS:
         if field not in RATING_FIELDS:
             prepared[field] = _text(prepared.get(field))
-    prepared["supplier_name"] = supplier_name_from_values(prepared)
+    prepared["supplier_short_name_normalized"] = normalize_supplier_name(prepared["supplier_short_name"])
     return prepared
 
 
-def supplier_name_from_values(values: dict[str, Any]) -> str:
-    return (
-        _text(values.get("supplier_full_name"))
-        or _text(values.get("supplier_name"))
-        or _text(values.get("supplier_short_name"))
-    )
+def supplier_display_name(values: dict[str, Any] | Row) -> str:
+    return _text(values["supplier_short_name"]) or _text(values["supplier_full_name"])
 
 
 def parse_rating(value: Any) -> int | None:
@@ -429,6 +419,34 @@ def rating_display(value: Any) -> str:
     return "未评分" if value in ("", None) else str(value)
 
 
+def validate_supplier_short_name_unique(
+    connection: Connection,
+    supplier_short_name: str,
+    supplier_id: int | None = None,
+) -> list[str]:
+    normalized = normalize_supplier_name(supplier_short_name)
+    if not normalized:
+        return []
+    params: list[Any] = [normalized]
+    supplier_filter = ""
+    if supplier_id is not None:
+        supplier_filter = " AND id != ?"
+        params.append(supplier_id)
+    existing = connection.execute(
+        f"""
+        SELECT id
+        FROM suppliers
+        WHERE supplier_short_name_normalized = ?
+        {supplier_filter}
+        LIMIT 1
+        """,
+        params,
+    ).fetchone()
+    if existing:
+        return ["供应商简称已存在，请使用唯一简称。"]
+    return []
+
+
 def sync_supplier_aliases(connection: Connection, supplier_id: int, operator_name: str) -> None:
     supplier = get_supplier(connection, supplier_id)
     if not supplier:
@@ -440,7 +458,6 @@ def sync_supplier_aliases(connection: Connection, supplier_id: int, operator_nam
     )
     alias_specs = []
     for source, field, alias_type in (
-        ("supplier_name", "supplier_name", "supplier_name"),
         ("full_name", "supplier_full_name", "full_name"),
         ("short_name", "supplier_short_name", "short_name"),
     ):
@@ -595,7 +612,7 @@ def create_supplier_from_candidate(
         connection,
         values={
             "supplier_full_name": factory_name,
-            "supplier_name": factory_name,
+            "supplier_short_name": factory_name,
             "aliases_text": factory_name,
         },
         operator_name=operator_name,

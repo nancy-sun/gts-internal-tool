@@ -929,8 +929,10 @@ def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
 ) -> None:
     operator_response = app_client.post("/operator", data={"operator_name": "Alice"})
     assert operator_response.status_code == 200
-    assert "操作人已保存" in operator_response.text
     assert "操作人：Alice" in operator_response.text
+    assert "修改操作人" in operator_response.text
+    assert 'data-operator-modal' in operator_response.text
+    assert 'action="/logout"' in operator_response.text
 
     upload_page = app_client.get("/upload")
     assert upload_page.status_code == 200
@@ -993,7 +995,8 @@ def test_supplier_create_edit_search_and_import_linking(
         "/suppliers/new",
         data={
             "operator_name": "Nancy",
-            "supplier_name": "Factory A",
+            "supplier_full_name": "Factory A Full",
+            "supplier_short_name": "Factory A",
             "contact_person": "Alice",
             "phone": "123",
             "wechat": "alice-wx",
@@ -1011,6 +1014,18 @@ def test_supplier_create_edit_search_and_import_linking(
     assert "Factory A" in create_response.text
     assert "Alice" in create_response.text
 
+    duplicate_short_name_response = app_client.post(
+        "/suppliers/new",
+        data={
+            "operator_name": "Nancy",
+            "supplier_full_name": "Another Factory",
+            "supplier_short_name": "Factory A",
+            "edit_password": "55123511",
+        },
+    )
+    assert duplicate_short_name_response.status_code == 400
+    assert "供应商简称已存在" in duplicate_short_name_response.text
+
     search_supplier_response = app_client.get("/suppliers", params={"q": "Mirror"})
     assert search_supplier_response.status_code == 200
     assert "Factory A" in search_supplier_response.text
@@ -1020,7 +1035,8 @@ def test_supplier_create_edit_search_and_import_linking(
         "/suppliers/1/edit",
         data={
             "operator_name": "Nancy",
-            "supplier_name": "Factory A Updated",
+            "supplier_full_name": "Factory A Full Updated",
+            "supplier_short_name": "Factory A Updated",
             "contact_person": "Alice",
             "phone": "456",
             "wechat": "alice-wx",
@@ -1076,7 +1092,7 @@ def test_supplier_create_edit_search_and_import_linking(
         connection.row_factory = sqlite3.Row
         linked = connection.execute(
             """
-            SELECT q.supplier_id, s.supplier_name
+            SELECT q.supplier_id, s.supplier_short_name
             FROM quotation_items q
             LEFT JOIN suppliers s ON s.id = q.supplier_id
             WHERE q.gts_no_normalized = 'GTSSUP001'
@@ -1090,7 +1106,7 @@ def test_supplier_create_edit_search_and_import_linking(
             """
         ).fetchone()
     assert linked["supplier_id"] == 1
-    assert linked["supplier_name"] == "Factory A Updated"
+    assert linked["supplier_short_name"] == "Factory A Updated"
     assert fallback["supplier_id"] is None
     assert fallback["factory"] == "Unlinked Factory"
 

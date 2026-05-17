@@ -90,7 +90,10 @@ def build_selected_output_row(
         candidate_query = """
             SELECT
                 q.*,
-                s.supplier_name
+                COALESCE(
+                    NULLIF(TRIM(s.supplier_short_name), ''),
+                    NULLIF(TRIM(s.supplier_full_name), '')
+                ) AS supplier_display_name
             FROM quotation_items q
             LEFT JOIN suppliers s ON s.id = q.supplier_id
             WHERE q.id = ?
@@ -99,7 +102,7 @@ def build_selected_output_row(
         candidate_query = """
             SELECT
                 q.*,
-                NULL AS supplier_name
+                NULL AS supplier_display_name
             FROM quotation_items q
             WHERE q.id = ?
         """
@@ -147,8 +150,8 @@ def build_output_row(
     if product:
         for field in ("gts_no", "description", "oem"):
             output[field] = product[field]
-    if "supplier_name" in candidate.keys() and _has_text(candidate["supplier_name"]):
-        output["factory"] = candidate["supplier_name"]
+    if "supplier_display_name" in candidate.keys() and _has_text(candidate["supplier_display_name"]):
+        output["factory"] = candidate["supplier_display_name"]
     output["photo"] = None
     if _has_text(output.get("updated_at")):
         output["updated_at"] = str(output["updated_at"])[:10]

@@ -107,7 +107,8 @@ body {
   width: 100%;
 }
 
-.logout-form {
+.operator-menu {
+  position: relative;
   flex: 0 0 auto;
   margin: 0 0 0 auto;
 }
@@ -120,6 +121,7 @@ body {
   max-width: 220px;
   padding: 0 12px;
   overflow: hidden;
+  gap: 6px;
   border: 1px solid #bdd6ce;
   border-radius: 999px;
   background: #eaf3f0;
@@ -129,6 +131,7 @@ body {
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .operator-chip:hover,
@@ -138,10 +141,93 @@ body {
   outline: none;
 }
 
-.logout-button {
+.operator-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: none;
+  min-width: 160px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.14);
+}
+
+.operator-menu.is-open .operator-dropdown {
+  display: grid;
+  gap: 2px;
+}
+
+.operator-dropdown form {
+  margin: 0;
+}
+
+.operator-dropdown button {
+  justify-content: flex-start;
+  width: 100%;
   min-height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
   font-size: 14px;
+  text-align: left;
+}
+
+.operator-dropdown button:hover,
+.operator-dropdown button:focus {
+  background: #eaf3f0;
+  color: var(--accent-dark);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(23, 32, 51, 0.36);
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.operator-modal {
+  width: min(420px, 100%);
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 24px 60px rgba(23, 32, 51, 0.22);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  background: #eef2f5;
+  color: var(--text);
+  border-radius: 999px;
 }
 
 .page {
@@ -1217,7 +1303,7 @@ tr:last-child td {
     right: 16px;
   }
 
-  .logout-form {
+  .operator-menu {
     margin-left: auto;
   }
 

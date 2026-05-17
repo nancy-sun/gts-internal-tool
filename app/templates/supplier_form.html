@@ -27,14 +27,18 @@
       <label for="operator_name">操作人</label>
       <input id="operator_name" name="operator_name" required autocomplete="off" value="{{ operator_name or '' }}">
 
-      <label for="supplier_name">供应商名称</label>
-      <input id="supplier_name" name="supplier_name" autocomplete="off" value="{{ values.supplier_name or '' }}">
-
       <label for="supplier_full_name">供应商全称</label>
       <input id="supplier_full_name" name="supplier_full_name" required autocomplete="off" value="{{ values.supplier_full_name or '' }}">
 
       <label for="supplier_short_name">供应商简称</label>
-      <input id="supplier_short_name" name="supplier_short_name" autocomplete="off" value="{{ values.supplier_short_name or '' }}">
+      <div>
+        <input id="supplier_short_name" name="supplier_short_name" required autocomplete="off" value="{{ values.supplier_short_name or '' }}">
+        {% for error in errors %}
+          {% if "供应商简称" in error %}
+            <p class="error">{{ error }}</p>
+          {% endif %}
+        {% endfor %}
+      </div>
 
       <label for="aliases_text">别名</label>
       <div>

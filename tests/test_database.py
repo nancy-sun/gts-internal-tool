@@ -34,10 +34,9 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
 
     assert {
         "id",
-        "supplier_name",
-        "supplier_name_normalized",
         "supplier_full_name",
         "supplier_short_name",
+        "supplier_short_name_normalized",
         "aliases_text",
         "contact_person",
         "phone",
@@ -58,8 +57,10 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
         "updated_by",
         "updated_at",
     }.issubset(supplier_columns)
+    assert "supplier_name" not in supplier_columns
+    assert "supplier_name_normalized" not in supplier_columns
     assert "supplier_id" in quotation_columns
-    assert "idx_suppliers_supplier_name_normalized" in indexes
+    assert "idx_suppliers_short_name_normalized_unique" in indexes
     alias_columns = {
         row[1]
         for row in connection.execute("PRAGMA table_info(supplier_aliases)").fetchall()
@@ -75,4 +76,101 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
         "created_at",
         "updated_at",
     }.issubset(alias_columns)
+    get_settings.cache_clear()
+
+
+def test_initialize_database_migrates_legacy_supplier_name_to_alias(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    database_path = tmp_path / "legacy.sqlite3"
+    monkeypatch.setenv("SHARED_ACCESS_CODE", "test-access-code")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "55123511")
+    monkeypatch.setenv("DATABASE_PATH", str(database_path))
+
+    with sqlite3.connect(database_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_name TEXT NOT NULL,
+                supplier_name_normalized TEXT,
+                supplier_full_name TEXT,
+                supplier_short_name TEXT,
+                aliases_text TEXT,
+                contact_person TEXT,
+                phone TEXT,
+                wechat TEXT,
+                city TEXT,
+                province TEXT,
+                product_scope TEXT,
+                factory_or_trader TEXT,
+                quality_level TEXT,
+                price_level TEXT,
+                quality_rating INTEGER,
+                price_rating INTEGER,
+                cooperation_rating INTEGER,
+                cooperation_notes TEXT,
+                notes TEXT,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_by TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX idx_suppliers_supplier_name_normalized
+            ON suppliers(supplier_name_normalized);
+            INSERT INTO suppliers (
+                supplier_name,
+                supplier_name_normalized,
+                supplier_full_name,
+                supplier_short_name,
+                aliases_text,
+                created_by,
+                created_at,
+                updated_by,
+                updated_at
+            )
+            VALUES (
+                'Old Factory Name',
+                'oldfactoryname',
+                'New Full Name',
+                'New Short',
+                '',
+                'Nancy',
+                '2026-05-17T00:00:00+00:00',
+                'Nancy',
+                '2026-05-17T00:00:00+00:00'
+            );
+            """
+        )
+
+    from app.config import get_settings
+    from app.database import initialize_database
+
+    get_settings.cache_clear()
+    initialize_database()
+
+    with sqlite3.connect(database_path) as connection:
+        connection.row_factory = sqlite3.Row
+        columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(suppliers)").fetchall()
+        }
+        supplier = connection.execute("SELECT * FROM suppliers WHERE id = 1").fetchone()
+        alias = connection.execute(
+            """
+            SELECT alias_name, source
+            FROM supplier_aliases
+            WHERE supplier_id = 1
+              AND alias_name = 'Old Factory Name'
+            """
+        ).fetchone()
+
+    assert "supplier_name" not in columns
+    assert "supplier_name_normalized" not in columns
+    assert supplier["supplier_full_name"] == "New Full Name"
+    assert supplier["supplier_short_name"] == "New Short"
+    assert supplier["aliases_text"] == "Old Factory Name"
+    assert alias["source"] == "aliases_text"
     get_settings.cache_clear()

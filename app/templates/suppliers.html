@@ -21,7 +21,6 @@
       <table>
         <thead>
           <tr>
-            <th>供应商</th>
             <th>全称</th>
             <th>简称</th>
             <th>别名</th>
@@ -39,7 +38,6 @@
         <tbody>
           {% for supplier in suppliers %}
             <tr>
-              <td>{{ supplier.supplier_name }}</td>
               <td>{{ supplier.supplier_full_name or "" }}</td>
               <td>{{ supplier.supplier_short_name or "" }}</td>
               <td>{{ supplier.aliases_text or "" }}</td>
@@ -55,7 +53,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="13">暂无供应商。</td>
+              <td colspan="12">暂无供应商。</td>
             </tr>
           {% endfor %}
         </tbody>

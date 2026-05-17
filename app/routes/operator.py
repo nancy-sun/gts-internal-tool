@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Form, Request
+from fastapi.responses import RedirectResponse
 
-from app.auth import get_session_operator_name, require_auth, set_session_operator_name
-from app.navigation import OPERATOR_CRUMB, breadcrumbs
-from app.templating import templates
+from app.auth import require_auth, set_session_operator_name
 
 
 router = APIRouter()
@@ -14,7 +13,7 @@ def operator_page(request: Request):
     if redirect:
         return redirect
 
-    return render_operator_page(request)
+    return RedirectResponse(url="/", status_code=303)
 
 
 @router.post("/operator")
@@ -25,43 +24,7 @@ def update_operator(request: Request, operator_name: str = Form(...)):
 
     cleaned_operator_name = operator_name.strip()
     if not cleaned_operator_name:
-        return render_operator_page(
-            request,
-            operator_name="",
-            error="请填写操作人。",
-            status_code=400,
-        )
+        return RedirectResponse(url="/", status_code=303)
 
     set_session_operator_name(request, cleaned_operator_name)
-    return render_operator_page(
-        request,
-        operator_name=cleaned_operator_name,
-        success="操作人已保存。",
-    )
-
-
-def render_operator_page(
-    request: Request,
-    *,
-    operator_name: str | None = None,
-    error: str | None = None,
-    success: str | None = None,
-    status_code: int = 200,
-):
-    return templates.TemplateResponse(
-        request,
-        "operator.html",
-        {
-            "request": request,
-            "operator_name": (
-                get_session_operator_name(request)
-                if operator_name is None
-                else operator_name
-            ),
-            "error": error,
-            "success": success,
-            "breadcrumbs": breadcrumbs(OPERATOR_CRUMB),
-            "return_url": "/",
-        },
-        status_code=status_code,
-    )
+    return RedirectResponse(url="/", status_code=303)

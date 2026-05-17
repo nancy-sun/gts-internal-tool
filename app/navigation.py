@@ -7,7 +7,6 @@ SEARCH_CRUMB = {"label": "查询数据库", "href": "/search"}
 DATA_QUALITY_CRUMB = {"label": "数据检查", "href": "/data-quality"}
 LOGS_CRUMB = {"label": "操作记录", "href": "/logs"}
 HS_CRUMB = {"label": "HS Code", "href": "/hs-codes"}
-OPERATOR_CRUMB = {"label": "操作人", "href": "/operator"}
 SUPPLIERS_CRUMB = {"label": "供应商", "href": "/suppliers"}
 
 

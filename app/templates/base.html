@@ -27,12 +27,18 @@
             </div>
           </div>
         </nav>
-        <a class="operator-chip" href="/operator">
-          操作人：{{ request.session.get("operator_name") or "未设置" }}
-        </a>
-        <form class="logout-form" method="post" action="/logout">
-          <button class="secondary-button logout-button" type="submit">退出</button>
-        </form>
+        <div class="operator-menu">
+          <button class="operator-chip" type="button" aria-haspopup="true" aria-expanded="false" data-operator-menu-button>
+            操作人：{{ request.session.get("operator_name") or "未设置" }}
+            <span aria-hidden="true">▾</span>
+          </button>
+          <div class="operator-dropdown" role="menu" data-operator-menu>
+            <button type="button" role="menuitem" data-operator-modal-open>修改操作人</button>
+            <form method="post" action="/logout">
+              <button type="submit" role="menuitem">退出</button>
+            </form>
+          </div>
+        </div>
       {% endif %}
     </header>
     <main class="page">
@@ -60,6 +66,31 @@
       {% endif %}
       {% block content %}{% endblock %}
     </main>
+    {% if request.session.get("authenticated") %}
+      <div class="modal-backdrop" hidden data-operator-modal>
+        <section class="operator-modal" role="dialog" aria-modal="true" aria-labelledby="operator-modal-title">
+          <form method="post" action="/operator" class="form-stack">
+            <div class="modal-header">
+              <h2 id="operator-modal-title">修改操作人</h2>
+              <button class="icon-button" type="button" aria-label="关闭" data-operator-modal-close>×</button>
+            </div>
+            <label for="operator_modal_name">操作人</label>
+            <input
+              id="operator_modal_name"
+              name="operator_name"
+              autocomplete="name"
+              value="{{ request.session.get("operator_name") or "" }}"
+              required
+              data-operator-modal-input
+            >
+            <div class="form-actions">
+              <button class="secondary-button" type="button" data-operator-modal-close>取消</button>
+              <button type="submit">保存</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    {% endif %}
     <script src="{{ url_for('static', path='/app.js') }}?v=20260511-product-edit-2"></script>
   </body>
 </html>

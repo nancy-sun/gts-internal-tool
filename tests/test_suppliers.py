@@ -2,8 +2,11 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from openpyxl import load_workbook
 
 from app.services.import_persistence import import_preview_rows
+from app.services.quotation_export import create_generated_workbook
+from app.services.search import group_search_results, search_catalogue
 from app.services.suppliers import (
     add_alias_text_alias,
     clean_aliases_text,
@@ -18,6 +21,7 @@ from app.services.suppliers import (
     supplier_form_values_from_db,
     sync_supplier_aliases,
     update_supplier,
+    validate_supplier_short_name_unique,
     validate_supplier_values,
 )
 
@@ -164,6 +168,18 @@ def test_validate_supplier_values_rejects_invalid_rating():
     assert "质量评分必须为空或 1-5。" in errors
 
 
+def test_supplier_short_name_must_be_unique(supplier_connection):
+    create_supplier(
+        supplier_connection,
+        values={"supplier_full_name": "供应商A", "supplier_short_name": "共同简称"},
+        operator_name="Nancy",
+    )
+
+    errors = validate_supplier_short_name_unique(supplier_connection, "共同简称")
+
+    assert errors == ["供应商简称已存在，请使用唯一简称。"]
+
+
 def test_import_matches_supplier_by_full_name_short_name_and_alias(supplier_connection):
     supplier_id = create_supplier(
         supplier_connection,
@@ -183,6 +199,51 @@ def test_import_matches_supplier_by_full_name_short_name_and_alias(supplier_conn
     ]
 
     assert imported_ids == [supplier_id, supplier_id, supplier_id, supplier_id]
+
+
+def test_linked_quotation_displays_updated_supplier_short_name_in_search_and_export(
+    supplier_connection,
+):
+    supplier_id = create_supplier(
+        supplier_connection,
+        values={"supplier_full_name": "中际全称", "supplier_short_name": "旧简称"},
+        operator_name="Nancy",
+    )
+    insert_unlinked_quotation(supplier_connection, "历史工厂名", "GTS-DISPLAY")
+    supplier_connection.execute(
+        "UPDATE quotation_items SET supplier_id = ? WHERE gts_no = 'GTS-DISPLAY'",
+        (supplier_id,),
+    )
+    quotation_id = supplier_connection.execute(
+        "SELECT id FROM quotation_items WHERE gts_no = 'GTS-DISPLAY'"
+    ).fetchone()["id"]
+
+    update_supplier(
+        supplier_connection,
+        supplier_id=supplier_id,
+        values={"supplier_full_name": "中际全称", "supplier_short_name": "新简称"},
+        operator_name="Nancy",
+    )
+
+    rows, _ = search_catalogue(supplier_connection, field="gts_no", query="GTS-DISPLAY")
+    grouped = group_search_results(rows)
+    stream, generated_count = create_generated_workbook(
+        supplier_connection,
+        preview_rows=[
+            {
+                "row_number": 4,
+                "values": {"gts_no": "GTS-DISPLAY", "quantity": 1},
+            }
+        ],
+        selected_candidate_ids={4: quotation_id},
+        operator_name="Nancy",
+        request_file_name="request.xlsx",
+    )
+    workbook = load_workbook(stream)
+
+    assert grouped[0]["quotations"][0]["supplier_display_name"] == "新简称"
+    assert generated_count == 1
+    assert workbook.active["F3"].value == "新简称"
 
 
 def test_ambiguous_alias_does_not_auto_link(supplier_connection):

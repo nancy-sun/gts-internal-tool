@@ -29,14 +29,24 @@ def search_catalogue(
     selected_field = SEARCH_FIELDS.get(field, "p.gts_no_normalized")
     supplier_link_enabled = supplier_link_available(connection)
     supplier_join = ""
-    supplier_name_select = "NULL AS supplier_name"
     supplier_display_select = "q.factory AS supplier_display_name"
     if supplier_link_enabled:
         supplier_join = "LEFT JOIN suppliers s ON s.id = q.supplier_id"
-        supplier_name_select = "s.supplier_name"
-        supplier_display_select = "COALESCE(s.supplier_name, q.factory) AS supplier_display_name"
+        supplier_display_select = """
+            COALESCE(
+                NULLIF(TRIM(s.supplier_short_name), ''),
+                NULLIF(TRIM(s.supplier_full_name), ''),
+                q.factory
+            ) AS supplier_display_name
+        """
         if field == "factory":
-            selected_field = "COALESCE(s.supplier_name, q.factory)"
+            selected_field = """
+                COALESCE(
+                    NULLIF(TRIM(s.supplier_short_name), ''),
+                    NULLIF(TRIM(s.supplier_full_name), ''),
+                    q.factory
+                )
+            """
 
     if field == "gts_no":
         search_value, warnings = normalize_gts_no(clean_query)
@@ -59,7 +69,6 @@ def search_catalogue(
             p.hs_code AS product_hs_code,
             q.id AS quotation_item_id,
             q.factory,
-            {supplier_name_select},
             {supplier_display_select},
             q.unit_price,
             q.packaging,
@@ -111,7 +120,6 @@ def group_search_results(rows: list[Row]) -> list[dict[str, Any]]:
                 {
                     "quotation_item_id": row["quotation_item_id"],
                     "factory": row["factory"],
-                    "supplier_name": row["supplier_name"],
                     "supplier_display_name": row["supplier_display_name"],
                     "unit_price": row["unit_price"],
                     "packaging": row["packaging"],
