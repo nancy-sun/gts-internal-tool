@@ -15,6 +15,7 @@ from app.routes import (
     products,
     search,
     suppliers,
+    system,
     upload,
 )
 from app.services.temp_cleanup import cleanup_stale_preview_files
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(search.router)
     app.include_router(data_quality.router)
     app.include_router(logs.router)
+    app.include_router(system.router)
     app.include_router(home.router)
     return app
 

@@ -100,6 +100,7 @@ def test_dashboard_keeps_primary_navigation_cards(ui_client: TestClient) -> None
     assert 'href="/generate"' in response.text
     assert 'href="/search"' in response.text
     assert 'href="/data-quality"' in response.text
+    assert 'href="/maintenance"' in response.text
     assert 'href="/hs-codes/upload"' in response.text
     assert 'href="/hs-codes/generate"' in response.text
 
@@ -108,6 +109,7 @@ def test_nav_highlights_current_section(ui_client: TestClient) -> None:
     upload_response = ui_client.get("/upload")
     search_response = ui_client.get("/search")
     hs_response = ui_client.get("/hs-codes/upload")
+    maintenance_response = ui_client.get("/maintenance")
 
     assert upload_response.status_code == 200
     assert 'href="/upload" class="is-active" aria-current="page"' in upload_response.text
@@ -116,6 +118,8 @@ def test_nav_highlights_current_section(ui_client: TestClient) -> None:
     assert hs_response.status_code == 200
     assert 'nav-dropdown-button is-active' in hs_response.text
     assert 'href="/hs-codes/upload" class="is-active"' in hs_response.text
+    assert maintenance_response.status_code == 200
+    assert 'href="/maintenance" class="is-active" aria-current="page"' in maintenance_response.text
 
 
 def test_upload_preview_loading_has_streaming_table_controls(ui_client: TestClient) -> None:

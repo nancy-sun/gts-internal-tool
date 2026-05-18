@@ -17,6 +17,7 @@
           <a href="/search" class="{% if current_path.startswith('/search') %}is-active{% endif %}" {% if current_path.startswith('/search') %}aria-current="page"{% endif %}>查询数据库</a>
           <a href="/suppliers" class="{% if current_path.startswith('/suppliers') %}is-active{% endif %}" {% if current_path.startswith('/suppliers') %}aria-current="page"{% endif %}>供应商</a>
           <a href="/data-quality" class="{% if current_path.startswith('/data-quality') %}is-active{% endif %}" {% if current_path.startswith('/data-quality') %}aria-current="page"{% endif %}>数据检查</a>
+          <a href="/maintenance" class="{% if current_path.startswith('/maintenance') %}is-active{% endif %}" {% if current_path.startswith('/maintenance') %}aria-current="page"{% endif %}>系统状态</a>
           <div class="nav-dropdown">
             <button class="nav-dropdown-button {% if current_path.startswith('/hs-codes') %}is-active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false" {% if current_path.startswith('/hs-codes') %}aria-current="page"{% endif %}>
               HS Code

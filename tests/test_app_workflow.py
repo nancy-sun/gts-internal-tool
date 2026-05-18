@@ -43,6 +43,55 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return client
 
 
+def test_healthz_is_public_and_maintenance_requires_login(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_path = tmp_path / "status.sqlite3"
+    monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "55123511")
+    monkeypatch.setenv("DATABASE_PATH", str(database_path))
+
+    from app.config import get_settings
+    from app.main import create_app
+
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+
+    health_response = client.get("/healthz")
+    assert health_response.status_code == 200
+    assert health_response.json() == {"status": "ok"}
+
+    maintenance_response = client.get("/maintenance", follow_redirects=False)
+    assert maintenance_response.status_code == 303
+    assert maintenance_response.headers["location"] == "/login"
+    get_settings.cache_clear()
+
+
+def test_maintenance_page_shows_non_secret_runtime_status(
+    app_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    response = app_client.get("/maintenance")
+
+    assert response.status_code == 200
+    assert "系统状态" in response.text
+    assert "运行模式" in response.text
+    assert "local" in response.text
+    assert "数据库路径" in response.text
+    assert str(tmp_path / "gts-test.sqlite3") in response.text
+    assert "数据库文件存在" in response.text
+    assert "数据库大小" in response.text
+    assert "Uploads 路径" in response.text
+    assert "Generated 路径" in response.text
+    assert "自动备份路径" in response.text
+    assert "最近自动备份时间" in response.text
+    assert ACCESS_CODE not in response.text
+    assert "test-session-secret-key" not in response.text
+    assert "55123511" not in response.text
+
+
 def test_office_workflow_upload_search_generate_download_and_log(
     app_client: TestClient,
     tmp_path: Path,

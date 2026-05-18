@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}系统状态 - GTS Internal Tool{% endblock %}
+{% block page_name %}系统状态{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>系统状态</h1>
+    <p>仅显示本地运行状态，不显示密码或密钥。</p>
+  </section>
+
+  <section class="table-section">
+    <div class="table-wrap">
+      <table class="maintenance-table">
+        <tbody>
+          <tr>
+            <th>运行模式</th>
+            <td>{{ status.app_mode }}</td>
+          </tr>
+          <tr>
+            <th>数据库路径</th>
+            <td>{{ status.database.path }}</td>
+          </tr>
+          <tr>
+            <th>数据库文件存在</th>
+            <td>{{ "是" if status.database.exists else "否" }}</td>
+          </tr>
+          <tr>
+            <th>数据库大小</th>
+            <td>{{ status.database.size }}</td>
+          </tr>
+          <tr>
+            <th>Uploads 路径</th>
+            <td>{{ status.uploads.path }}</td>
+          </tr>
+          <tr>
+            <th>Uploads 大小</th>
+            <td>{{ status.uploads.size }}</td>
+          </tr>
+          <tr>
+            <th>Generated 路径</th>
+            <td>{{ status.generated.path }}</td>
+          </tr>
+          <tr>
+            <th>Generated 大小</th>
+            <td>{{ status.generated.size }}</td>
+          </tr>
+          <tr>
+            <th>自动备份路径</th>
+            <td>{{ status.auto_backups.path }}</td>
+          </tr>
+          <tr>
+            <th>自动备份大小</th>
+            <td>{{ status.auto_backups.size }}</td>
+          </tr>
+          <tr>
+            <th>最近自动备份时间</th>
+            <td>{{ status.auto_backups.latest_backup_time }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

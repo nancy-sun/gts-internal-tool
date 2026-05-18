@@ -2,6 +2,44 @@ import sqlite3
 from pathlib import Path
 
 
+def test_supplier_edit_password_defaults_to_product_edit_password(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SHARED_ACCESS_CODE", "test-access-code")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "product-password")
+    monkeypatch.delenv("SUPPLIER_EDIT_PASSWORD", raising=False)
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "settings.sqlite3"))
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    assert settings.supplier_edit_password == "product-password"
+    get_settings.cache_clear()
+
+
+def test_supplier_edit_password_env_overrides_product_edit_password(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SHARED_ACCESS_CODE", "test-access-code")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "product-password")
+    monkeypatch.setenv("SUPPLIER_EDIT_PASSWORD", "supplier-password")
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "settings.sqlite3"))
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    assert settings.supplier_edit_password == "supplier-password"
+    get_settings.cache_clear()
+
+
 def test_initialize_database_creates_suppliers_and_optional_supplier_id(
     tmp_path: Path,
     monkeypatch,
