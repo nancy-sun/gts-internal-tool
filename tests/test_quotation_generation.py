@@ -121,10 +121,10 @@ def test_build_output_row_uses_current_product_oem_description_and_request_unit(
         """
         INSERT INTO products (
             id, gts_no, gts_no_normalized, description, oem, oem_normalized,
-            created_by, created_at, updated_by, updated_at
+            chinese_description, created_by, created_at, updated_by, updated_at
         )
         VALUES (1, 'GTS-CURRENT', 'GTSCURRENT', 'Current Product Description',
-                'CURRENT-OEM', 'CURRENTOEM', 'Alice', ?, 'Alice', ?)
+                'CURRENT-OEM', 'CURRENTOEM', '当前品名', 'Alice', ?, 'Alice', ?)
         """,
         (now, now),
     )
@@ -142,7 +142,7 @@ def test_build_output_row_uses_current_product_oem_description_and_request_unit(
     assert output["description"] == "Current Product Description"
     assert output["oem"] == "CURRENT-OEM"
     assert output["unit"] == "SET"
-    assert output["chinese_description"] == "历史描述"
+    assert output["chinese_description"] == "当前品名"
 
 
 def test_build_output_row_uses_system_oem_description_and_unit_when_request_values_empty():

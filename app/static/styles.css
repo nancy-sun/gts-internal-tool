@@ -908,6 +908,57 @@ button:disabled {
   font-size: 13px;
 }
 
+.supplier-combobox {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.supplier-combobox-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+}
+
+.supplier-combobox-option,
+.supplier-combobox-empty {
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.supplier-combobox-option:hover,
+.supplier-combobox-option:focus {
+  background: #eaf3f0;
+  color: var(--accent-dark);
+  outline: none;
+}
+
+.supplier-combobox-empty {
+  color: var(--muted);
+}
+
+.supplier-combobox .field-error {
+  margin: 4px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .supplier-inline-form input[type="radio"] {
   width: 14px;
   height: 14px;

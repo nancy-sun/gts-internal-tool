@@ -8,7 +8,7 @@ from app.services.normalization import normalize_gts_no, normalize_oem
 from app.services.operation_logging import create_operation_log, utc_now_text
 
 
-EDITABLE_PRODUCT_FIELDS = ("gts_no", "oem", "description", "hs_code")
+EDITABLE_PRODUCT_FIELDS = ("gts_no", "oem", "description", "chinese_description", "hs_code")
 
 
 @dataclass(frozen=True)
@@ -84,6 +84,7 @@ def update_product(
     gts_no = clean_text(values.get("gts_no"))
     oem = clean_text(values.get("oem"))
     description = clean_text(values.get("description"))
+    chinese_description = clean_text(values.get("chinese_description"))
     hs_code = clean_text(values.get("hs_code"))
     gts_no_normalized, _ = normalize_gts_no(gts_no)
     oem_normalized, _ = normalize_oem(oem)
@@ -94,6 +95,7 @@ def update_product(
             "gts_no": gts_no,
             "oem": oem,
             "description": description,
+            "chinese_description": chinese_description,
             "hs_code": hs_code,
         },
     )
@@ -107,6 +109,7 @@ def update_product(
             oem = ?,
             oem_normalized = ?,
             description = ?,
+            chinese_description = ?,
             hs_code = ?,
             updated_by = ?,
             updated_at = ?
@@ -118,6 +121,7 @@ def update_product(
             oem,
             oem_normalized,
             description,
+            chinese_description,
             hs_code,
             operator_name.strip(),
             now,

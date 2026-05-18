@@ -240,6 +240,10 @@
   fields.forEach(function (field) {
     field.addEventListener("input", updateSubmitState);
   });
+  requiredProductEditFields(form).forEach(function (field) {
+    field.addEventListener("input", updateSubmitState);
+    field.addEventListener("change", updateSubmitState);
+  });
   updateSubmitState();
 
   function updateSubmitState() {
@@ -251,12 +255,15 @@
   }
 
   function requiredFieldsReady(formElement) {
-    var requiredFields = Array.prototype.slice.call(
-      formElement.querySelectorAll("input[required], select[required], textarea[required]")
-    );
-    return requiredFields.every(function (field) {
+    return requiredProductEditFields(formElement).every(function (field) {
       return Boolean((field.value || "").trim()) && field.checkValidity();
     });
+  }
+
+  function requiredProductEditFields(formElement) {
+    return Array.prototype.slice.call(
+      formElement.querySelectorAll("input[required], select[required], textarea[required]")
+    );
   }
 })();
 
@@ -609,7 +616,16 @@
     var batchSubmit = batchForm.querySelector("[data-supplier-batch-submit]");
     setupSupplierAutocomplete(batchForm);
     batchForm.addEventListener("input", updateBatchState);
-    batchForm.addEventListener("change", updateBatchState);
+    batchForm.addEventListener("change", function () {
+      updateSupplierComboboxErrors(batchForm);
+      updateBatchState();
+    });
+    batchForm.addEventListener("submit", function (event) {
+      updateSupplierComboboxErrors(batchForm);
+      if (!batchFormReady(batchForm)) {
+        event.preventDefault();
+      }
+    });
     updateBatchState();
 
     function updateBatchState() {
@@ -618,6 +634,12 @@
       }
       batchSubmit.disabled = !batchFormReady(batchForm);
     }
+  }
+
+  function updateSupplierComboboxErrors(form) {
+    Array.prototype.slice.call(
+      form.querySelectorAll("[data-supplier-existing-search]")
+    ).forEach(updateSupplierComboboxError);
   }
 
   var supplierForms = Array.prototype.slice.call(
@@ -676,35 +698,146 @@
     Array.prototype.slice.call(
       form.querySelectorAll("[data-supplier-existing-search]")
     ).forEach(function (input) {
+      var combobox = input.closest("[data-supplier-combobox]");
+      var optionsPanel = combobox ? combobox.querySelector("[data-supplier-options]") : null;
+      var options = combobox
+        ? Array.prototype.slice.call(combobox.querySelectorAll("[data-supplier-option]"))
+        : [];
+
       input.addEventListener("input", function () {
-        syncSupplierAutocomplete(input);
+        resetSupplierComboboxSelection(input);
+        filterSupplierComboboxOptions(input);
+        openSupplierCombobox(input);
       });
       input.addEventListener("change", function () {
-        syncSupplierAutocomplete(input);
+        filterSupplierComboboxOptions(input);
+        updateSupplierComboboxError(input);
       });
-      syncSupplierAutocomplete(input);
+      input.addEventListener("focus", function () {
+        filterSupplierComboboxOptions(input);
+        openSupplierCombobox(input);
+      });
+      input.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeSupplierCombobox(input);
+        }
+        if (event.key === "Enter" && optionsPanel && !optionsPanel.hidden) {
+          var firstVisibleOption = options.find(function (option) {
+            return !option.hidden;
+          });
+          if (firstVisibleOption) {
+            event.preventDefault();
+            selectSupplierComboboxOption(input, firstVisibleOption);
+          }
+        }
+      });
+      options.forEach(function (option) {
+        option.addEventListener("click", function () {
+          selectSupplierComboboxOption(input, option);
+        });
+      });
+      filterSupplierComboboxOptions(input);
+      updateSupplierComboboxError(input);
+    });
+
+    document.addEventListener("click", function (event) {
+      Array.prototype.slice.call(
+        form.querySelectorAll("[data-supplier-combobox]")
+      ).forEach(function (combobox) {
+        if (!combobox.contains(event.target)) {
+          var input = combobox.querySelector("[data-supplier-existing-search]");
+          if (input) {
+            closeSupplierCombobox(input);
+          }
+        }
+      });
     });
   }
 
-  function syncSupplierAutocomplete(input) {
+  function selectSupplierComboboxOption(input, option) {
     var row = input.closest("[data-supplier-batch-row]");
     var supplierField = row ? row.querySelector("[data-supplier-existing-field]") : null;
-    var listId = input.getAttribute("list");
-    var dataList = listId ? document.getElementById(listId) : null;
-    var selectedSupplierId = "";
-
-    if (dataList) {
-      Array.prototype.some.call(dataList.options, function (option) {
-        if (option.value === input.value) {
-          selectedSupplierId = option.getAttribute("data-supplier-id") || "";
-          return true;
-        }
-        return false;
-      });
-    }
-
     if (supplierField) {
-      supplierField.value = selectedSupplierId;
+      supplierField.value = option.getAttribute("data-supplier-id") || "";
     }
+    input.value = option.getAttribute("data-supplier-label") || option.textContent.trim();
+    input.setAttribute("data-selected-supplier-label", input.value);
+    closeSupplierCombobox(input);
+    updateSupplierComboboxError(input);
+  }
+
+  function resetSupplierComboboxSelection(input) {
+    var row = input.closest("[data-supplier-batch-row]");
+    var supplierField = row ? row.querySelector("[data-supplier-existing-field]") : null;
+    if (supplierField) {
+      supplierField.value = "";
+    }
+    input.removeAttribute("data-selected-supplier-label");
+    updateSupplierComboboxError(input);
+  }
+
+  function filterSupplierComboboxOptions(input) {
+    var combobox = input.closest("[data-supplier-combobox]");
+    if (!combobox) {
+      return;
+    }
+    var query = normalizeSupplierComboboxText(input.value);
+    var visibleCount = 0;
+    Array.prototype.slice.call(
+      combobox.querySelectorAll("[data-supplier-option]")
+    ).forEach(function (option) {
+      var searchText = normalizeSupplierComboboxText(
+        option.getAttribute("data-supplier-search") || option.textContent
+      );
+      var visible = !query || searchText.indexOf(query) !== -1;
+      option.hidden = !visible;
+      if (visible) {
+        visibleCount += 1;
+      }
+    });
+    var empty = combobox.querySelector("[data-supplier-empty]");
+    if (empty) {
+      empty.hidden = visibleCount > 0;
+    }
+  }
+
+  function openSupplierCombobox(input) {
+    var optionsPanel = supplierOptionsPanel(input);
+    if (optionsPanel) {
+      optionsPanel.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    }
+  }
+
+  function closeSupplierCombobox(input) {
+    var optionsPanel = supplierOptionsPanel(input);
+    if (optionsPanel) {
+      optionsPanel.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function supplierOptionsPanel(input) {
+    var combobox = input.closest("[data-supplier-combobox]");
+    return combobox ? combobox.querySelector("[data-supplier-options]") : null;
+  }
+
+  function updateSupplierComboboxError(input) {
+    var row = input.closest("[data-supplier-batch-row]");
+    var action = row ? row.querySelector('input[name^="action__"]:checked') : null;
+    var supplierField = row ? row.querySelector("[data-supplier-existing-field]") : null;
+    var shouldShowError = Boolean(
+      action && action.value === "existing" && input.value.trim() && !(supplierField && supplierField.value)
+    );
+    var combobox = input.closest("[data-supplier-combobox]");
+    var error = combobox ? combobox.querySelector("[data-supplier-existing-error]") : null;
+    input.classList.toggle("is-invalid", shouldShowError);
+    if (error) {
+      error.hidden = !shouldShowError;
+    }
+  }
+
+  function normalizeSupplierComboboxText(value) {
+    return String(value || "").trim().toLowerCase();
   }
 })();

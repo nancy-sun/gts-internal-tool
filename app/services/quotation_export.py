@@ -148,7 +148,7 @@ def build_output_row(
 ) -> dict[str, Any]:
     output = {field: candidate[field] for field, _ in GENERATED_COLUMNS if field in candidate.keys()}
     if product:
-        for field in ("gts_no", "description", "oem"):
+        for field in ("gts_no", "description", "oem", "chinese_description"):
             output[field] = product[field]
     if "supplier_display_name" in candidate.keys() and _has_text(candidate["supplier_display_name"]):
         output["factory"] = candidate["supplier_display_name"]

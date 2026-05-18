@@ -87,22 +87,35 @@
                           <input type="radio" name="action__{{ match.key }}" value="existing" required data-supplier-action>
                           关联已有供应商
                         </label>
-                        <input
-                          type="text"
-                          list="supplier-options-{{ match.key }}"
-                          placeholder="输入供应商简称/全称/别名"
-                          autocomplete="off"
-                          data-supplier-existing-search
-                        >
+                        <div class="supplier-combobox" data-supplier-combobox>
+                          <input
+                            type="text"
+                            placeholder="输入供应商简称/全称/别名"
+                            autocomplete="off"
+                            role="combobox"
+                            aria-expanded="false"
+                            aria-autocomplete="list"
+                            data-supplier-existing-search
+                          >
+                          <div class="supplier-combobox-options" role="listbox" hidden data-supplier-options>
+                            {% for supplier in suppliers %}
+                              <button
+                                type="button"
+                                role="option"
+                                class="supplier-combobox-option"
+                                data-supplier-option
+                                data-supplier-id="{{ supplier.id }}"
+                                data-supplier-label="{{ supplier.display_name }} / 全称：{{ supplier.supplier_full_name or '-' }} / 别名：{{ supplier.aliases_text or '-' }}"
+                                data-supplier-search="{{ supplier.display_name }} {{ supplier.supplier_full_name or '' }} {{ supplier.supplier_short_name or '' }} {{ supplier.aliases_text or '' }}"
+                              >
+                                {{ supplier.display_name }} / 全称：{{ supplier.supplier_full_name or "-" }} / 别名：{{ supplier.aliases_text or "-" }}
+                              </button>
+                            {% endfor %}
+                            <div class="supplier-combobox-empty" data-supplier-empty hidden>没有匹配的供应商</div>
+                          </div>
+                          <p class="field-error" data-supplier-existing-error hidden>请选择已有供应商</p>
+                        </div>
                         <input type="hidden" name="supplier_id__{{ match.key }}" data-supplier-existing-field>
-                        <datalist id="supplier-options-{{ match.key }}">
-                          {% for supplier in suppliers %}
-                            <option
-                              value="{{ supplier.display_name }} / 全称：{{ supplier.supplier_full_name or '-' }} / 别名：{{ supplier.aliases_text or '-' }}"
-                              data-supplier-id="{{ supplier.id }}"
-                            ></option>
-                          {% endfor %}
-                        </datalist>
                         <label class="radio-line">
                           <input type="radio" name="action__{{ match.key }}" value="create" required data-supplier-action>
                           创建新供应商

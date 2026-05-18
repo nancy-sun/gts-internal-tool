@@ -443,12 +443,17 @@ def test_upload_preview_uses_autocomplete_for_existing_supplier_link(
     preview_page = app_client.get(f"/upload/preview/{token}")
 
     assert preview_page.status_code == 200
+    assert 'data-supplier-combobox' in preview_page.text
     assert 'data-supplier-existing-search' in preview_page.text
     assert 'data-supplier-existing-field' in preview_page.text
-    assert 'list="supplier-options-' in preview_page.text
+    assert 'data-supplier-options' in preview_page.text
+    assert 'data-supplier-option' in preview_page.text
+    assert '没有匹配的供应商' in preview_page.text
     assert "Known Supplier Full" in preview_page.text
     assert "Known Supplier" in preview_page.text
     assert "Known Alias" in preview_page.text
+    assert "<datalist" not in preview_page.text
+    assert 'list="supplier-options-' not in preview_page.text
     assert 'select name="supplier_id__' not in preview_page.text
 
 
@@ -1097,6 +1102,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
                         {
                             "gts_no": "GTS-OLD-001",
                             "description": "Old product description",
+                            "chinese_description": "旧品名",
                             "oem": "OEM-OLD-001",
                             "factory": "Factory A",
                             "unit": "pc",
@@ -1120,6 +1126,8 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     assert 'data-original-value="GTS-OLD-001"' in edit_page.text
     assert 'value="OEM-OLD-001"' in edit_page.text
     assert 'value="Old product description"' in edit_page.text
+    assert '<label for="chinese_description">品名</label>' in edit_page.text
+    assert 'value="旧品名"' in edit_page.text
     assert "data-product-edit-submit disabled" in edit_page.text
 
     bad_password_response = app_client.post(
@@ -1129,6 +1137,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
             "gts_no": "GTS-NEW-001",
             "oem": "OEM-NEW-001",
             "description": "New product description",
+            "chinese_description": "新品名",
             "hs_code": "87089999",
             "edit_password": "wrong",
         },
@@ -1136,6 +1145,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     assert bad_password_response.status_code == 400
     assert "确认密码不正确" in bad_password_response.text
     assert 'value="GTS-NEW-001"' in bad_password_response.text
+    assert 'value="新品名"' in bad_password_response.text
     assert 'data-original-value="GTS-OLD-001"' in bad_password_response.text
 
     edit_response = app_client.post(
@@ -1145,6 +1155,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
             "gts_no": "GTS-NEW-001",
             "oem": "OEM-NEW-001",
             "description": "New product description",
+            "chinese_description": "新品名",
             "hs_code": "87089999",
             "edit_password": "55123511",
         },
@@ -1192,6 +1203,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     assert worksheet["B3"].value == "GTS-NEW-001"
     assert worksheet["C3"].value == "New product description"
     assert worksheet["D3"].value == "OEM-NEW-001"
+    assert worksheet["G3"].value == "新品名"
 
     hs_generate_response = app_client.post(
         "/hs-codes/generate/preview",

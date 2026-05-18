@@ -2,7 +2,6 @@ import json
 import logging
 from pathlib import Path
 from uuid import uuid4
-from collections import Counter
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
@@ -18,27 +17,30 @@ from app.services.import_full_quotation import (
     build_import_preview_row,
     import_preview_rows,
 )
-from app.services.operation_logging import create_operation_log
-from app.services.preview_tokens import preview_file_path, remove_preview_file
+from app.services.preview_tokens import remove_preview_file
 from app.services.suppliers import (
-    add_alias_text_alias,
-    create_supplier,
-    get_supplier,
     list_suppliers,
-    normalize_supplier_name,
-    sync_supplier_aliases,
-    validate_supplier_short_name_unique,
+)
+from app.services.upload_preview_state import (
+    find_supplier_match,
+    load_preview_payload as load_preview_payload_from_state,
+    preview_path as preview_path_from_state,
+    save_preview_payload as save_preview_payload_to_state,
+    validate_all_suppliers_resolved,
+)
+from app.services.upload_supplier_matching import (
+    build_supplier_matches,
+    supplier_display,
+    supplier_matches_summary,
+    unresolved_supplier_count,
 )
 from app.services.upload_supplier_resolution import (
     apply_supplier_resolution_to_rows,
-    build_supplier_matches,
-    supplier_display,
-    supplier_factory_display_value,
-    supplier_match_is_unresolved,
-    supplier_matches_summary,
+    create_preview_supplier,
+    link_preview_supplier,
+    resolve_batch_preview_suppliers,
+    resolve_preview_ambiguous_supplier,
     supplier_resolution_map,
-    supplier_status_label,
-    unresolved_supplier_count,
 )
 from app.services.upload_validation import (
     sanitize_upload_filename,
@@ -141,10 +143,7 @@ async def upload_preview(
         "workbook_path": str(workbook_path),
         "rows": [],
     }
-    preview_path(token).write_text(
-        json.dumps(preview_payload, ensure_ascii=False, default=str),
-        encoding="utf-8",
-    )
+    save_preview_payload(token, preview_payload)
 
     return templates.TemplateResponse(
         request,
@@ -174,7 +173,10 @@ def upload_preview_stream(request: Request, token: str):
         )
 
     def event_stream():
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = load_preview_payload(token)
+        if not payload:
+            yield sse_event("preview_error", {"message": "找不到预览文件。"})
+            return
         parsed_rows = []
         workbook_path = Path(payload["workbook_path"])
         try:
@@ -197,10 +199,7 @@ def upload_preview_stream(request: Request, token: str):
             supplier_summary = supplier_matches_summary(supplier_matches, len(preview_rows))
             payload["rows"] = preview_rows
             payload["supplier_matches"] = supplier_matches
-            path.write_text(
-                json.dumps(payload, ensure_ascii=False, default=str),
-                encoding="utf-8",
-            )
+            save_preview_payload(token, payload)
             yield sse_event(
                 "complete",
                 {
@@ -250,7 +249,7 @@ def upload_preview_supplier_link(
         return RedirectResponse(url="/upload", status_code=303)
 
     with get_connection() as connection:
-        error = resolve_supplier_match_with_existing(
+        error = link_preview_supplier(
             connection,
             payload,
             match_key=match_key,
@@ -279,93 +278,13 @@ async def upload_preview_supplier_batch(request: Request):
     if not payload:
         return RedirectResponse(url="/upload", status_code=303)
 
-    supplier_matches = payload.get("supplier_matches") or []
-    pending_matches = [
-        match for match in supplier_matches if supplier_match_is_unresolved(match)
-    ]
-    errors = validate_batch_supplier_form(form, pending_matches)
-    if errors:
-        return render_upload_preview(
-            request,
-            token,
-            payload,
-            error="；".join(errors),
-            status_code=400,
-        )
-
     with get_connection() as connection:
-        errors.extend(validate_batch_supplier_database(connection, form, pending_matches))
-        if errors:
-            return render_upload_preview(
-                request,
-                token,
-                payload,
-                error="；".join(errors),
-                status_code=400,
-            )
-
-        create_counts_by_short_name = Counter(
-            normalize_supplier_name(str(form.get(f"supplier_short_name__{match['key']}") or ""))
-            for match in pending_matches
-            if str(form.get(f"action__{match['key']}") or "") == "create"
+        errors = resolve_batch_preview_suppliers(
+            connection,
+            payload,
+            form,
+            operator_name=operator_name,
         )
-        created_suppliers_by_name: dict[str, int] = {}
-        for match in pending_matches:
-            key = match["key"]
-            action = str(form.get(f"action__{key}") or "")
-            if action in {"existing", "ambiguous"}:
-                supplier_id = int(str(form.get(f"supplier_id__{key}") or "0"))
-                error = resolve_supplier_match_with_existing(
-                    connection,
-                    payload,
-                    match_key=key,
-                    supplier_id=supplier_id,
-                    operator_name=operator_name,
-                    resolved_status=(
-                        "ambiguous_resolved"
-                        if match.get("status") == "ambiguous_pending"
-                        else "resolved_existing"
-                    ),
-                    action_type=(
-                        "supplier_preview_ambiguous_resolved"
-                        if match.get("status") == "ambiguous_pending"
-                        else "supplier_preview_linked"
-                    ),
-                )
-                if error:
-                    errors.append(error)
-            elif action == "create":
-                normalized_short_name = normalize_supplier_name(
-                    str(form.get(f"supplier_short_name__{key}") or "")
-                )
-                is_same_batch_merge = create_counts_by_short_name[normalized_short_name] > 1
-                existing_supplier_id = created_suppliers_by_name.get(normalized_short_name)
-                if existing_supplier_id:
-                    error = resolve_supplier_match_with_existing(
-                        connection,
-                        payload,
-                        match_key=key,
-                        supplier_id=existing_supplier_id,
-                        operator_name=operator_name,
-                        resolved_status="resolved_new",
-                        action_type="supplier_preview_created",
-                        add_factory_alias=False,
-                        force_factory_value=True,
-                    )
-                    if error:
-                        errors.append(error)
-                    continue
-                supplier_id = create_supplier_for_preview_match(
-                    connection,
-                    payload,
-                    match,
-                    supplier_short_name=str(form.get(f"supplier_short_name__{key}") or ""),
-                    operator_name=operator_name,
-                    add_factory_alias=not is_same_batch_merge,
-                    force_factory_value=is_same_batch_merge,
-                )
-                created_suppliers_by_name[normalized_short_name] = supplier_id
-
         if errors:
             return render_upload_preview(
                 request,
@@ -374,6 +293,7 @@ async def upload_preview_supplier_batch(request: Request):
                 error="；".join(errors),
                 status_code=400,
             )
+
         connection.commit()
 
     save_preview_payload(token, payload)
@@ -402,43 +322,24 @@ def upload_preview_supplier_create(
     if not match:
         return render_upload_preview(request, token, payload, error="找不到供应商匹配项。", status_code=400)
 
-    factory = (match.get("factory") or "").strip()
-    short_name = supplier_short_name.strip()
-    values = {
-        "supplier_full_name": supplier_full_name.strip() or short_name,
-        "supplier_short_name": short_name,
-        "aliases_text": aliases_text.strip() or (factory if not match.get("is_blank_factory") else ""),
-    }
-    errors = []
-    if not operator_name:
-        errors.append("请填写操作人。")
-    if not values["supplier_full_name"]:
-        errors.append("请填写供应商全称。")
-    if not values["supplier_short_name"]:
-        errors.append("请填写供应商简称。")
-
     with get_connection() as connection:
-        errors.extend(
-            validate_supplier_short_name_unique(
-                connection,
-                values["supplier_short_name"],
-            )
+        _, error = create_preview_supplier(
+            connection,
+            payload,
+            match_key=match_key,
+            supplier_full_name=supplier_full_name,
+            supplier_short_name=supplier_short_name,
+            aliases_text=aliases_text,
+            operator_name=operator_name,
         )
-        if errors:
+        if error:
             return render_upload_preview(
                 request,
                 token,
                 payload,
-                error="；".join(errors),
+                error=error,
                 status_code=400,
             )
-        create_supplier_for_preview_match(
-            connection,
-            payload,
-            match,
-            supplier_short_name=values["supplier_short_name"],
-            operator_name=operator_name,
-        )
         connection.commit()
     save_preview_payload(token, payload)
     return RedirectResponse(url=f"/upload/preview/{token}", status_code=303)
@@ -462,14 +363,12 @@ def upload_preview_supplier_resolve_ambiguous(
         return RedirectResponse(url="/upload", status_code=303)
 
     with get_connection() as connection:
-        error = resolve_supplier_match_with_existing(
+        error = resolve_preview_ambiguous_supplier(
             connection,
             payload,
             match_key=match_key,
             supplier_id=supplier_id,
             operator_name=operator_name,
-            resolved_status="ambiguous_resolved",
-            action_type="supplier_preview_ambiguous_resolved",
         )
         if error:
             return render_upload_preview(request, token, payload, error=error, status_code=400)
@@ -488,7 +387,9 @@ async def upload_confirm(request: Request, token: str = Form(...)):
     if not path.exists():
         return RedirectResponse(url="/upload", status_code=303)
 
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = load_preview_payload(token)
+    if not payload:
+        return RedirectResponse(url="/upload", status_code=303)
     if preview_has_errors(payload["rows"]):
         return render_upload_preview(
             request,
@@ -498,12 +399,13 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             status_code=400,
         )
 
-    if supplier_resolution_blocked(payload):
+    supplier_errors = validate_all_suppliers_resolved(payload)
+    if supplier_errors:
         return render_upload_preview(
             request,
             token,
             payload,
-            error="还有未处理的供应商，请先完成供应商匹配。",
+            error="；".join(supplier_errors),
             status_code=400,
         )
 
@@ -558,21 +460,15 @@ async def upload_confirm(request: Request, token: str = Form(...)):
 
 
 def preview_path(token: str) -> Path:
-    return preview_file_path(UPLOAD_DIR, "preview", token)
+    return preview_path_from_state(token, UPLOAD_DIR)
 
 
 def load_preview_payload(token: str) -> dict | None:
-    path = preview_path(token)
-    if not path.exists():
-        return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    return load_preview_payload_from_state(token, UPLOAD_DIR)
 
 
 def save_preview_payload(token: str, payload: dict) -> None:
-    preview_path(token).write_text(
-        json.dumps(payload, ensure_ascii=False, default=str),
-        encoding="utf-8",
-    )
+    save_preview_payload_to_state(token, payload, UPLOAD_DIR)
 
 
 def render_upload_preview(
@@ -609,171 +505,6 @@ def render_upload_preview(
         },
         status_code=status_code,
     )
-
-
-def find_supplier_match(payload: dict, match_key: str) -> dict | None:
-    for match in payload.get("supplier_matches") or []:
-        if match.get("key") == match_key:
-            return match
-    return None
-
-
-def resolve_supplier_match_with_existing(
-    connection,
-    payload: dict,
-    *,
-    match_key: str,
-    supplier_id: int,
-    operator_name: str,
-    resolved_status: str,
-    action_type: str,
-    add_factory_alias: bool = True,
-    force_factory_value: bool = False,
-) -> str | None:
-    match = find_supplier_match(payload, match_key)
-    if not match:
-        return "找不到供应商匹配项。"
-    supplier = get_supplier(connection, supplier_id)
-    if not supplier:
-        return "选择的供应商不存在。"
-    factory = (match.get("factory") or "").strip()
-    if factory:
-        if add_factory_alias:
-            add_alias_text_alias(connection, supplier_id, factory)
-            sync_supplier_aliases(connection, supplier_id, operator_name)
-        factory_value_for_import = (
-            supplier_factory_display_value(supplier) if force_factory_value else factory
-        )
-    else:
-        factory_value_for_import = supplier_factory_display_value(supplier)
-        if not factory_value_for_import:
-            return "选择的供应商缺少名称，不能用于空白供应商。"
-    update_supplier_match(
-        payload,
-        match,
-        supplier=supplier,
-        status=resolved_status,
-        factory_value_for_import=factory_value_for_import,
-        force_factory_value=force_factory_value,
-    )
-    create_operation_log(
-        connection,
-        operator_name=operator_name,
-        action_type=action_type,
-        row_count=match.get("occurrence_count"),
-        note=f"供应商ID={supplier_id}; 工厂={match.get('display_factory')}",
-    )
-    return None
-
-
-def update_supplier_match(
-    payload: dict,
-    match: dict,
-    *,
-    supplier,
-    status: str,
-    factory_value_for_import: str,
-    force_factory_value: bool = False,
-) -> None:
-    match["status"] = status
-    match["status_label"] = supplier_status_label(status)
-    match["supplier_id"] = supplier["id"]
-    match["factory_value_for_import"] = factory_value_for_import
-    match["force_factory_value_for_import"] = force_factory_value
-    match["matched_supplier"] = supplier_display(supplier)
-    apply_supplier_resolution_to_rows(payload.get("rows") or [], payload.get("supplier_matches") or [])
-
-
-def create_supplier_for_preview_match(
-    connection,
-    payload: dict,
-    match: dict,
-    *,
-    supplier_short_name: str,
-    operator_name: str,
-    add_factory_alias: bool = True,
-    force_factory_value: bool = False,
-) -> int:
-    factory = (match.get("factory") or "").strip()
-    short_name = supplier_short_name.strip()
-    supplier_id = create_supplier(
-        connection,
-        values={
-            "supplier_full_name": short_name,
-            "supplier_short_name": short_name,
-            "aliases_text": factory if factory and add_factory_alias else "",
-        },
-        operator_name=operator_name,
-    )
-    supplier = get_supplier(connection, supplier_id)
-    factory_value_for_import = (
-        supplier_factory_display_value(supplier)
-        if force_factory_value or not factory
-        else factory
-    )
-    update_supplier_match(
-        payload,
-        match,
-        supplier=supplier,
-        status="resolved_new",
-        factory_value_for_import=factory_value_for_import,
-        force_factory_value=force_factory_value,
-    )
-    create_operation_log(
-        connection,
-        operator_name=operator_name,
-        action_type="supplier_preview_created",
-        row_count=match.get("occurrence_count"),
-        note=f"供应商ID={supplier_id}; 工厂={match.get('display_factory')}",
-    )
-    return supplier_id
-
-
-def validate_batch_supplier_form(form, pending_matches: list[dict]) -> list[str]:
-    errors = []
-    for match in pending_matches:
-        key = match["key"]
-        label = match.get("display_factory") or key
-        action = str(form.get(f"action__{key}") or "")
-        if match.get("status") == "ambiguous_pending":
-            if action != "ambiguous":
-                errors.append(f"{label} 请选择一个供应商。")
-                continue
-            if not str(form.get(f"supplier_id__{key}") or "").strip():
-                errors.append(f"{label} 请选择一个供应商。")
-            continue
-        if action not in {"existing", "create"}:
-            errors.append(f"{label} 请选择处理方式。")
-            continue
-        if action == "existing" and not str(form.get(f"supplier_id__{key}") or "").strip():
-            errors.append(f"{label} 请选择已有供应商。")
-        if action == "create" and not str(form.get(f"supplier_short_name__{key}") or "").strip():
-            errors.append(f"{label} 请填写供应商简称。")
-    return errors
-
-
-def validate_batch_supplier_database(connection, form, pending_matches: list[dict]) -> list[str]:
-    errors = []
-    for match in pending_matches:
-        key = match["key"]
-        action = str(form.get(f"action__{key}") or "")
-        if action in {"existing", "ambiguous"}:
-            supplier_id = int(str(form.get(f"supplier_id__{key}") or "0"))
-            if supplier_id and not get_supplier(connection, supplier_id):
-                errors.append(f"{match.get('display_factory')} 选择的供应商不存在。")
-        elif action == "create":
-            short_name = str(form.get(f"supplier_short_name__{key}") or "").strip()
-            duplicate_errors = validate_supplier_short_name_unique(connection, short_name)
-            errors.extend(f"{short_name}：{message}" for message in duplicate_errors)
-    return errors
-
-
-def supplier_resolution_blocked(payload: dict) -> bool:
-    supplier_matches = payload.get("supplier_matches")
-    if supplier_matches is None:
-        return True
-    return any(supplier_match_is_unresolved(match) for match in supplier_matches)
-
 
 def parse_selected_updates(form_items) -> set[tuple[int, str]]:
     selected = set()

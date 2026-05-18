@@ -10,7 +10,7 @@ from app.services.import_preview import (
 from app.services.normalization import normalize_gts_no, normalize_oem
 from app.services.operation_logging import create_operation_log, utc_now_text
 from app.services.suppliers import find_supplier_by_name, supplier_link_available
-from app.services.upload_supplier_resolution import supplier_match_key
+from app.services.upload_supplier_matching import supplier_match_key
 
 
 def import_preview_rows(

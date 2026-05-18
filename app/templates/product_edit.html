@@ -47,6 +47,9 @@
         <label for="description">英文描述</label>
         <input id="description" name="description" value="{{ values.description or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.description or '' }}">
 
+        <label for="chinese_description">品名</label>
+        <input id="chinese_description" name="chinese_description" value="{{ values.chinese_description or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.chinese_description or '' }}">
+
         <label for="hs_code">HS Code</label>
         <input id="hs_code" name="hs_code" value="{{ values.hs_code or '' }}" autocomplete="off" data-product-edit-field data-original-value="{{ product.hs_code or '' }}">
       </div>

@@ -59,6 +59,8 @@ def test_layout_css_keeps_table_pages_stable() -> None:
     assert "white-space: normal" in css
     assert ".suppliers-table" in css
     assert ".suppliers-table th:nth-child(6)" in css
+    assert ".supplier-combobox-options" in css
+    assert ".supplier-combobox-empty" in css
     assert ".data-quality-table" in css
     assert ".table-section + .table-section" in css
     assert "input.is-invalid" in css
@@ -73,6 +75,21 @@ def test_app_js_has_generic_required_form_validation() -> None:
     assert "markInvalidControls" in script
     assert "focusFirstInvalidControl" in script
     assert "data-product-edit-submit" in script
+    assert "requiredProductEditFields(form)" in script
+    assert "field.addEventListener(\"input\", updateSubmitState)" in script
+    assert "field.addEventListener(\"change\", updateSubmitState)" in script
+
+
+def test_app_js_has_supplier_combobox_selection_logic() -> None:
+    script = Path("app/static/app.js").read_text(encoding="utf-8")
+
+    assert "setupSupplierAutocomplete" in script
+    assert "selectSupplierComboboxOption" in script
+    assert "resetSupplierComboboxSelection" in script
+    assert "filterSupplierComboboxOptions" in script
+    assert "updateSupplierComboboxError" in script
+    assert "data-supplier-id" in script
+    assert "data-supplier-existing-field" in script
 
 
 def test_dashboard_keeps_primary_navigation_cards(ui_client: TestClient) -> None:

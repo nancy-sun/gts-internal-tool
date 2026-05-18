@@ -42,6 +42,7 @@ async def product_edit_submit(
     gts_no: str = Form(""),
     oem: str = Form(""),
     description: str = Form(""),
+    chinese_description: str = Form(""),
     hs_code: str = Form(""),
     edit_password: str = Form(""),
 ):
@@ -54,6 +55,7 @@ async def product_edit_submit(
         "gts_no": gts_no,
         "oem": oem,
         "description": description,
+        "chinese_description": chinese_description,
         "hs_code": hs_code,
     }
     errors = []
