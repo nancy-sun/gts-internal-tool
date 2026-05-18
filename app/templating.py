@@ -15,4 +15,17 @@ def format_quantity(value) -> str:
         return str(value)
 
 
+def format_compact_number(value) -> str:
+    if value in ("", None):
+        return ""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if number.is_integer():
+        return str(int(number))
+    return f"{number:.2f}".rstrip("0").rstrip(".")
+
+
 templates.env.filters["quantity"] = format_quantity
+templates.env.filters["number_compact"] = format_compact_number

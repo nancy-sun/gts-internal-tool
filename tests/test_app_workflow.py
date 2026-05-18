@@ -72,6 +72,14 @@ def test_office_workflow_upload_search_generate_download_and_log(
                             "unit": "pc",
                             "unit_price": 99,
                             "total_price": 198,
+                            "item_per_package": "12/CTN",
+                            "packages": 2,
+                            "weight_per_package": "5 kg",
+                            "gross_weight": "10 kg",
+                            "length": 10,
+                            "width": 20,
+                            "height": 30,
+                            "measurements_volume": "0.06 CBM",
                             "expected_delivery": "25days",
                             "comment": "first upload",
                         }
@@ -103,6 +111,12 @@ def test_office_workflow_upload_search_generate_download_and_log(
     assert 'href="/products/1/edit"' in search_response.text
     assert "编辑产品" in search_response.text
     assert "历史报价 1 条" in search_response.text
+    assert "只/件" in search_response.text
+    assert "GW/件" in search_response.text
+    assert "体积" in search_response.text
+    assert ">12</td>" in search_response.text
+    assert ">5</td>" in search_response.text
+    assert ">0.06</td>" in search_response.text
     assert '<details class="quotation-history">' in search_response.text
     assert '<details class="quotation-history" open>' not in search_response.text
 
@@ -401,6 +415,43 @@ def test_upload_preview_groups_repeated_factory_and_blocks_until_resolved(
     assert supplier_ids[0] is not None
 
 
+def test_upload_preview_uses_autocomplete_for_existing_supplier_link(
+    app_client: TestClient,
+) -> None:
+    create_supplier_for_test(
+        app_client,
+        full_name="Known Supplier Full",
+        short_name="Known Supplier",
+        aliases_text="Known Alias",
+    )
+    upload_response = app_client.post(
+        "/upload/preview",
+        data={"operator_name": "Nancy"},
+        files={
+            "excel_file": (
+                "unmatched-factory.xlsx",
+                build_quotation_workbook(
+                    [{"gts_no": "GTS-AUTO-001", "factory": "New Factory", "unit": "pc", "unit_price": 10}]
+                ),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    token = extract_token(upload_response.text)
+    app_client.get(f"/upload/preview/stream/{token}")
+
+    preview_page = app_client.get(f"/upload/preview/{token}")
+
+    assert preview_page.status_code == 200
+    assert 'data-supplier-existing-search' in preview_page.text
+    assert 'data-supplier-existing-field' in preview_page.text
+    assert 'list="supplier-options-' in preview_page.text
+    assert "Known Supplier Full" in preview_page.text
+    assert "Known Supplier" in preview_page.text
+    assert "Known Alias" in preview_page.text
+    assert 'select name="supplier_id__' not in preview_page.text
+
+
 def test_batch_create_same_short_name_merges_multiple_factory_groups(
     app_client: TestClient,
     tmp_path: Path,
@@ -556,6 +607,10 @@ def test_supplier_full_short_and_alias_auto_match_in_upload_preview(
         "auto_matched",
         "auto_matched",
     ]
+    preview_page = app_client.get(f"/upload/preview/{token}")
+    assert preview_page.status_code == 200
+    assert "supplier-status-auto_matched" not in preview_page.text
+    assert "所有供应商已匹配，可以导入。" in preview_page.text
     assert app_client.post("/upload/confirm", data={"token": token}).status_code == 200
 
 

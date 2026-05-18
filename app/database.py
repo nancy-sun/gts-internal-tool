@@ -4,6 +4,17 @@ from typing import Any
 
 from app.config import get_settings
 
+QUOTATION_REAL_COLUMNS = {
+    "item_per_package",
+    "packages",
+    "weight_per_package",
+    "gross_weight",
+    "length",
+    "width",
+    "height",
+    "measurements_volume",
+}
+
 
 def get_connection() -> sqlite3.Connection:
     settings = get_settings()
@@ -104,14 +115,14 @@ def initialize_database() -> None:
                 unit TEXT,
                 unit_price REAL,
                 total_price REAL,
-                item_per_package TEXT,
-                packages TEXT,
-                weight_per_package TEXT,
-                gross_weight TEXT,
-                length TEXT,
-                width TEXT,
-                height TEXT,
-                measurements_volume TEXT,
+                item_per_package REAL,
+                packages REAL,
+                weight_per_package REAL,
+                gross_weight REAL,
+                length REAL,
+                width REAL,
+                height REAL,
+                measurements_volume REAL,
                 packaging TEXT,
                 expected_delivery TEXT,
                 comment TEXT,
@@ -145,6 +156,7 @@ def initialize_database() -> None:
         )
         ensure_column(connection, "products", "hs_code", "TEXT")
         ensure_column(connection, "quotation_items", "supplier_id", "INTEGER")
+        migrate_quotation_numeric_columns(connection)
         ensure_column(connection, "suppliers", "supplier_full_name", "TEXT")
         ensure_column(connection, "suppliers", "supplier_short_name", "TEXT")
         ensure_column(connection, "suppliers", "supplier_short_name_normalized", "TEXT")
@@ -162,6 +174,118 @@ def initialize_database() -> None:
               AND supplier_short_name_normalized != ''
             """
         )
+
+
+def migrate_quotation_numeric_columns(connection: sqlite3.Connection) -> None:
+    columns = connection.execute("PRAGMA table_info(quotation_items)").fetchall()
+    if not columns:
+        return
+    column_types = {row["name"]: (row["type"] or "").upper() for row in columns}
+    if all(column_types.get(column) == "REAL" for column in QUOTATION_REAL_COLUMNS):
+        return
+
+    rows = connection.execute("SELECT * FROM quotation_items ORDER BY id").fetchall()
+    connection.execute("PRAGMA foreign_keys = OFF")
+    connection.execute("ALTER TABLE quotation_items RENAME TO quotation_items_old_numeric")
+    connection.executescript(
+        """
+        CREATE TABLE quotation_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            supplier_id INTEGER,
+            no TEXT,
+            gts_no TEXT,
+            gts_no_normalized TEXT,
+            description TEXT,
+            oem TEXT,
+            oem_normalized TEXT,
+            factory TEXT,
+            chinese_description TEXT,
+            quantity REAL,
+            unit TEXT,
+            unit_price REAL,
+            total_price REAL,
+            item_per_package REAL,
+            packages REAL,
+            weight_per_package REAL,
+            gross_weight REAL,
+            length REAL,
+            width REAL,
+            height REAL,
+            measurements_volume REAL,
+            packaging TEXT,
+            expected_delivery TEXT,
+            comment TEXT,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(product_id) REFERENCES products(id),
+            FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+        );
+        """
+    )
+    insert_columns = [
+        "id",
+        "product_id",
+        "supplier_id",
+        "no",
+        "gts_no",
+        "gts_no_normalized",
+        "description",
+        "oem",
+        "oem_normalized",
+        "factory",
+        "chinese_description",
+        "quantity",
+        "unit",
+        "unit_price",
+        "total_price",
+        "item_per_package",
+        "packages",
+        "weight_per_package",
+        "gross_weight",
+        "length",
+        "width",
+        "height",
+        "measurements_volume",
+        "packaging",
+        "expected_delivery",
+        "comment",
+        "created_by",
+        "created_at",
+        "updated_by",
+        "updated_at",
+    ]
+    placeholders = ", ".join("?" for _ in insert_columns)
+    for row in rows:
+        values = []
+        for column in insert_columns:
+            value = row[column] if column in row.keys() else None
+            if column in QUOTATION_REAL_COLUMNS:
+                value = _parse_numeric_value(value)
+            values.append(value)
+        connection.execute(
+            f"""
+            INSERT INTO quotation_items ({", ".join(insert_columns)})
+            VALUES ({placeholders})
+            """,
+            values,
+        )
+    connection.execute("DROP TABLE quotation_items_old_numeric")
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_quotation_items_product_id
+        ON quotation_items(product_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_quotation_items_updated_at
+        ON quotation_items(updated_at)
+        """
+    )
+    connection.execute("PRAGMA foreign_keys = ON")
 
 
 def ensure_column(
@@ -342,3 +466,14 @@ def _text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _parse_numeric_value(value: Any) -> float | None:
+    if value in ("", None):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    match = re.search(r"[-+]?\d*\.?\d+", str(value).replace(",", ""))
+    if not match:
+        return None
+    return float(match.group(0))

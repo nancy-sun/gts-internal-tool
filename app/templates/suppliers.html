@@ -9,10 +9,10 @@
     <p>供应商资料待完善：{{ incomplete_count }} 个</p>
   </section>
 
-  <form method="get" action="/suppliers" class="search-form">
+  <form method="get" action="/suppliers" class="search-form supplier-search-form">
     <label for="q">关键词</label>
-    <input id="q" name="q" value="{{ query }}" autocomplete="off" placeholder="供应商 / 城市 / 产品范围">
-    <select name="status" aria-label="资料状态">
+    <input id="q" name="q" value="{{ query }}" autocomplete="off" placeholder="供应商 / 城市 / 产品范围" class="supplier-search-input">
+    <select name="status" aria-label="资料状态" class="supplier-status-select">
       <option value="all" {% if status != "incomplete" %}selected{% endif %}>全部</option>
       <option value="incomplete" {% if status == "incomplete" %}selected{% endif %}>仅看待完善</option>
     </select>
@@ -22,7 +22,7 @@
 
   <section class="table-section">
     <div class="table-wrap">
-      <table>
+      <table class="suppliers-table">
         <thead>
           <tr>
             <th>全称</th>

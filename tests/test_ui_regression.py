@@ -43,16 +43,27 @@ def ui_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_layout_css_keeps_table_pages_stable() -> None:
     css = Path("app/static/styles.css").read_text(encoding="utf-8")
 
+    assert "overflow: hidden" in css
+    assert ".topbar" in css
+    assert "position: sticky" in css
+    assert "top: 0" in css
     assert ".page:has(.preview-page-form)" in css
+    assert "overscroll-behavior: contain" in css
     assert ".preview-page-form .table-wrap" in css
     assert ".upload-preview-table" in css
     assert "min-width: 1180px" in css
     assert ".generation-preview-table" in css
     assert ".search-results-table" in css
+    assert "min-width: 1240px" in css
+    assert ".search-results-table th:nth-child(15)" in css
+    assert "white-space: normal" in css
+    assert ".suppliers-table" in css
+    assert ".suppliers-table th:nth-child(6)" in css
     assert ".data-quality-table" in css
     assert ".table-section + .table-section" in css
     assert "input.is-invalid" in css
     assert "select.is-invalid" in css
+    assert ".topnav a.is-active" in css
 
 
 def test_app_js_has_generic_required_form_validation() -> None:
@@ -74,6 +85,20 @@ def test_dashboard_keeps_primary_navigation_cards(ui_client: TestClient) -> None
     assert 'href="/data-quality"' in response.text
     assert 'href="/hs-codes/upload"' in response.text
     assert 'href="/hs-codes/generate"' in response.text
+
+
+def test_nav_highlights_current_section(ui_client: TestClient) -> None:
+    upload_response = ui_client.get("/upload")
+    search_response = ui_client.get("/search")
+    hs_response = ui_client.get("/hs-codes/upload")
+
+    assert upload_response.status_code == 200
+    assert 'href="/upload" class="is-active" aria-current="page"' in upload_response.text
+    assert search_response.status_code == 200
+    assert 'href="/search" class="is-active" aria-current="page"' in search_response.text
+    assert hs_response.status_code == 200
+    assert 'nav-dropdown-button is-active' in hs_response.text
+    assert 'href="/hs-codes/upload" class="is-active"' in hs_response.text
 
 
 def test_upload_preview_loading_has_streaming_table_controls(ui_client: TestClient) -> None:

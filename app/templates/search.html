@@ -72,6 +72,14 @@
                         <tr>
                           <th>工厂</th>
                           <th>单价</th>
+                          <th>只/件</th>
+                          <th>件数</th>
+                          <th>GW/件</th>
+                          <th>G.W.</th>
+                          <th>长</th>
+                          <th>宽</th>
+                          <th>高</th>
+                          <th>体积</th>
                           <th>包装</th>
                           <th>交期</th>
                           <th>备注</th>
@@ -84,6 +92,14 @@
                           <tr>
                             <td>{{ quotation.supplier_display_name or quotation.factory or "" }}</td>
                             <td>{% if quotation.unit_price is not none %}¥{{ "%.2f"|format(quotation.unit_price) }}{% endif %}</td>
+                            <td>{{ quotation.item_per_package|number_compact if quotation.item_per_package is not none else "" }}</td>
+                            <td>{{ quotation.packages|number_compact if quotation.packages is not none else "" }}</td>
+                            <td>{{ quotation.weight_per_package|number_compact if quotation.weight_per_package is not none else "" }}</td>
+                            <td>{{ quotation.gross_weight|number_compact if quotation.gross_weight is not none else "" }}</td>
+                            <td>{{ quotation.length|number_compact if quotation.length is not none else "" }}</td>
+                            <td>{{ quotation.width|number_compact if quotation.width is not none else "" }}</td>
+                            <td>{{ quotation.height|number_compact if quotation.height is not none else "" }}</td>
+                            <td>{{ quotation.measurements_volume|number_compact if quotation.measurements_volume is not none else "" }}</td>
                             <td>{{ quotation.packaging or "" }}</td>
                             <td>{{ quotation.expected_delivery or "" }}</td>
                             <td>{{ quotation.comment or "" }}</td>

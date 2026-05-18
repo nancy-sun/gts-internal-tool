@@ -607,6 +607,7 @@
   var batchForm = document.querySelector("[data-supplier-batch-form]");
   if (batchForm) {
     var batchSubmit = batchForm.querySelector("[data-supplier-batch-submit]");
+    setupSupplierAutocomplete(batchForm);
     batchForm.addEventListener("input", updateBatchState);
     batchForm.addEventListener("change", updateBatchState);
     updateBatchState();
@@ -660,7 +661,7 @@
         return false;
       }
       if (action.value === "existing" || action.value === "ambiguous") {
-        var supplier = row.querySelector('select[name^="supplier_id__"], input[type="radio"][name^="supplier_id__"]:checked');
+        var supplier = row.querySelector('input[type="hidden"][name^="supplier_id__"], select[name^="supplier_id__"], input[type="radio"][name^="supplier_id__"]:checked');
         return Boolean(supplier && supplier.value);
       }
       if (action.value === "create") {
@@ -669,5 +670,41 @@
       }
       return false;
     });
+  }
+
+  function setupSupplierAutocomplete(form) {
+    Array.prototype.slice.call(
+      form.querySelectorAll("[data-supplier-existing-search]")
+    ).forEach(function (input) {
+      input.addEventListener("input", function () {
+        syncSupplierAutocomplete(input);
+      });
+      input.addEventListener("change", function () {
+        syncSupplierAutocomplete(input);
+      });
+      syncSupplierAutocomplete(input);
+    });
+  }
+
+  function syncSupplierAutocomplete(input) {
+    var row = input.closest("[data-supplier-batch-row]");
+    var supplierField = row ? row.querySelector("[data-supplier-existing-field]") : null;
+    var listId = input.getAttribute("list");
+    var dataList = listId ? document.getElementById(listId) : null;
+    var selectedSupplierId = "";
+
+    if (dataList) {
+      Array.prototype.some.call(dataList.options, function (option) {
+        if (option.value === input.value) {
+          selectedSupplierId = option.getAttribute("data-supplier-id") || "";
+          return true;
+        }
+        return false;
+      });
+    }
+
+    if (supplierField) {
+      supplierField.value = selectedSupplierId;
+    }
   }
 })();

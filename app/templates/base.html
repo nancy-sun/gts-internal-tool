@@ -7,23 +7,24 @@
     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=20260517-upload-supplier-resolution">
   </head>
   <body>
+    {% set current_path = request.url.path %}
     <header class="topbar">
       <a class="brand" href="/">GTS Internal Tool</a>
       {% if request.session.get("authenticated") %}
         <nav class="topnav" aria-label="主要功能">
-          <a href="/upload">上传报价</a>
-          <a href="/generate">生成报价</a>
-          <a href="/search">查询数据库</a>
-          <a href="/suppliers">供应商</a>
-          <a href="/data-quality">数据检查</a>
+          <a href="/upload" class="{% if current_path.startswith('/upload') %}is-active{% endif %}" {% if current_path.startswith('/upload') %}aria-current="page"{% endif %}>上传报价</a>
+          <a href="/generate" class="{% if current_path.startswith('/generate') %}is-active{% endif %}" {% if current_path.startswith('/generate') %}aria-current="page"{% endif %}>生成报价</a>
+          <a href="/search" class="{% if current_path.startswith('/search') %}is-active{% endif %}" {% if current_path.startswith('/search') %}aria-current="page"{% endif %}>查询数据库</a>
+          <a href="/suppliers" class="{% if current_path.startswith('/suppliers') %}is-active{% endif %}" {% if current_path.startswith('/suppliers') %}aria-current="page"{% endif %}>供应商</a>
+          <a href="/data-quality" class="{% if current_path.startswith('/data-quality') %}is-active{% endif %}" {% if current_path.startswith('/data-quality') %}aria-current="page"{% endif %}>数据检查</a>
           <div class="nav-dropdown">
-            <button class="nav-dropdown-button" type="button" aria-haspopup="true" aria-expanded="false">
+            <button class="nav-dropdown-button {% if current_path.startswith('/hs-codes') %}is-active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false" {% if current_path.startswith('/hs-codes') %}aria-current="page"{% endif %}>
               HS Code
               <span aria-hidden="true">▾</span>
             </button>
             <div class="nav-dropdown-menu" role="menu">
-              <a role="menuitem" href="/hs-codes/upload">上传 HS Code</a>
-              <a role="menuitem" href="/hs-codes/generate">生成 HS Code 报表</a>
+              <a role="menuitem" href="/hs-codes/upload" class="{% if current_path.startswith('/hs-codes/upload') %}is-active{% endif %}">上传 HS Code</a>
+              <a role="menuitem" href="/hs-codes/generate" class="{% if current_path.startswith('/hs-codes/generate') %}is-active{% endif %}">生成 HS Code 报表</a>
             </div>
           </div>
         </nav>

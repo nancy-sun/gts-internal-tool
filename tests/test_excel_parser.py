@@ -283,17 +283,44 @@ def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliase
     assert rows[0].values["unit"] == "PCS"
     assert rows[0].values["unit_price"] == 3.5
     assert rows[0].values["total_price"] == 21
-    assert rows[0].values["item_per_package"] == "12/CTN"
+    assert rows[0].values["item_per_package"] == 12
     assert rows[0].values["packages"] == 2
-    assert rows[0].values["weight_per_package"] == "5 kg"
-    assert rows[0].values["gross_weight"] == "10 kg"
+    assert rows[0].values["weight_per_package"] == 5
+    assert rows[0].values["gross_weight"] == 10
     assert rows[0].values["length"] == 10
     assert rows[0].values["width"] == 20
     assert rows[0].values["height"] == 30
-    assert rows[0].values["measurements_volume"] == "0.06 CBM"
+    assert rows[0].values["measurements_volume"] == 0.06
     assert rows[0].values["packaging"] == "纸箱"
     assert rows[0].values["expected_delivery"] == "45 days"
     assert rows[0].values["comment"] == "测试备注"
+
+
+def test_parse_full_quotation_workbook_warns_when_numeric_extra_field_has_no_number(
+    tmp_path: Path,
+) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet["A1"] = "No."
+    sheet["B1"] = "GTS No."
+    sheet["F1"] = "Factory"
+    sheet["I1"] = "Unit"
+    sheet["J1"] = "Unit Price"
+    sheet["N1"] = "Weight / Package"
+    sheet["A2"] = 1
+    sheet["B2"] = "GTS-401"
+    sheet["F2"] = "Factory A"
+    sheet["I2"] = "pc"
+    sheet["J2"] = 10
+    sheet["N2"] = "heavy"
+    path = tmp_path / "quotation_invalid_numeric_extra.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["weight_per_package"] is None
+    assert "Weight / Package不是数字，已留空。" in rows[0].warnings
 
 
 def test_parse_full_quotation_workbook_errors_when_required_columns_missing(tmp_path: Path):

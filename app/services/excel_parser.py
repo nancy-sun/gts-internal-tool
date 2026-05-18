@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,19 @@ QUOTATION_FIELDS = [
     "comment",
 ]
 
-NUMERIC_FIELDS = {"quantity", "unit_price", "total_price"}
+NUMERIC_FIELDS = {
+    "quantity",
+    "unit_price",
+    "total_price",
+    "item_per_package",
+    "packages",
+    "weight_per_package",
+    "gross_weight",
+    "length",
+    "width",
+    "height",
+    "measurements_volume",
+}
 REQUIRED_UPLOAD_HEADERS = {"factory", "unit", "unit_price"}
 REQUIRED_UPLOAD_VALUE_FIELDS = {"unit", "unit_price"}
 
@@ -258,6 +271,14 @@ def field_label(field: str) -> str:
         "factory": "工厂",
         "unit": "单位",
         "unit_price": "单价",
+        "item_per_package": "Item/Package",
+        "packages": "Packages",
+        "weight_per_package": "Weight / Package",
+        "gross_weight": "G.W.",
+        "length": "Length",
+        "width": "Width",
+        "height": "Height",
+        "measurements_volume": "Measurements / Volume",
     }.get(field, field)
 
 
@@ -297,8 +318,8 @@ def _parse_number(value: Any, field: str, warnings: list[str]) -> float | None:
         return float(value)
 
     text = str(value).strip().replace(",", "")
-    try:
-        return float(text)
-    except ValueError:
-        warnings.append(f"{field_label(field)}不是数字，已留空。")
-        return None
+    match = re.search(r"[-+]?\d*\.?\d+", text)
+    if match:
+        return float(match.group(0))
+    warnings.append(f"{field_label(field)}不是数字，已留空。")
+    return None

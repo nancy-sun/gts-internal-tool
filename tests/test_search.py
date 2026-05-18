@@ -119,6 +119,14 @@ def test_group_search_results_shows_one_product_with_quotation_history():
         "2026-01-03T00:00:00+00:00",
         factory="Factory B",
         unit_price=12.5,
+        item_per_package=12,
+        packages=3,
+        weight_per_package=5,
+        gross_weight=15,
+        length=10,
+        width=20,
+        height=30,
+        measurements_volume=0.06,
     )
 
     rows, _ = search_catalogue(connection, field="gts_no", query="GTS1")
@@ -132,6 +140,9 @@ def test_group_search_results_shows_one_product_with_quotation_history():
         for quotation in products[0]["quotations"]
     ] == ["Factory B", "Factory A"]
     assert products[0]["quotations"][0]["unit_price"] == 12.5
+    assert products[0]["quotations"][0]["item_per_package"] == 12
+    assert products[0]["quotations"][0]["weight_per_package"] == 5
+    assert products[0]["quotations"][0]["measurements_volume"] == 0.06
 
 
 def initialize_test_schema(connection: sqlite3.Connection) -> None:
@@ -157,6 +168,14 @@ def initialize_test_schema(connection: sqlite3.Connection) -> None:
             product_id INTEGER NOT NULL,
             factory TEXT,
             unit_price REAL,
+            item_per_package REAL,
+            packages REAL,
+            weight_per_package REAL,
+            gross_weight REAL,
+            length REAL,
+            width REAL,
+            height REAL,
+            measurements_volume REAL,
             packaging TEXT,
             expected_delivery TEXT,
             comment TEXT,
@@ -207,13 +226,37 @@ def insert_quotation(
     updated_at: str,
     factory: str | None = None,
     unit_price: float | None = None,
+    item_per_package: float | None = None,
+    packages: float | None = None,
+    weight_per_package: float | None = None,
+    gross_weight: float | None = None,
+    length: float | None = None,
+    width: float | None = None,
+    height: float | None = None,
+    measurements_volume: float | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO quotation_items (
-            id, product_id, factory, unit_price, updated_by, updated_at
+            id, product_id, factory, unit_price, item_per_package, packages,
+            weight_per_package, gross_weight, length, width, height, measurements_volume,
+            updated_by, updated_at
         )
-        VALUES (?, ?, ?, ?, 'Tester', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Tester', ?)
         """,
-        (quotation_id, product_id, factory, unit_price, updated_at),
+        (
+            quotation_id,
+            product_id,
+            factory,
+            unit_price,
+            item_per_package,
+            packages,
+            weight_per_package,
+            gross_weight,
+            length,
+            width,
+            height,
+            measurements_volume,
+            updated_at,
+        ),
     )
