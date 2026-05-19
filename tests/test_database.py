@@ -65,6 +65,14 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
             row[1]
             for row in connection.execute("PRAGMA table_info(quotation_items)").fetchall()
         }
+        user_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(users)").fetchall()
+        }
+        operation_log_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(operation_logs)").fetchall()
+        }
         quotation_column_types = {
             row[1]: row[2]
             for row in connection.execute("PRAGMA table_info(quotation_items)").fetchall()
@@ -101,6 +109,20 @@ def test_initialize_database_creates_suppliers_and_optional_supplier_id(
     }.issubset(supplier_columns)
     assert "supplier_name" not in supplier_columns
     assert "supplier_name_normalized" not in supplier_columns
+    assert {
+        "id",
+        "username",
+        "display_name",
+        "role",
+        "password_hash",
+        "is_active",
+        "must_change_password",
+        "last_login_at",
+        "created_at",
+        "updated_at",
+    }.issubset(user_columns)
+    assert "email" not in user_columns
+    assert "user_id" in operation_log_columns
     assert "supplier_id" in quotation_columns
     for column in (
         "item_per_package",

@@ -249,6 +249,16 @@
         </tbody>
       </table>
     </div>
+    <div class="edit-product-password-section">
+      <label for="confirm_password">确认密码</label>
+      <input
+        id="confirm_password"
+        name="confirm_password"
+        type="password"
+        required
+        autocomplete="new-password"
+      >
+    </div>
     <div class="form-actions">
       <a class="text-link" href="/upload">取消</a>
       <button type="submit" {% if has_errors or unresolved_supplier_count %}disabled{% endif %}>确认导入</button>

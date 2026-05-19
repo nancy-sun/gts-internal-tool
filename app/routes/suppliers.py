@@ -1,10 +1,12 @@
-from hmac import compare_digest
-
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.auth import get_session_operator_name, require_auth, set_session_operator_name
-from app.config import get_settings
+from app.auth import (
+    get_session_operator_name,
+    require_auth,
+    require_password_confirmation,
+    set_session_operator_name,
+)
 from app.database import get_connection
 from app.navigation import SUPPLIERS_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.suppliers import (
@@ -74,6 +76,7 @@ def supplier_create_submit(
     request: Request,
     operator_name: str = Form(...),
     edit_password: str = Form(""),
+    confirm_password: str = Form(""),
     supplier_full_name: str = Form(""),
     supplier_short_name: str = Form(""),
     aliases_text: str = Form(""),
@@ -96,8 +99,9 @@ def supplier_create_submit(
     operator_name = set_session_operator_name(request, operator_name)
     values = supplier_form_values(locals())
     errors = validate_supplier_values(values, operator_name)
-    if not compare_digest(edit_password, get_settings().supplier_edit_password):
-        errors.append("密码不正确。")
+    password_error = require_password_confirmation(request, confirm_password or edit_password)
+    if password_error:
+        errors.append(password_error)
     with get_connection() as connection:
         errors.extend(
             validate_supplier_short_name_unique(
@@ -177,6 +181,7 @@ def supplier_edit_submit(
     supplier_id: int,
     operator_name: str = Form(...),
     edit_password: str = Form(""),
+    confirm_password: str = Form(""),
     supplier_full_name: str = Form(""),
     supplier_short_name: str = Form(""),
     aliases_text: str = Form(""),
@@ -199,8 +204,9 @@ def supplier_edit_submit(
     operator_name = set_session_operator_name(request, operator_name)
     values = supplier_form_values(locals())
     errors = validate_supplier_values(values, operator_name)
-    if not compare_digest(edit_password, get_settings().supplier_edit_password):
-        errors.append("密码不正确。")
+    password_error = require_password_confirmation(request, confirm_password or edit_password)
+    if password_error:
+        errors.append(password_error)
 
     with get_connection() as connection:
         supplier = get_supplier(connection, supplier_id)

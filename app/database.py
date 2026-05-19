@@ -142,18 +142,34 @@ def initialize_database() -> None:
 
             CREATE TABLE IF NOT EXISTS operation_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 action_time TEXT NOT NULL,
                 operator_name TEXT NOT NULL,
                 action_type TEXT NOT NULL,
                 file_name TEXT,
                 row_count INTEGER,
-                note TEXT
+                note TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
             );
 
             CREATE INDEX IF NOT EXISTS idx_operation_logs_action_time
             ON operation_logs(action_time);
+
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('admin', 'sales', 'merchandiser')),
+                password_hash TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                must_change_password INTEGER NOT NULL DEFAULT 0,
+                last_login_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             """
         )
+        ensure_column(connection, "operation_logs", "user_id", "INTEGER")
         ensure_column(connection, "products", "hs_code", "TEXT")
         ensure_column(connection, "quotation_items", "supplier_id", "INTEGER")
         migrate_quotation_numeric_columns(connection)

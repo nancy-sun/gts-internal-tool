@@ -25,6 +25,10 @@ class Settings:
             "SUPPLIER_EDIT_PASSWORD",
             self.product_edit_password,
         )
+        self.enable_legacy_access_code = (
+            os.getenv("ENABLE_LEGACY_ACCESS_CODE", "false").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
 
         if not self.shared_access_code:
             raise RuntimeError("SHARED_ACCESS_CODE must be set in .env")

@@ -1,10 +1,12 @@
-from hmac import compare_digest
-
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.auth import get_session_operator_name, require_auth, set_session_operator_name
-from app.config import get_settings
+from app.auth import (
+    get_session_operator_name,
+    require_auth,
+    require_password_confirmation,
+    set_session_operator_name,
+)
 from app.database import get_connection
 from app.navigation import SEARCH_CRUMB
 from app.services.product_edit import get_product, update_product, validate_product_edit
@@ -45,6 +47,7 @@ async def product_edit_submit(
     chinese_description: str = Form(""),
     hs_code: str = Form(""),
     edit_password: str = Form(""),
+    confirm_password: str = Form(""),
 ):
     redirect = require_auth(request)
     if redirect:
@@ -61,8 +64,9 @@ async def product_edit_submit(
     errors = []
     if not operator_name.strip():
         errors.append("请填写操作人。")
-    if not compare_digest(edit_password, get_settings().product_edit_password):
-        errors.append("确认密码不正确。")
+    password_error = require_password_confirmation(request, confirm_password or edit_password)
+    if password_error:
+        errors.append(password_error)
 
     with get_connection() as connection:
         validation = validate_product_edit(

@@ -6,7 +6,12 @@ from uuid import uuid4
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 
-from app.auth import get_session_operator_name, require_auth, set_session_operator_name
+from app.auth import (
+    get_session_operator_name,
+    require_auth,
+    require_password_confirmation,
+    set_session_operator_name,
+)
 from app.config import BASE_DIR, get_settings
 from app.database import get_connection
 from app.navigation import UPLOAD_CRUMB, breadcrumbs, child_breadcrumbs
@@ -418,6 +423,19 @@ async def upload_confirm(request: Request, token: str = Form(...)):
             token,
             payload,
             error="请先为 GTS、OEM、工厂、价格的差异选择保留旧值或使用新值。",
+            status_code=400,
+        )
+
+    password_error = require_password_confirmation(
+        request,
+        str(form.get("confirm_password") or ""),
+    )
+    if password_error:
+        return render_upload_preview(
+            request,
+            token,
+            payload,
+            error=password_error,
             status_code=400,
         )
 

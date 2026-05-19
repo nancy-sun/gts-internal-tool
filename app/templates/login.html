@@ -5,17 +5,17 @@
 
 {% block content %}
   <section class="narrow-panel">
-    <h1>办公室访问</h1>
+    <h1>员工登录</h1>
     <form method="post" action="/login" class="form-stack">
-      <label for="operator_name">操作人</label>
-      <input id="operator_name" name="operator_name" autocomplete="name" value="{{ operator_name or '' }}">
+      <label for="username">用户名</label>
+      <input id="username" name="username" autocomplete="username" value="{{ username or '' }}" required autofocus>
 
-      <label for="access_code">共享访问码</label>
-      <input id="access_code" name="access_code" type="password" autocomplete="current-password" required autofocus>
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
       {% if error %}
         <p class="error">{{ error }}</p>
       {% endif %}
-      <button type="submit">进入</button>
+      <button type="submit">登录</button>
     </form>
   </section>
 {% endblock %}

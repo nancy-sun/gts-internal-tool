@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 - GTS Internal Tool{% endblock %}
+{% block page_name %}用户管理{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact-heading">
+    <h1>用户管理</h1>
+    <p>离职员工请禁用账号，不要改给新人使用。</p>
+  </section>
+
+  {% if error %}
+    <div class="notice error-notice"><p>{{ error }}</p></div>
+  {% endif %}
+
+  <section class="table-section">
+    <div class="section-actions">
+      <a class="primary-link-button" href="/admin/users/new">新增用户</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>用户名</th>
+            <th>显示名称</th>
+            <th>角色</th>
+            <th>状态</th>
+            <th>最后登录</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>{{ user.username }}</td>
+              <td>{{ user.display_name }}</td>
+              <td>{{ user.role }}</td>
+              <td>{{ "启用" if user.is_active else "禁用" }}</td>
+              <td>{{ user.last_login_at[:10] if user.last_login_at else "" }}</td>
+              <td>
+                <a class="table-action-button" href="/admin/users/{{ user.id }}/edit">编辑</a>
+                <form method="post" action="/admin/users/{{ user.id }}/toggle-active" class="inline-form">
+                  <button type="submit" class="secondary-button">{{ "禁用" if user.is_active else "启用" }}</button>
+                </form>
+                <form method="post" action="/admin/users/{{ user.id }}/delete" class="inline-form">
+                  <input name="confirm_password" type="password" placeholder="管理员密码" required>
+                  <button type="submit" class="danger-button">删除</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

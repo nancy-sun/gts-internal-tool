@@ -42,7 +42,15 @@ def real_file_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestCli
     client = TestClient(create_app())
     client.database_path = database_path
     client.upload_path = upload_path
-    login_response = client.post("/login", data={"access_code": ACCESS_CODE})
+    login_response = client.post(
+        "/setup-admin",
+        data={
+            "username": "admin",
+            "display_name": "Nancy",
+            "password": "55123511",
+            "confirm_password": "55123511",
+        },
+    )
     assert login_response.status_code == 200
     return client
 
@@ -63,7 +71,10 @@ def test_real_quotation_upload_file_imports_and_generates_quote(
     assert first_row["values"]["gross_weight"] == 90
 
     resolve_all_unmatched_suppliers(real_file_client, upload_token)
-    confirm_response = real_file_client.post("/upload/confirm", data={"token": upload_token})
+    confirm_response = real_file_client.post(
+        "/upload/confirm",
+        data={"token": upload_token, "confirm_password": "55123511"},
+    )
     assert confirm_response.status_code == 200
 
     with sqlite3.connect(real_file_client.database_path) as connection:

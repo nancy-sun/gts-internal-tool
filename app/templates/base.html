@@ -18,6 +18,9 @@
           <a href="/suppliers" class="{% if current_path.startswith('/suppliers') %}is-active{% endif %}" {% if current_path.startswith('/suppliers') %}aria-current="page"{% endif %}>供应商</a>
           <a href="/data-quality" class="{% if current_path.startswith('/data-quality') %}is-active{% endif %}" {% if current_path.startswith('/data-quality') %}aria-current="page"{% endif %}>数据检查</a>
           <a href="/maintenance" class="{% if current_path.startswith('/maintenance') %}is-active{% endif %}" {% if current_path.startswith('/maintenance') %}aria-current="page"{% endif %}>系统状态</a>
+          {% if request.session.get("role") == "admin" %}
+            <a href="/admin/users" class="{% if current_path.startswith('/admin/users') %}is-active{% endif %}" {% if current_path.startswith('/admin/users') %}aria-current="page"{% endif %}>用户管理</a>
+          {% endif %}
           <div class="nav-dropdown">
             <button class="nav-dropdown-button {% if current_path.startswith('/hs-codes') %}is-active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false" {% if current_path.startswith('/hs-codes') %}aria-current="page"{% endif %}>
               HS Code
@@ -31,7 +34,8 @@
         </nav>
         <div class="operator-menu">
           <button class="operator-chip" type="button" aria-haspopup="true" aria-expanded="false" data-operator-menu-button>
-            操作人：{{ request.session.get("operator_name") or "未设置" }}
+            {{ request.session.get("display_name") or request.session.get("operator_name") or "未登录" }}
+            {% if request.session.get("role") %}｜{{ request.session.get("role") }}{% endif %}
             <span aria-hidden="true">▾</span>
           </button>
           <div class="operator-dropdown" role="menu" data-operator-menu>

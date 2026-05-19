@@ -38,7 +38,7 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     client = TestClient(create_app())
     client.upload_path = upload_path
-    login_response = client.post("/login", data={"access_code": ACCESS_CODE})
+    login_response = bootstrap_admin(client)
     assert login_response.status_code == 200
     return client
 
@@ -413,7 +413,7 @@ def test_upload_preview_reports_missing_required_fields(app_client: TestClient) 
     assert "单位不能为空" in stream_response.text
     assert "单价不能为空" in stream_response.text
 
-    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    confirm_response = app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"})
     assert confirm_response.status_code == 400
     assert "预览有错误，请修改 Excel 后再导入。" in confirm_response.text
 
@@ -447,7 +447,7 @@ def test_upload_preview_groups_repeated_factory_and_blocks_until_resolved(
     assert payload["supplier_matches"][0]["occurrence_count"] == 2
     assert len(payload["supplier_matches"]) == 1
 
-    blocked_response = app_client.post("/upload/confirm", data={"token": token})
+    blocked_response = app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"})
     assert blocked_response.status_code == 400
     assert "还有未处理的供应商" in blocked_response.text
 
@@ -549,7 +549,7 @@ def test_batch_create_same_short_name_merges_multiple_factory_groups(
     assert [
         row["values"]["factory"] for row in resolved_payload["rows"]
     ] == ["Merged Supplier", "Merged Supplier"]
-    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    confirm_response = app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"})
     assert confirm_response.status_code == 200
 
     with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
@@ -616,7 +616,7 @@ def test_blank_factory_group_requires_resolution_and_import_fills_factory(
         follow_redirects=False,
     )
     assert create_response.status_code == 303
-    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    confirm_response = app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"})
     assert confirm_response.status_code == 200
     with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
         row = connection.execute(
@@ -665,7 +665,7 @@ def test_supplier_full_short_and_alias_auto_match_in_upload_preview(
     assert preview_page.status_code == 200
     assert "supplier-status-auto_matched" not in preview_page.text
     assert "所有供应商已匹配，可以导入。" in preview_page.text
-    assert app_client.post("/upload/confirm", data={"token": token}).status_code == 200
+    assert app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"}).status_code == 200
 
 
 def test_ambiguous_supplier_blocks_until_selected(app_client: TestClient) -> None:
@@ -691,7 +691,7 @@ def test_ambiguous_supplier_blocks_until_selected(app_client: TestClient) -> Non
 
     assert match["status"] == "ambiguous_pending"
     assert len(match["candidate_suppliers"]) == 2
-    assert app_client.post("/upload/confirm", data={"token": token}).status_code == 400
+    assert app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"}).status_code == 400
 
     response = app_client.post(
         "/upload/preview/supplier/batch",
@@ -704,7 +704,7 @@ def test_ambiguous_supplier_blocks_until_selected(app_client: TestClient) -> Non
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert app_client.post("/upload/confirm", data={"token": token}).status_code == 200
+    assert app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"}).status_code == 200
 
 
 def test_upload_confirm_stops_before_import_when_auto_backup_fails(
@@ -746,7 +746,7 @@ def test_upload_confirm_stops_before_import_when_auto_backup_fails(
 
     resolve_all_unmatched_suppliers(app_client, token)
     monkeypatch.setattr(upload_route, "create_auto_backup", fail_backup)
-    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    confirm_response = app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"})
 
     assert confirm_response.status_code == 500
     assert "自动备份失败" in confirm_response.text
@@ -1192,7 +1192,7 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
         },
     )
     assert bad_password_response.status_code == 400
-    assert "确认密码不正确" in bad_password_response.text
+    assert "密码确认失败" in bad_password_response.text
     assert 'value="GTS-NEW-001"' in bad_password_response.text
     assert 'value="新品名"' in bad_password_response.text
     assert 'data-original-value="GTS-OLD-001"' in bad_password_response.text
@@ -1290,7 +1290,7 @@ def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
 ) -> None:
     operator_response = app_client.post("/operator", data={"operator_name": "Alice"})
     assert operator_response.status_code == 200
-    assert "操作人：Alice" in operator_response.text
+    assert "Nancy" in operator_response.text
     assert "修改操作人" in operator_response.text
     assert 'data-operator-modal' in operator_response.text
     assert 'action="/logout"' in operator_response.text
@@ -1340,7 +1340,7 @@ def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
 
     updated_upload_page = app_client.get("/upload")
     assert updated_upload_page.status_code == 200
-    assert "操作人：Bob" in updated_upload_page.text
+    assert "Nancy" in updated_upload_page.text
     assert 'name="operator_name" required autocomplete="name" value="Bob"' in updated_upload_page.text
 
     edit_page = app_client.get("/products/1/edit")
@@ -1463,7 +1463,7 @@ def test_supplier_create_edit_search_and_import_linking(
     token = extract_token(upload_response.text)
     app_client.get(f"/upload/preview/stream/{token}")
     resolve_all_unmatched_suppliers(app_client, token)
-    confirm_response = app_client.post("/upload/confirm", data={"token": token})
+    confirm_response = app_client.post("/upload/confirm", data={"token": token, "confirm_password": "55123511"})
     assert confirm_response.status_code == 200
 
     with sqlite3.connect(tmp_path / "gts-test.sqlite3") as connection:
@@ -1496,7 +1496,10 @@ def test_supplier_create_edit_search_and_import_linking(
     assert "Unlinked Factory" in fallback_search.text
 
 
-def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_login_requires_employee_username_password(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SHARED_ACCESS_CODE", ACCESS_CODE)
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
     monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "55123511")
@@ -1512,25 +1515,45 @@ def test_login_rejects_wrong_shared_access_code(tmp_path: Path, monkeypatch: pyt
     assert protected_response.status_code == 303
     assert protected_response.headers["location"] == "/login"
 
+    login_redirect = client.get("/login", follow_redirects=False)
+    assert login_redirect.status_code == 303
+    assert login_redirect.headers["location"] == "/setup-admin"
+
+    setup_response = client.post(
+        "/setup-admin",
+        data={
+            "username": "admin",
+            "display_name": "Nancy",
+            "password": "55123511",
+            "confirm_password": "55123511",
+        },
+        follow_redirects=False,
+    )
+    assert setup_response.status_code == 303
+    client.post("/logout")
+
     login_page = client.get("/login")
     assert login_page.status_code == 200
-    assert "操作人" in login_page.text
-    assert 'name="operator_name"' in login_page.text
+    assert 'name="username"' in login_page.text
+    assert 'name="password"' in login_page.text
 
-    bad_login_response = client.post("/login", data={"access_code": "wrong-code"})
+    bad_login_response = client.post(
+        "/login",
+        data={"username": "admin", "password": "wrong-code"},
+    )
     assert bad_login_response.status_code == 401
-    assert "访问码不正确" in bad_login_response.text
+    assert "用户名或密码不正确" in bad_login_response.text
 
     good_login_response = client.post(
         "/login",
-        data={"access_code": ACCESS_CODE, "operator_name": "Nancy"},
+        data={"username": "admin", "password": "55123511"},
         follow_redirects=False,
     )
     assert good_login_response.status_code == 303
 
     home_response = client.get("/")
     assert home_response.status_code == 200
-    assert "操作人：Nancy" in home_response.text
+    assert "Nancy" in home_response.text
 
 
 def build_quotation_workbook(rows: list[dict]) -> BytesIO:
@@ -1638,6 +1661,18 @@ def workbook_bytes(workbook: Workbook) -> BytesIO:
     return stream
 
 
+def bootstrap_admin(client: TestClient):
+    return client.post(
+        "/setup-admin",
+        data={
+            "username": "admin",
+            "display_name": "Nancy",
+            "password": "55123511",
+            "confirm_password": "55123511",
+        },
+    )
+
+
 def extract_token(html: str) -> str:
     match = re.search(r'name="token" value="([^"]+)"', html)
     assert match is not None
@@ -1650,7 +1685,10 @@ def preview_payload(client: TestClient, token: str) -> dict:
 
 def confirm_upload_after_creating_suppliers(client: TestClient, token: str):
     resolve_all_unmatched_suppliers(client, token)
-    return client.post("/upload/confirm", data={"token": token})
+    return client.post(
+        "/upload/confirm",
+        data={"token": token, "confirm_password": "55123511"},
+    )
 
 
 def resolve_all_unmatched_suppliers(client: TestClient, token: str) -> None:

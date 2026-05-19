@@ -35,7 +35,15 @@ def ui_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     client = TestClient(create_app())
     client.database_path = database_path
     client.upload_path = upload_path
-    login_response = client.post("/login", data={"access_code": ACCESS_CODE})
+    login_response = client.post(
+        "/setup-admin",
+        data={
+            "username": "admin",
+            "display_name": "Nancy",
+            "password": "55123511",
+            "confirm_password": "55123511",
+        },
+    )
     assert login_response.status_code == 200
     return client
 

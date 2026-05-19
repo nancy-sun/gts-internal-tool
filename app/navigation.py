@@ -9,6 +9,7 @@ LOGS_CRUMB = {"label": "操作记录", "href": "/logs"}
 HS_CRUMB = {"label": "HS Code", "href": "/hs-codes"}
 SUPPLIERS_CRUMB = {"label": "供应商", "href": "/suppliers"}
 MAINTENANCE_CRUMB = {"label": "系统状态", "href": "/maintenance"}
+ADMIN_USERS_CRUMB = {"label": "用户管理", "href": "/admin/users"}
 
 
 def breadcrumbs(*crumbs: dict[str, str]) -> list[dict[str, str]]:

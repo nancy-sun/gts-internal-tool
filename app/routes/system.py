@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request
+from fastapi.responses import PlainTextResponse
 
 from app.auth import require_auth
 from app.navigation import MAINTENANCE_CRUMB, breadcrumbs
@@ -12,6 +13,11 @@ router = APIRouter()
 @router.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+
+@router.get("/robots.txt")
+def robots_txt():
+    return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
 
 @router.get("/maintenance")
