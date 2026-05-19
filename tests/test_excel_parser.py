@@ -296,6 +296,60 @@ def test_parse_full_quotation_workbook_supports_extended_case_insensitive_aliase
     assert rows[0].values["comment"] == "测试备注"
 
 
+def test_parse_full_quotation_workbook_supports_ctn_aliases_from_real_files(
+    tmp_path: Path,
+) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    headers = [
+        "no",
+        "gts No",
+        "DES",
+        "OEM. No",
+        "Image",
+        "Factory",
+        "qty",
+        "unit",
+        "price",
+        "总价",
+        "item/ctn",
+        "ctn",
+        "gw/ctn",
+        "gw",
+    ]
+    for index, header in enumerate(headers, start=1):
+        sheet.cell(row=3, column=index, value=header)
+    values = [
+        1,
+        "GTSTEST001",
+        "FOOT STEP RH",
+        5010225393,
+        "",
+        "hi",
+        20,
+        "pc",
+        9,
+        180,
+        2,
+        10,
+        9,
+        90,
+    ]
+    for index, value in enumerate(values, start=1):
+        sheet.cell(row=4, column=index, value=value)
+    path = tmp_path / "quotation_ctn_aliases.xlsx"
+    workbook.save(path)
+
+    rows = parse_full_quotation_workbook(path)
+
+    assert len(rows) == 1
+    assert rows[0].values["description"] == "FOOT STEP RH"
+    assert rows[0].values["item_per_package"] == 2
+    assert rows[0].values["packages"] == 10
+    assert rows[0].values["weight_per_package"] == 9
+    assert rows[0].values["gross_weight"] == 90
+
+
 def test_parse_full_quotation_workbook_warns_when_numeric_extra_field_has_no_number(
     tmp_path: Path,
 ) -> None:

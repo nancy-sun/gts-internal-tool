@@ -72,15 +72,17 @@ HEADER_ALIASES = {
     "item_per_package": [
         "Item/Package",
         "Item Per Package",
+        "Item/CTN",
         "item/pkg",
         "Items/Package",
         "每箱数量",
     ],
-    "packages": ["Packages", "Package Count", "箱数", "pkg", "pkg."],
+    "packages": ["Packages", "Package Count", "CTN", "箱数", "pkg", "pkg."],
     "weight_per_package": [
         "Weight / Package",
         "Weight Per Package",
         "Weight/Package",
+        "GW/CTN",
         "w./pkg",
         "weight/pkg",
         "每箱重量",
