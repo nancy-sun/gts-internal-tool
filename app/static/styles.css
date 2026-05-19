@@ -54,6 +54,18 @@ body {
   text-decoration: none;
 }
 
+.legacy-access-banner {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid #f1c376;
+  border-radius: 6px;
+  background: #fff7e6;
+  color: var(--review);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .topnav {
   display: flex;
   align-items: center;
@@ -566,14 +578,64 @@ button:focus {
   background: var(--accent-dark);
 }
 
+.primary-link-button,
+.table-action-button,
+.secondary-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.primary-link-button,
+.table-action-button {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.primary-link-button:hover,
+.primary-link-button:focus,
+.table-action-button:hover,
+.table-action-button:focus {
+  background: var(--accent-dark);
+  color: #ffffff;
+  outline: none;
+}
+
 .secondary-button {
   background: #eef2f5;
   color: var(--text);
 }
 
+.secondary-link-button {
+  background: #eef2f5;
+  color: var(--text);
+}
+
 .secondary-button:hover,
-.secondary-button:focus {
+.secondary-button:focus,
+.secondary-link-button:hover,
+.secondary-link-button:focus {
   background: #dfe6ec;
+  color: var(--text);
+  outline: none;
+}
+
+.danger-button {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.danger-button:hover,
+.danger-button:focus {
+  background: #8f1d18;
 }
 
 .error {
@@ -1021,6 +1083,115 @@ button:disabled {
 
 .inline-form select {
   min-width: 180px;
+}
+
+.admin-users-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.admin-user-create-button {
+  min-width: 112px;
+}
+
+.admin-users-table {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  vertical-align: middle;
+}
+
+.admin-users-table th:nth-child(1),
+.admin-users-table td:nth-child(1) {
+  width: 14%;
+}
+
+.admin-users-table th:nth-child(2),
+.admin-users-table td:nth-child(2) {
+  width: 16%;
+}
+
+.admin-users-table th:nth-child(3),
+.admin-users-table td:nth-child(3) {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.admin-users-table th:nth-child(4),
+.admin-users-table td:nth-child(4) {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.admin-users-table th:nth-child(5),
+.admin-users-table td:nth-child(5) {
+  width: 12%;
+  white-space: nowrap;
+}
+
+.admin-users-table th:nth-child(6),
+.admin-users-table td:nth-child(6) {
+  width: 14%;
+}
+
+.admin-user-action-cell {
+  text-align: left;
+}
+
+.admin-user-action-form {
+  margin: 0;
+}
+
+.admin-user-edit-button,
+.admin-user-action-form button {
+  min-width: 72px;
+}
+
+.admin-user-action-form input {
+  width: 120px;
+  min-height: 38px;
+}
+
+.admin-user-delete-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.admin-user-delete-form input {
+  width: 150px;
+  min-height: 38px;
+}
+
+.admin-user-delete-form .danger-button {
+  width: 84px;
+  min-width: 84px;
+}
+
+.admin-user-danger-section {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-user-delete-warning {
+  margin-bottom: 0;
+}
+
+.admin-user-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-user-delete-button {
+  width: 120px;
+  min-width: 120px;
 }
 
 .data-status-tag {

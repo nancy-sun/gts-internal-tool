@@ -40,6 +40,68 @@ def test_supplier_edit_password_env_overrides_product_edit_password(
     get_settings.cache_clear()
 
 
+def test_settings_no_longer_require_legacy_access_code_or_edit_passwords(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("SHARED_ACCESS_CODE", raising=False)
+    monkeypatch.delenv("PRODUCT_EDIT_PASSWORD", raising=False)
+    monkeypatch.delenv("SUPPLIER_EDIT_PASSWORD", raising=False)
+    monkeypatch.setenv("ENABLE_LEGACY_ACCESS_CODE", "false")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "settings.sqlite3"))
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    assert settings.shared_access_code == ""
+    assert settings.product_edit_password == ""
+    assert settings.supplier_edit_password == ""
+    get_settings.cache_clear()
+
+
+def test_settings_require_access_code_only_when_legacy_enabled(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("SHARED_ACCESS_CODE", raising=False)
+    monkeypatch.setenv("ENABLE_LEGACY_ACCESS_CODE", "true")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "settings.sqlite3"))
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        get_settings()
+    except RuntimeError as exc:
+        assert "SHARED_ACCESS_CODE" in str(exc)
+    else:
+        raise AssertionError("Expected missing shared access code to fail")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_settings_require_long_session_secret(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("ENABLE_LEGACY_ACCESS_CODE", "false")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "short")
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "settings.sqlite3"))
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        get_settings()
+    except RuntimeError as exc:
+        assert "SESSION_SECRET_KEY" in str(exc)
+    else:
+        raise AssertionError("Expected short session secret to fail")
+    finally:
+        get_settings.cache_clear()
+
+
 def test_initialize_database_creates_suppliers_and_optional_supplier_id(
     tmp_path: Path,
     monkeypatch,

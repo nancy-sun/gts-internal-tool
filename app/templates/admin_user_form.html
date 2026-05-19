@@ -24,7 +24,7 @@
       <label for="role">角色</label>
       <select id="role" name="role" required>
         {% for role in roles %}
-          <option value="{{ role }}" {% if values.role == role %}selected{% endif %}>{{ role }}</option>
+          <option value="{{ role }}" {% if values.role == role %}selected{% endif %}>{{ role|role_label }}</option>
         {% endfor %}
       </select>
 
@@ -34,33 +34,64 @@
       </label>
 
       {% if mode == "new" %}
-        <label for="password">初始密码</label>
-        <input id="password" name="password" type="password" required autocomplete="new-password">
+        <label for="new_password">初始密码</label>
+        <input id="new_password" name="new_password" type="password" required autocomplete="new-password">
 
-        <label for="confirm_password">确认密码</label>
-        <input id="confirm_password" name="confirm_password" type="password" required autocomplete="new-password">
+        <label for="new_password_confirm">确认初始密码</label>
+        <input id="new_password_confirm" name="new_password_confirm" type="password" required autocomplete="new-password">
       {% endif %}
 
+      <label for="admin_confirm_password">管理员密码确认</label>
+      <input id="admin_confirm_password" name="admin_confirm_password" type="password" required autocomplete="current-password">
+
       <div class="form-actions">
-        <a class="text-link" href="/admin/users">取消</a>
+        <a class="secondary-link-button" href="/admin/users">取消</a>
         <button type="submit">保存</button>
       </div>
     </form>
 
     {% if mode != "new" and user %}
       <hr>
+      <section class="admin-user-danger-section">
+        <h2>账号状态</h2>
+        <p>离职员工请优先禁用账号，不要改给新人使用。</p>
+        <form method="post" action="/admin/users/{{ user.id }}/status" class="form-stack" autocomplete="off">
+          <label for="status_admin_confirm_password">管理员密码确认</label>
+          <input id="status_admin_confirm_password" name="admin_confirm_password" type="password" required autocomplete="current-password">
+          <div class="notice warning-notice admin-user-delete-warning">
+            删除账号不会删除该员工之前的操作记录。历史记录会保留操作人姓名，但不再关联到这个用户账号。
+          </div>
+          <label class="checkbox-line">
+            <input type="checkbox" name="confirm_delete" value="1">
+            我已确认删除后的历史记录处理方式
+          </label>
+          <div class="admin-user-status-actions">
+            <button type="submit" name="status_action" value="toggle_active" class="secondary-button">
+              {{ "禁用账号" if user.is_active else "启用账号" }}
+            </button>
+            <button type="submit" name="status_action" value="delete" class="danger-button admin-user-delete-button">
+              删除账号
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <hr>
       <form method="post" action="/admin/users/{{ user.id }}/reset-password" class="form-stack" autocomplete="off">
         <h2>重置密码</h2>
         <label for="reset_password">新密码</label>
-        <input id="reset_password" name="password" type="password" required autocomplete="new-password">
+        <input id="reset_password" name="new_password" type="password" required autocomplete="new-password">
 
         <label for="reset_confirm_password">确认新密码</label>
-        <input id="reset_confirm_password" name="confirm_password" type="password" required autocomplete="new-password">
+        <input id="reset_confirm_password" name="new_password_confirm" type="password" required autocomplete="new-password">
 
         <label class="checkbox-line">
           <input type="checkbox" name="must_change_password" value="1" checked>
           下次登录必须修改密码
         </label>
+
+        <label for="reset_admin_confirm_password">管理员密码确认</label>
+        <input id="reset_admin_confirm_password" name="admin_confirm_password" type="password" required autocomplete="current-password">
 
         <button type="submit">重置密码</button>
       </form>

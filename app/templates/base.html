@@ -11,6 +11,9 @@
     <header class="topbar">
       <a class="brand" href="/">GTS Internal Tool</a>
       {% if request.session.get("authenticated") %}
+        {% if request.session.get("legacy_access") %}
+          <div class="legacy-access-banner">当前为临时访问模式，部分管理功能不可用。</div>
+        {% endif %}
         <nav class="topnav" aria-label="主要功能">
           <a href="/upload" class="{% if current_path.startswith('/upload') %}is-active{% endif %}" {% if current_path.startswith('/upload') %}aria-current="page"{% endif %}>上传报价</a>
           <a href="/generate" class="{% if current_path.startswith('/generate') %}is-active{% endif %}" {% if current_path.startswith('/generate') %}aria-current="page"{% endif %}>生成报价</a>
@@ -35,7 +38,7 @@
         <div class="operator-menu">
           <button class="operator-chip" type="button" aria-haspopup="true" aria-expanded="false" data-operator-menu-button>
             {{ request.session.get("display_name") or request.session.get("operator_name") or "未登录" }}
-            {% if request.session.get("role") %}｜{{ request.session.get("role") }}{% endif %}
+            {% if request.session.get("role") %}｜{{ request.session.get("role")|role_label }}{% endif %}
             <span aria-hidden="true">▾</span>
           </button>
           <div class="operator-dropdown" role="menu" data-operator-menu>

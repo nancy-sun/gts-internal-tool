@@ -13,7 +13,7 @@ from app.services.operation_logging import create_operation_log
 from app.services.users import (
     VALID_ROLES,
     create_user,
-    delete_user_if_safe,
+    delete_user_and_detach_logs,
     get_user,
     list_users,
     reset_user_password,
@@ -65,8 +65,9 @@ def admin_user_create(
     username: str = Form(""),
     display_name: str = Form(""),
     role: str = Form("sales"),
-    password: str = Form(""),
-    confirm_password: str = Form(""),
+    new_password: str = Form(""),
+    new_password_confirm: str = Form(""),
+    admin_confirm_password: str = Form(""),
     must_change_password: str = Form(""),
 ):
     redirect = require_admin(request)
@@ -74,7 +75,10 @@ def admin_user_create(
         return redirect
     values = user_form_values(locals())
     errors = []
-    if password != confirm_password:
+    password_error = require_password_confirmation(request, admin_confirm_password)
+    if password_error:
+        errors.append(password_error)
+    if new_password != new_password_confirm:
         errors.append("两次输入的密码不一致。")
     with get_connection() as connection:
         user_id = None
@@ -84,7 +88,7 @@ def admin_user_create(
                 username=username,
                 display_name=display_name,
                 role=role,
-                password=password,
+                password=new_password,
                 must_change_password=bool(must_change_password),
             )
             errors.extend(create_errors)
@@ -133,6 +137,7 @@ def admin_user_edit(
     display_name: str = Form(""),
     role: str = Form("sales"),
     must_change_password: str = Form(""),
+    admin_confirm_password: str = Form(""),
 ):
     redirect = require_admin(request)
     if redirect:
@@ -142,15 +147,20 @@ def admin_user_edit(
         user = get_user(connection, user_id)
         if not user:
             return RedirectResponse(url="/admin/users", status_code=303)
-        errors = update_user(
-            connection,
-            user_id=user_id,
-            username=username,
-            display_name=display_name,
-            role=role,
-            must_change_password=bool(must_change_password),
-            operator_name=session_display_name(request),
-        )
+        errors = []
+        password_error = require_password_confirmation(request, admin_confirm_password)
+        if password_error:
+            errors.append(password_error)
+        if not errors:
+            errors = update_user(
+                connection,
+                user_id=user_id,
+                username=username,
+                display_name=display_name,
+                role=role,
+                must_change_password=bool(must_change_password),
+                operator_name=session_display_name(request),
+            )
         if errors:
             return render_user_form(
                 request,
@@ -174,15 +184,19 @@ def admin_user_edit(
 def admin_user_reset_password(
     request: Request,
     user_id: int,
-    password: str = Form(""),
-    confirm_password: str = Form(""),
+    new_password: str = Form(""),
+    new_password_confirm: str = Form(""),
+    admin_confirm_password: str = Form(""),
     must_change_password: str = Form(""),
 ):
     redirect = require_admin(request)
     if redirect:
         return redirect
     errors = []
-    if password != confirm_password:
+    password_error = require_password_confirmation(request, admin_confirm_password)
+    if password_error:
+        errors.append(password_error)
+    if new_password != new_password_confirm:
         errors.append("两次输入的密码不一致。")
     with get_connection() as connection:
         user = get_user(connection, user_id)
@@ -192,7 +206,7 @@ def admin_user_reset_password(
             errors = reset_user_password(
                 connection,
                 user_id=user_id,
-                password=password,
+                password=new_password,
                 must_change_password=bool(must_change_password),
             )
         if errors:
@@ -214,32 +228,36 @@ def admin_user_reset_password(
     return RedirectResponse(url="/admin/users", status_code=303)
 
 
+@router.post("/admin/users/{user_id}/status")
+def admin_user_status(
+    request: Request,
+    user_id: int,
+    status_action: str = Form(""),
+    admin_confirm_password: str = Form(""),
+    confirm_delete: str = Form(""),
+):
+    return handle_user_status_action(
+        request,
+        user_id=user_id,
+        status_action=status_action,
+        admin_confirm_password=admin_confirm_password,
+        confirm_delete=confirm_delete,
+    )
+
+
 @router.post("/admin/users/{user_id}/toggle-active")
-def admin_user_toggle_active(request: Request, user_id: int):
-    redirect = require_admin(request)
-    if redirect:
-        return redirect
-    current_user = get_current_user(request)
-    if current_user and int(current_user["id"]) == user_id:
-        return RedirectResponse(url="/admin/users", status_code=303)
-    with get_connection() as connection:
-        user = get_user(connection, user_id)
-        if not user:
-            return RedirectResponse(url="/admin/users", status_code=303)
-        errors = set_user_active(
-            connection,
-            user_id=user_id,
-            is_active=not bool(user["is_active"]),
-        )
-        if not errors:
-            create_operation_log(
-                connection,
-                operator_name=session_display_name(request),
-                action_type="user_active_changed",
-                note=user["username"],
-            )
-            connection.commit()
-    return RedirectResponse(url="/admin/users", status_code=303)
+def admin_user_toggle_active(
+    request: Request,
+    user_id: int,
+    admin_confirm_password: str = Form(""),
+):
+    return handle_user_status_action(
+        request,
+        user_id=user_id,
+        status_action="toggle_active",
+        admin_confirm_password=admin_confirm_password,
+        confirm_delete="",
+    )
 
 
 @router.post("/admin/users/{user_id}/delete")
@@ -248,27 +266,63 @@ def admin_user_delete(
     user_id: int,
     confirm_password: str = Form(""),
 ):
+    return handle_user_status_action(
+        request,
+        user_id=user_id,
+        status_action="delete",
+        admin_confirm_password=confirm_password,
+        confirm_delete="1",
+    )
+
+
+def handle_user_status_action(
+    request: Request,
+    *,
+    user_id: int,
+    status_action: str,
+    admin_confirm_password: str,
+    confirm_delete: str,
+):
     redirect = require_admin(request)
     if redirect:
         return redirect
+    if status_action not in {"toggle_active", "delete"}:
+        return render_user_action_error(request, user_id, "请选择有效账号操作。")
     current_user = get_current_user(request)
     if current_user and int(current_user["id"]) == user_id:
-        return render_delete_error(request, "不能删除当前登录账号。")
-    password_error = require_password_confirmation(request, confirm_password)
+        message = "不能删除当前登录账号。" if status_action == "delete" else "不能禁用当前登录账号。"
+        return render_user_action_error(request, user_id, message)
+    if status_action == "delete" and not confirm_delete:
+        return render_user_action_error(
+            request,
+            user_id,
+            "请先确认：删除账号不会删除历史操作记录，历史记录将保留操作人姓名但不再关联账号。",
+        )
+    password_error = require_password_confirmation(request, admin_confirm_password)
     if password_error:
-        return render_delete_error(request, password_error)
+        return render_user_action_error(request, user_id, password_error)
     with get_connection() as connection:
         user = get_user(connection, user_id)
-        errors = delete_user_if_safe(connection, user_id=user_id)
-        if errors:
-            return render_delete_error(request, "；".join(errors))
-        if user:
-            create_operation_log(
+        if not user:
+            return RedirectResponse(url="/admin/users", status_code=303)
+        if status_action == "toggle_active":
+            errors = set_user_active(
                 connection,
-                operator_name=session_display_name(request),
-                action_type="user_deleted",
-                note=user["username"],
+                user_id=user_id,
+                is_active=not bool(user["is_active"]),
             )
+            action_type = "user_active_changed"
+        else:
+            errors = delete_user_and_detach_logs(connection, user_id=user_id)
+            action_type = "user_deleted"
+        if errors:
+            return render_user_action_error(request, user_id, "；".join(errors))
+        create_operation_log(
+            connection,
+            operator_name=session_display_name(request),
+            action_type=action_type,
+            note=user["username"],
+        )
         connection.commit()
     return RedirectResponse(url="/admin/users", status_code=303)
 
@@ -286,6 +340,21 @@ def render_delete_error(request: Request, error: str):
             "breadcrumbs": breadcrumbs(ADMIN_USERS_CRUMB),
             "return_url": "/",
         },
+        status_code=400,
+    )
+
+
+def render_user_action_error(request: Request, user_id: int, error: str):
+    with get_connection() as connection:
+        user = get_user(connection, user_id)
+    if not user:
+        return render_delete_error(request, error)
+    return render_user_form(
+        request,
+        user=user,
+        values=dict(user),
+        mode="edit",
+        errors=[error],
         status_code=400,
     )
 

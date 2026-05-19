@@ -14,11 +14,11 @@
   {% endif %}
 
   <section class="table-section">
-    <div class="section-actions">
-      <a class="primary-link-button" href="/admin/users/new">新增用户</a>
+    <div class="section-actions admin-users-actions">
+      <a class="primary-link-button admin-user-create-button" href="/admin/users/new">新增用户</a>
     </div>
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap admin-users-table-wrap">
+      <table class="admin-users-table">
         <thead>
           <tr>
             <th>用户名</th>
@@ -34,18 +34,11 @@
             <tr>
               <td>{{ user.username }}</td>
               <td>{{ user.display_name }}</td>
-              <td>{{ user.role }}</td>
+              <td>{{ user.role|role_label }}</td>
               <td>{{ "启用" if user.is_active else "禁用" }}</td>
               <td>{{ user.last_login_at[:10] if user.last_login_at else "" }}</td>
-              <td>
-                <a class="table-action-button" href="/admin/users/{{ user.id }}/edit">编辑</a>
-                <form method="post" action="/admin/users/{{ user.id }}/toggle-active" class="inline-form">
-                  <button type="submit" class="secondary-button">{{ "禁用" if user.is_active else "启用" }}</button>
-                </form>
-                <form method="post" action="/admin/users/{{ user.id }}/delete" class="inline-form">
-                  <input name="confirm_password" type="password" placeholder="管理员密码" required>
-                  <button type="submit" class="danger-button">删除</button>
-                </form>
+              <td class="admin-user-action-cell">
+                <a class="table-action-button admin-user-edit-button" href="/admin/users/{{ user.id }}/edit">编辑</a>
               </td>
             </tr>
           {% endfor %}

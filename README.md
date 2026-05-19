@@ -6,10 +6,11 @@ Version 1 is intentionally small:
 
 - FastAPI web app
 - SQLite database
-- Shared access code
+- Employee username/password login
+- Roles: admin, sales, merchandiser
 - Local Excel uploads
 - Local LAN access
-- No CRM, ERP, individual accounts, roles, delete function, or public deployment
+- No CRM, ERP, sales portal, PostgreSQL migration, OSS storage, or public deployment
 
 ## Current Status
 
@@ -18,7 +19,10 @@ Implemented:
 - FastAPI app
 - SQLite database initialization
 - Local folder creation
-- Shared access code login
+- Username/password login
+- One-time first admin setup
+- Admin user management
+- Password confirmation for sensitive writes
 - Home page
 - Template config files for quotation and request Excel layouts
 - Database search page
@@ -34,8 +38,23 @@ Implemented:
 - HS Code upload by GTS, product search display, and HS Code report Excel download
 - Operation logging for HS Code updates and generated HS Code reports
 - Manual local backup script and backup instructions
+- `robots.txt` and `X-Robots-Tag` noindex protection for internal-only use
 
 Phase 1 through Phase 5 MVP work is implemented.
+
+This branch includes cloud-readiness authentication work only. The app has not been deployed, and no PostgreSQL or OSS migration has been performed.
+
+## Authentication
+
+The app now uses employee username/password login. The first time a new database is opened, visit `/setup-admin` to create the first administrator. Employees do not self-register; an administrator creates employee accounts from `用户管理`.
+
+Roles:
+
+- `admin` / 管理员: manage users and access all internal pages.
+- `sales` / 业务员: use office workflows without user administration.
+- `merchandiser` / 跟单: use office workflows without user administration.
+
+The old shared access code is disabled by default. `ENABLE_LEGACY_ACCESS_CODE=true` can enable emergency temporary access, but that mode does not grant admin access.
 
 ## Staff Instructions
 
@@ -58,6 +77,7 @@ python3 -m pytest tests
 1. Create `.env` from `.env.example`.
 2. Install dependencies.
 3. Start the app on port 8080.
+4. Open the app and create the first admin account if prompted.
 
 ```bash
 cp .env.example .env

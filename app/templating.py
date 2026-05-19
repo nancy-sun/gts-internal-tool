@@ -6,6 +6,13 @@ from app.config import BASE_DIR
 templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 
 
+ROLE_LABELS = {
+    "admin": "管理员",
+    "sales": "业务员",
+    "merchandiser": "跟单",
+}
+
+
 def format_quantity(value) -> str:
     if value in ("", None):
         return ""
@@ -27,5 +34,10 @@ def format_compact_number(value) -> str:
     return f"{number:.2f}".rstrip("0").rstrip(".")
 
 
+def role_label(value) -> str:
+    return ROLE_LABELS.get(str(value or ""), str(value or ""))
+
+
 templates.env.filters["quantity"] = format_quantity
 templates.env.filters["number_compact"] = format_compact_number
+templates.env.filters["role_label"] = role_label

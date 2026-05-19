@@ -156,6 +156,29 @@ def reset_user_password(
     return []
 
 
+def change_user_password(
+    connection: Connection,
+    *,
+    user_id: int,
+    new_password: str,
+) -> list[str]:
+    if not get_user(connection, user_id):
+        return ["找不到用户。"]
+    if not new_password:
+        return ["请填写新密码。"]
+    connection.execute(
+        """
+        UPDATE users
+        SET password_hash = ?,
+            must_change_password = 0,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (hash_password(new_password), utc_now_text(), user_id),
+    )
+    return []
+
+
 def set_user_active(connection: Connection, *, user_id: int, is_active: bool) -> list[str]:
     if not get_user(connection, user_id):
         return ["找不到用户。"]
@@ -171,17 +194,13 @@ def set_user_active(connection: Connection, *, user_id: int, is_active: bool) ->
     return []
 
 
-def delete_user_if_safe(connection: Connection, *, user_id: int) -> list[str]:
+def delete_user_and_detach_logs(connection: Connection, *, user_id: int) -> list[str]:
     if not get_user(connection, user_id):
         return ["找不到用户。"]
-    log_count = int(
-        connection.execute(
-            "SELECT COUNT(*) FROM operation_logs WHERE user_id = ?",
-            (user_id,),
-        ).fetchone()[0]
+    connection.execute(
+        "UPDATE operation_logs SET user_id = NULL WHERE user_id = ?",
+        (user_id,),
     )
-    if log_count:
-        return ["该用户已有操作记录，不能删除。请改为禁用账号。"]
     connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
     return []
 

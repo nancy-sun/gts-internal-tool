@@ -13,6 +13,15 @@ SESSION_OPERATOR_KEY = "operator_name"
 SESSION_USER_ID_KEY = "user_id"
 SESSION_DISPLAY_NAME_KEY = "display_name"
 SESSION_ROLE_KEY = "role"
+SESSION_LEGACY_KEY = "legacy_access"
+
+PASSWORD_CHANGE_ALLOWED_PATHS = {
+    "/change-password",
+    "/logout",
+    "/static",
+    "/healthz",
+    "/robots.txt",
+}
 
 
 def is_authenticated(request: Request) -> bool:
@@ -22,6 +31,8 @@ def is_authenticated(request: Request) -> bool:
 def require_auth(request: Request) -> RedirectResponse | None:
     if is_authenticated(request):
         set_current_log_user(session_user_id(request))
+        if must_change_password(request) and not password_change_path_allowed(request):
+            return RedirectResponse(url="/change-password", status_code=303)
         return None
     return RedirectResponse(url="/login", status_code=303)
 
@@ -34,6 +45,8 @@ def require_admin(request: Request) -> RedirectResponse | None:
     redirect = require_login(request)
     if redirect:
         return redirect
+    if is_legacy_session(request):
+        return RedirectResponse(url="/forbidden", status_code=303)
     if request.session.get(SESSION_ROLE_KEY) == "admin":
         return None
     return RedirectResponse(url="/forbidden", status_code=303)
@@ -46,6 +59,22 @@ def require_role(request: Request, roles: set[str] | tuple[str, ...] | list[str]
     if request.session.get(SESSION_ROLE_KEY) in roles:
         return None
     return RedirectResponse(url="/forbidden", status_code=303)
+
+
+def is_legacy_session(request: Request) -> bool:
+    return bool(request.session.get(SESSION_LEGACY_KEY))
+
+
+def must_change_password(request: Request) -> bool:
+    if is_legacy_session(request):
+        return False
+    current_user = get_current_user(request)
+    return bool(current_user and current_user["must_change_password"])
+
+
+def password_change_path_allowed(request: Request) -> bool:
+    path = request.url.path
+    return any(path == allowed or path.startswith(f"{allowed}/") for allowed in PASSWORD_CHANGE_ALLOWED_PATHS)
 
 
 def get_current_user(request: Request) -> Row | None:

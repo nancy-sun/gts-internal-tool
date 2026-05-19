@@ -30,12 +30,12 @@ class Settings:
             in {"1", "true", "yes", "on"}
         )
 
-        if not self.shared_access_code:
-            raise RuntimeError("SHARED_ACCESS_CODE must be set in .env")
         if len(self.session_secret_key) < 16:
             raise RuntimeError("SESSION_SECRET_KEY must be at least 16 characters")
-        if not self.product_edit_password:
-            raise RuntimeError("PRODUCT_EDIT_PASSWORD must be set in .env")
+        if self.enable_legacy_access_code and not self.shared_access_code:
+            raise RuntimeError(
+                "SHARED_ACCESS_CODE must be set when ENABLE_LEGACY_ACCESS_CODE=true"
+            )
 
     @property
     def database_file(self) -> Path:

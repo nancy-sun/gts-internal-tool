@@ -1,12 +1,19 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.auth import SESSION_USER_ID_KEY, set_login_session
+from app.auth import (
+    SESSION_LEGACY_KEY,
+    SESSION_USER_ID_KEY,
+    get_current_user,
+    require_auth,
+    set_login_session,
+)
 from app.config import get_settings
 from app.database import get_connection
 from app.services.users import (
     count_users,
     create_user,
+    change_user_password,
     get_user_by_username,
     update_last_login,
     verify_user_password,
@@ -54,6 +61,7 @@ def login(
         request.session.clear()
         request.session["authenticated"] = True
         request.session["operator_name"] = "Legacy Access"
+        request.session[SESSION_LEGACY_KEY] = True
         return RedirectResponse(url="/", status_code=303)
 
     return templates.TemplateResponse(
@@ -115,6 +123,64 @@ def setup_admin_submit(
         user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         connection.commit()
     set_login_session(request, user)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@router.get("/change-password")
+def change_password_page(request: Request):
+    redirect = require_auth(request)
+    if redirect and redirect.headers.get("location") != "/change-password":
+        return redirect
+    if not get_current_user(request):
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse(
+        request,
+        "change_password.html",
+        {"request": request, "error": None},
+    )
+
+
+@router.post("/change-password")
+def change_password_submit(
+    request: Request,
+    current_password: str = Form(""),
+    new_password: str = Form(""),
+    confirm_new_password: str = Form(""),
+):
+    redirect = require_auth(request)
+    if redirect and redirect.headers.get("location") != "/change-password":
+        return redirect
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    errors = []
+    if not verify_user_password(user, current_password):
+        errors.append("当前密码不正确。")
+    if not new_password:
+        errors.append("请填写新密码。")
+    if new_password != confirm_new_password:
+        errors.append("两次输入的新密码不一致。")
+    if errors:
+        return templates.TemplateResponse(
+            request,
+            "change_password.html",
+            {"request": request, "error": "；".join(errors)},
+            status_code=400,
+        )
+    with get_connection() as connection:
+        errors = change_user_password(
+            connection,
+            user_id=int(user["id"]),
+            new_password=new_password,
+        )
+        if errors:
+            return templates.TemplateResponse(
+                request,
+                "change_password.html",
+                {"request": request, "error": "；".join(errors)},
+                status_code=400,
+            )
+        connection.commit()
     return RedirectResponse(url="/", status_code=303)
 
 
