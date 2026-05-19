@@ -31,7 +31,7 @@
     <div class="supplier-detail-list">
       <div class="supplier-detail-row">
         <label for="operator_name">操作人</label>
-        <input id="operator_name" name="operator_name" required autocomplete="off" value="{{ operator_name or '' }}">
+        <input id="operator_name" name="operator_name" required autocomplete="off" value="{{ operator_name or '' }}" {% if request.session.get("user_id") %}readonly{% endif %}>
       </div>
 
       <div class="supplier-detail-row">

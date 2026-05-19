@@ -209,7 +209,7 @@ def test_must_change_password_is_enforced(auth_client: TestClient) -> None:
         data={
             "current_password": "wrong",
             "new_password": "new-temp-pass",
-            "confirm_new_password": "new-temp-pass",
+            "confirm_password": "new-temp-pass",
         },
     )
     assert wrong_change.status_code == 400
@@ -220,7 +220,7 @@ def test_must_change_password_is_enforced(auth_client: TestClient) -> None:
         data={
             "current_password": "temp-pass",
             "new_password": "new-temp-pass",
-            "confirm_new_password": "new-temp-pass",
+            "confirm_password": "new-temp-pass",
         },
         follow_redirects=False,
     )

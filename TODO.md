@@ -13,6 +13,7 @@ This file tracks known follow-up work after the current implementation.
 - PostgreSQL readiness plan.
 - File storage / OSS abstraction plan.
 - Alibaba Cloud deployment plan.
+- Role permission refinement.
 - Sales portal later, after deployment/auth/storage decisions are stable.
 - Decide deployment strategy before building a sales portal.
 - Test a Cloudflare Tunnel pilot if leadership wants remote access.

@@ -145,6 +145,7 @@ def change_password_submit(
     request: Request,
     current_password: str = Form(""),
     new_password: str = Form(""),
+    confirm_password: str = Form(""),
     confirm_new_password: str = Form(""),
 ):
     redirect = require_auth(request)
@@ -158,7 +159,8 @@ def change_password_submit(
         errors.append("当前密码不正确。")
     if not new_password:
         errors.append("请填写新密码。")
-    if new_password != confirm_new_password:
+    confirmed_password = confirm_password or confirm_new_password
+    if new_password != confirmed_password:
         errors.append("两次输入的新密码不一致。")
     if errors:
         return templates.TemplateResponse(

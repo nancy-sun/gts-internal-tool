@@ -13,7 +13,7 @@
   <form class="form-stack" method="post" action="/hs-codes/generate/preview" enctype="multipart/form-data">
     <label>
       操作员姓名
-      <input name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}">
+      <input name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}" {% if request.session.get("user_id") %}readonly{% endif %}>
     </label>
     <label>
       Excel 文件

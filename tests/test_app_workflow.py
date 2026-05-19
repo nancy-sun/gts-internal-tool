@@ -38,6 +38,7 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     client = TestClient(create_app())
     client.upload_path = upload_path
+    client.database_path = database_path
     login_response = bootstrap_admin(client)
     assert login_response.status_code == 200
     return client
@@ -1285,31 +1286,31 @@ def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(
     assert "编辑产品" in logs_response.text
 
 
-def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
+def test_logged_in_user_operator_identity_cannot_be_spoofed(
     app_client: TestClient,
 ) -> None:
     operator_response = app_client.post("/operator", data={"operator_name": "Alice"})
     assert operator_response.status_code == 200
     assert "Nancy" in operator_response.text
-    assert "修改操作人" in operator_response.text
-    assert 'data-operator-modal' in operator_response.text
+    assert "修改操作人" not in operator_response.text
+    assert 'data-operator-modal' not in operator_response.text
     assert 'action="/logout"' in operator_response.text
 
     upload_page = app_client.get("/upload")
     assert upload_page.status_code == 200
-    assert 'name="operator_name" required autocomplete="name" value="Alice"' in upload_page.text
+    assert 'name="operator_name" required autocomplete="name" value="Nancy" readonly' in upload_page.text
 
     generate_page = app_client.get("/generate")
     assert generate_page.status_code == 200
-    assert 'name="operator_name" required autocomplete="name" value="Alice"' in generate_page.text
+    assert 'name="operator_name" required autocomplete="name" value="Nancy" readonly' in generate_page.text
 
     hs_upload_page = app_client.get("/hs-codes/upload")
     assert hs_upload_page.status_code == 200
-    assert 'name="operator_name" required autocomplete="name" value="Alice"' in hs_upload_page.text
+    assert 'name="operator_name" required autocomplete="name" value="Nancy" readonly' in hs_upload_page.text
 
     hs_generate_page = app_client.get("/hs-codes/generate")
     assert hs_generate_page.status_code == 200
-    assert 'name="operator_name" required autocomplete="name" value="Alice"' in hs_generate_page.text
+    assert 'name="operator_name" required autocomplete="name" value="Nancy" readonly' in hs_generate_page.text
 
     upload_response = app_client.post(
         "/upload/preview",
@@ -1337,15 +1338,54 @@ def test_operator_name_can_be_saved_changed_and_prefilled_in_session(
     app_client.get(f"/upload/preview/stream/{upload_token}")
     confirm_response = confirm_upload_after_creating_suppliers(app_client, upload_token)
     assert confirm_response.status_code == 200
+    with sqlite3.connect(app_client.database_path) as connection:
+        upload_log = connection.execute(
+            """
+            SELECT user_id, operator_name
+            FROM operation_logs
+            WHERE action_type = 'upload_full_quotation'
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    assert upload_log == (1, "Nancy")
 
     updated_upload_page = app_client.get("/upload")
     assert updated_upload_page.status_code == 200
-    assert "Nancy" in updated_upload_page.text
-    assert 'name="operator_name" required autocomplete="name" value="Bob"' in updated_upload_page.text
+    assert 'name="operator_name" required autocomplete="name" value="Nancy" readonly' in updated_upload_page.text
 
     edit_page = app_client.get("/products/1/edit")
     assert edit_page.status_code == 200
-    assert 'name="operator_name" required autocomplete="off" value="Bob"' in edit_page.text
+    assert 'name="operator_name" required autocomplete="off" value="Nancy" readonly' in edit_page.text
+
+    edit_response = app_client.post(
+        "/products/1/edit",
+        data={
+            "operator_name": "Spoofed Operator",
+            "gts_no": "GTS-OP-001",
+            "oem": "OEM-OP-001",
+            "description": "Updated by real user",
+            "chinese_description": "真实用户更新",
+            "hs_code": "87089999",
+            "confirm_password": "55123511",
+        },
+    )
+    assert edit_response.status_code == 200
+    with sqlite3.connect(app_client.database_path) as connection:
+        product_row = connection.execute(
+            "SELECT updated_by FROM products WHERE id = 1"
+        ).fetchone()
+        log_row = connection.execute(
+            """
+            SELECT user_id, operator_name
+            FROM operation_logs
+            WHERE action_type = 'edit_product'
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    assert product_row == ("Nancy",)
+    assert log_row == (1, "Nancy")
 
 
 def test_supplier_create_edit_search_and_import_linking(
@@ -1355,7 +1395,7 @@ def test_supplier_create_edit_search_and_import_linking(
     create_response = app_client.post(
         "/suppliers/new",
         data={
-            "operator_name": "Nancy",
+            "operator_name": "Spoofed Supplier Operator",
             "supplier_full_name": "Factory A Full",
             "supplier_short_name": "Factory A",
             "contact_person": "Alice",
@@ -1376,6 +1416,21 @@ def test_supplier_create_edit_search_and_import_linking(
     assert "Alice" in create_response.text
     assert 'class="supplier-detail-form"' not in create_response.text
     assert 'href="/suppliers/1/edit?mode=edit"' in create_response.text
+    with sqlite3.connect(app_client.database_path) as connection:
+        supplier_audit = connection.execute(
+            "SELECT created_by, updated_by FROM suppliers WHERE id = 1"
+        ).fetchone()
+        supplier_log = connection.execute(
+            """
+            SELECT user_id, operator_name
+            FROM operation_logs
+            WHERE action_type = 'create_supplier'
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    assert supplier_audit == ("Nancy", "Nancy")
+    assert supplier_log == (1, "Nancy")
 
     duplicate_short_name_response = app_client.post(
         "/suppliers/new",

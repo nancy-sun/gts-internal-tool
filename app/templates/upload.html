@@ -11,7 +11,7 @@
   <section class="narrow-panel">
     <form method="post" action="/upload/preview" enctype="multipart/form-data" class="form-stack">
       <label for="operator_name">操作员姓名</label>
-      <input id="operator_name" name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}">
+      <input id="operator_name" name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}" {% if request.session.get("user_id") %}readonly{% endif %}>
 
       <label for="excel_file">Excel 文件</label>
       <input id="excel_file" name="excel_file" type="file" accept=".xlsx" required>

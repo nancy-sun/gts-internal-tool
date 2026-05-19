@@ -42,7 +42,9 @@
             <span aria-hidden="true">▾</span>
           </button>
           <div class="operator-dropdown" role="menu" data-operator-menu>
-            <button type="button" role="menuitem" data-operator-modal-open>修改操作人</button>
+            {% if request.session.get("legacy_access") %}
+              <button type="button" role="menuitem" data-operator-modal-open>修改操作人</button>
+            {% endif %}
             <form method="post" action="/logout">
               <button type="submit" role="menuitem">退出</button>
             </form>
@@ -75,7 +77,7 @@
       {% endif %}
       {% block content %}{% endblock %}
     </main>
-    {% if request.session.get("authenticated") %}
+    {% if request.session.get("authenticated") and request.session.get("legacy_access") %}
       <div class="modal-backdrop" hidden data-operator-modal>
         <section class="operator-modal" role="dialog" aria-modal="true" aria-labelledby="operator-modal-title">
           <form method="post" action="/operator" class="form-stack">

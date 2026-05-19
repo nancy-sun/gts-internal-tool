@@ -23,6 +23,7 @@ Implemented:
 - One-time first admin setup
 - Admin user management
 - Password confirmation for sensitive writes
+- Operation logs use the logged-in employee identity
 - Home page
 - Template config files for quotation and request Excel layouts
 - Database search page

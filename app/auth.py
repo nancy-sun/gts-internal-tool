@@ -104,13 +104,20 @@ def session_display_name(request: Request) -> str:
 
 
 def get_session_operator_name(request: Request) -> str:
+    display_name = session_display_name(request)
+    if display_name and not is_legacy_session(request):
+        return display_name
     return (
         str(request.session.get(SESSION_OPERATOR_KEY) or "").strip()
-        or session_display_name(request)
+        or display_name
     )
 
 
 def set_session_operator_name(request: Request, operator_name: str) -> str:
+    display_name = session_display_name(request)
+    if display_name and not is_legacy_session(request):
+        request.session[SESSION_OPERATOR_KEY] = display_name
+        return display_name
     cleaned_operator_name = operator_name.strip() or session_display_name(request)
     if cleaned_operator_name:
         request.session[SESSION_OPERATOR_KEY] = cleaned_operator_name
