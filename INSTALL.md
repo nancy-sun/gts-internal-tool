@@ -13,9 +13,9 @@ cp .env.example .env
 4. Edit `.env` and set real values:
 
 ```text
-SHARED_ACCESS_CODE=your-office-code
 SESSION_SECRET_KEY=use-a-long-random-secret
 APP_PORT=8080
+ENABLE_LEGACY_ACCESS_CODE=false
 ```
 
 5. Install dependencies:
@@ -44,16 +44,33 @@ http://192.168.x.x:8080
 
 Replace `192.168.x.x` with the office computer's LAN IP address.
 
-## Change the Shared Access Code
+## First Admin Setup
 
-The shared access code is not hard-coded in source code. It is read from `.env`.
+The app uses employee username/password login. No email is required.
+
+On first run with an empty database:
+
+1. Open the app in the browser.
+2. The app will redirect to `/setup-admin`.
+3. Create the first administrator account.
+4. Log in as admin.
+5. Open `用户管理` to create staff accounts.
+
+Deactivated users cannot log in. For resigned employees, normally disable the account instead of reusing it for another person. Admin can delete users if needed; old operation logs remain and keep the historical `operator_name`, while their `user_id` is detached.
+
+## Emergency Legacy Access Code
+
+The old shared access code is disabled by default and is only an emergency fallback.
+
+To enable it temporarily:
 
 1. Stop the running app.
 2. Open `.env`.
-3. Change this line:
+3. Set:
 
 ```text
-SHARED_ACCESS_CODE=your-new-office-code
+ENABLE_LEGACY_ACCESS_CODE=true
+SHARED_ACCESS_CODE=your-emergency-code
 ```
 
 4. Save `.env`.
@@ -63,7 +80,7 @@ SHARED_ACCESS_CODE=your-new-office-code
 uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
-Existing browser sessions may remain logged in until the browser session ends. Staff can also click `Log out` and log in with the new code.
+Legacy access mode cannot enter user management. Return `ENABLE_LEGACY_ACCESS_CODE=false` after emergency use.
 
 ## Change the Port
 
@@ -91,22 +108,11 @@ If you change `APP_PORT` to `8000`, start with:
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-## Change the Product Edit Password
+## Sensitive Write Confirmation
 
-Manual product edits require a separate confirmation password. The password is not stored in browser local storage or the login session.
+Product edits, supplier edits, user management, and full quotation import require the logged-in user to re-enter their own login password.
 
-1. Stop the running app.
-2. Open `.env`.
-3. Change:
-
-```text
-PRODUCT_EDIT_PASSWORD=your-edit-password
-```
-
-4. Save `.env`.
-5. Start the app again.
-
-`PRODUCT_EDIT_PASSWORD` must be set in `.env`. It is not cached in the browser and is not committed to git because `.env` is ignored.
+`PRODUCT_EDIT_PASSWORD` and `SUPPLIER_EDIT_PASSWORD` are legacy fallback settings only. They are not required for normal username/password login.
 
 ## Backup Setup
 

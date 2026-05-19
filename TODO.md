@@ -17,7 +17,7 @@ This file tracks known follow-up work after the current implementation.
 - Sales portal later, after deployment/auth/storage decisions are stable.
 - Decide deployment strategy before building a sales portal.
 - Test a Cloudflare Tunnel pilot if leadership wants remote access.
-- Consider user accounts and roles before storing sales quotation data.
+- Refine role permissions before storing sales quotation data.
 - Decide whether browser sessions should expire automatically after a workday.
 - Add browser automation for the main UI flows if manual visual checks become repetitive.
 - Revisit backup/restore testing after the first office test cycle.

@@ -389,6 +389,15 @@ def test_delete_user_rules_and_operation_log_user_id(auth_client: TestClient) ->
         retained_log = connection.execute(
             "SELECT user_id, operator_name FROM operation_logs WHERE action_type = 'test'"
         ).fetchone()
+        deleted_log = connection.execute(
+            """
+            SELECT user_id, operator_name, note
+            FROM operation_logs
+            WHERE action_type = 'user_deleted'
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
         log_user_ids = [
             row[0]
             for row in connection.execute(
@@ -398,6 +407,7 @@ def test_delete_user_rules_and_operation_log_user_id(auth_client: TestClient) ->
     assert 2 not in user_ids
     assert 3 not in user_ids
     assert retained_log == (None, "Logged User")
+    assert deleted_log == (1, "Admin User", "logged / Logged User")
     assert log_user_ids
     assert all(user_id == 1 for user_id in log_user_ids)
 

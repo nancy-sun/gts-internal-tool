@@ -321,7 +321,7 @@ def handle_user_status_action(
             connection,
             operator_name=session_display_name(request),
             action_type=action_type,
-            note=user["username"],
+            note=format_user_action_note(user),
         )
         connection.commit()
     return RedirectResponse(url="/admin/users", status_code=303)
@@ -342,6 +342,10 @@ def render_delete_error(request: Request, error: str):
         },
         status_code=400,
     )
+
+
+def format_user_action_note(user) -> str:
+    return f"{user['username']} / {user['display_name']}"
 
 
 def render_user_action_error(request: Request, user_id: int, error: str):
