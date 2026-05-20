@@ -62,14 +62,14 @@
             删除账号不会删除该员工之前的操作记录。历史记录会保留操作人姓名，但不再关联到这个用户账号。
           </div>
           <label class="checkbox-line">
-            <input type="checkbox" name="confirm_delete" value="1">
+            <input type="checkbox" name="confirm_delete" value="1" data-user-delete-confirmation>
             我已确认删除后的历史记录处理方式
           </label>
           <div class="admin-user-status-actions">
             <button type="submit" name="status_action" value="toggle_active" class="secondary-button">
               {{ "禁用账号" if user.is_active else "启用账号" }}
             </button>
-            <button type="submit" name="status_action" value="delete" class="danger-button admin-user-delete-button">
+            <button type="submit" name="status_action" value="delete" class="danger-button admin-user-delete-button" data-user-delete-button disabled>
               删除账号
             </button>
           </div>

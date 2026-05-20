@@ -29,10 +29,7 @@ def create_operation_log(
     user_id: int | None = None,
 ) -> None:
     resolved_user_id = user_id if user_id is not None else current_log_user_id.get()
-    columns = {
-        row["name"] if isinstance(row, Row) else row[1]
-        for row in connection.execute("PRAGMA table_info(operation_logs)").fetchall()
-    }
+    columns = operation_log_columns(connection)
     if "user_id" not in columns:
         connection.execute(
             """
@@ -82,10 +79,7 @@ def create_operation_log(
 
 
 def list_operation_logs(connection: Connection, limit: int = 200) -> list[Row]:
-    columns = {
-        row["name"] if isinstance(row, Row) else row[1]
-        for row in connection.execute("PRAGMA table_info(operation_logs)").fetchall()
-    }
+    columns = operation_log_columns(connection)
     user_id_select = "user_id" if "user_id" in columns else "NULL AS user_id"
     return connection.execute(
         f"""
@@ -104,3 +98,10 @@ def list_operation_logs(connection: Connection, limit: int = 200) -> list[Row]:
         """,
         (limit,),
     ).fetchall()
+
+
+def operation_log_columns(connection: Connection) -> set[str]:
+    return {
+        row["name"] if isinstance(row, Row) else row[1]
+        for row in connection.execute("PRAGMA table_info(operation_logs)").fetchall()
+    }

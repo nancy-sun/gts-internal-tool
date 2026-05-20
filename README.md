@@ -86,7 +86,7 @@ Docker is the primary deployment method. The first deployable version keeps uplo
 /data/backups
 ```
 
-Production starts with a fresh empty PostgreSQL database. Visit `/setup-admin` to create the first admin. See [ALIYUN_DEPLOYMENT.md](ALIYUN_DEPLOYMENT.md).
+Production starts with a fresh empty PostgreSQL database. Visit `/setup-admin` to create the first admin. See [ALIYUN_DEPLOYMENT.md](ALIYUN_DEPLOYMENT.md) and [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md).
 
 ## Test Cases
 
@@ -96,16 +96,18 @@ Automated tests live in `tests/` and include the main upload-search-generate Exc
 python3 -m pytest tests
 ```
 
-## Run Locally
+## Local SQLite Development
 
 1. Create `.env` from `.env.example`.
 2. Install dependencies.
-3. Start the app on port 8080.
-4. Open the app and create the first admin account if prompted.
+3. Run the tests.
+4. Start the app on port 8080.
+5. Open the app and create the first admin account at `/setup-admin` if prompted.
 
 ```bash
 cp .env.example .env
 python -m pip install -r requirements.txt
+python3 -m pytest tests
 uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
@@ -120,3 +122,19 @@ Other office computers can use the office computer LAN address:
 ```text
 http://192.168.x.x:8080
 ```
+
+## Docker PostgreSQL Smoke Test
+
+Use Docker Compose to test the deployable PostgreSQL path locally:
+
+```bash
+docker compose up --build
+```
+
+Then check:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+The compose environment sets `DATABASE_URL=postgresql+psycopg://...`, so the app initializes and uses PostgreSQL instead of local SQLite. Open `http://localhost:8080`, create the first admin through `/setup-admin`, then test login, user management, upload preview/import, supplier matching, search, and operation logs.

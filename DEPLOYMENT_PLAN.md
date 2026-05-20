@@ -1,6 +1,6 @@
 # DEPLOYMENT_PLAN
 
-This project is currently being prepared for Docker deployment. Do not deploy it publicly until access control, PostgreSQL, HTTPS, and backup procedures are verified.
+This project is Docker/PostgreSQL deployable for a first Alibaba Cloud staging environment. Do not expose it publicly until HTTPS, RDS access rules, backups, and staff account setup are verified.
 
 ## Option A: Local office only
 
@@ -80,7 +80,7 @@ Cons:
 - File uploads/backups must not be on ephemeral storage.
 
 Security risks:
-- Shared access code is not enough for long-term internet exposure.
+- Employee username/password login is required for cloud access.
 - HTTPS and secret management become mandatory.
 
 Backup strategy:
@@ -124,7 +124,7 @@ Backup strategy:
 - Separate export/restore procedure for business continuity.
 
 Estimated code changes:
-- Medium to high. PostgreSQL compatibility and Docker packaging are now in progress; OSS remains future work.
+- Low for first staging deployment. PostgreSQL compatibility and Docker packaging are implemented; OSS remains future work.
 
 Recommended use case:
 - Recommended production direction: Docker app on ECS plus Alibaba Cloud RDS PostgreSQL. Production starts empty and first admin is created through `/setup-admin`.
@@ -132,6 +132,7 @@ Recommended use case:
 ## Cloud-readiness checklist
 
 - Decide deployment strategy before building a sales portal.
+- Complete `DEPLOYMENT_CHECKLIST.md` before Alibaba Cloud staging.
 - Use HTTPS for any remote/public access.
 - Review session cookie settings for HTTPS, proxy headers, and SameSite behavior.
 - Keep legacy shared access code disabled by default.

@@ -111,6 +111,10 @@ def test_admin_can_manage_users_and_non_admin_cannot(auth_client: TestClient) ->
         follow_redirects=False,
     )
     assert create_response.status_code == 303
+    assert create_response.headers["location"] == "/admin/users"
+    create_list_page = auth_client.get("/admin/users")
+    assert "已新增用户：Sales One" in create_list_page.text
+    assert 'role="status"' in create_list_page.text
     edit_page = auth_client.get("/admin/users/2/edit")
     assert "业务员" in edit_page.text
     assert "跟单" in edit_page.text
@@ -151,6 +155,8 @@ def test_admin_can_manage_users_and_non_admin_cannot(auth_client: TestClient) ->
     assert 'action="/admin/users/2/delete"' not in edit_page.text
     assert edit_page.text.count('id="status_admin_confirm_password"') == 1
     assert "历史记录会保留操作人姓名" in edit_page.text
+    assert "data-user-delete-confirmation" in edit_page.text
+    assert "data-user-delete-button disabled" in edit_page.text
 
     deactivate_response = auth_client.post(
         "/admin/users/2/status",

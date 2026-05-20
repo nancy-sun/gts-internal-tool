@@ -123,6 +123,21 @@
 })();
 
 (function () {
+  var deleteConfirmation = document.querySelector("[data-user-delete-confirmation]");
+  var deleteButton = document.querySelector("[data-user-delete-button]");
+  if (!deleteConfirmation || !deleteButton) {
+    return;
+  }
+
+  function syncUserDeleteButton() {
+    deleteButton.disabled = !deleteConfirmation.checked;
+  }
+
+  deleteConfirmation.addEventListener("change", syncUserDeleteButton);
+  syncUserDeleteButton();
+})();
+
+(function () {
   var storageKey = "gts_operator_name";
   var operatorInputs = Array.prototype.slice.call(
     document.querySelectorAll('input[name="operator_name"]')

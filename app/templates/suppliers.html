@@ -45,9 +45,11 @@
               <td>{{ supplier.product_scope or "" }}</td>
               <td>
                 {% if row.missing_tags %}
-                  {% for tag in row.missing_tags %}
-                    <span class="data-status-tag data-status-tag-{{ tag.kind }}">{{ tag.label }}</span>
-                  {% endfor %}
+                  <span class="data-status-tags">
+                    {% for tag in row.missing_tags %}
+                      <span class="data-status-tag data-status-tag-{{ tag.kind }}">{{ tag.label }}</span>
+                    {% endfor %}
+                  </span>
                 {% else %}
                   <span class="success-text">完整</span>
                 {% endif %}

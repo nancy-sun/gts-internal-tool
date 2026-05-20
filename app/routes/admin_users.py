@@ -31,6 +31,7 @@ def admin_users_page(request: Request):
     redirect = require_admin(request)
     if redirect:
         return redirect
+    success = request.session.pop("admin_users_success", None)
     with get_connection() as connection:
         users = list_users(connection)
     return templates.TemplateResponse(
@@ -39,6 +40,7 @@ def admin_users_page(request: Request):
         {
             "request": request,
             "users": users,
+            "success": success,
             "breadcrumbs": breadcrumbs(ADMIN_USERS_CRUMB),
             "return_url": "/",
         },
@@ -108,7 +110,8 @@ def admin_user_create(
             note=username.strip(),
         )
         connection.commit()
-    return RedirectResponse(url=f"/admin/users/{user_id}/edit", status_code=303)
+    request.session["admin_users_success"] = f"已新增用户：{display_name.strip() or username.strip()}"
+    return RedirectResponse(url="/admin/users", status_code=303)
 
 
 @router.get("/admin/users/{user_id}/edit")

@@ -10,13 +10,17 @@ This file tracks known follow-up work after the current implementation.
 
 ## Later Improvements
 
-- PostgreSQL readiness plan.
-- File storage / OSS abstraction plan.
-- Alibaba Cloud deployment plan.
-- Test Docker Compose PostgreSQL smoke flow before real ECS deployment.
+- Final deploy hardening and checklist review.
+- Alibaba Cloud staging deployment.
+- ICP filing and `internal.gtsmotor.cn` domain setup.
+- Test Docker Compose PostgreSQL smoke flow before real ECS deployment when deployment files change.
+- Complete `DEPLOYMENT_CHECKLIST.md` before Alibaba Cloud staging.
+- File storage / OSS abstraction and implementation plan.
 - Add real migration tooling before production schema changes after launch.
 - Role permission refinement.
 - Sales portal later, after deployment/auth/storage decisions are stable.
+- Sales portal v0.
+- Payment approval later.
 - Decide deployment strategy before building a sales portal.
 - Test a Cloudflare Tunnel pilot if leadership wants remote access.
 - Refine role permissions before storing sales quotation data.

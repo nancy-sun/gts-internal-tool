@@ -158,3 +158,24 @@ http://localhost:8080
 4. Create the first admin through `/setup-admin`.
 
 The compose setup mounts persistent local directories under `docker-data/` for uploads, generated files, and backups. OSS is not implemented yet.
+
+For Alibaba Cloud staging deployment, follow `ALIYUN_DEPLOYMENT.md` and complete `DEPLOYMENT_CHECKLIST.md` before staff testing.
+
+## Troubleshooting
+
+Docker not installed:
+- Use the local SQLite setup above, or install Docker Desktop before running `docker compose up --build`.
+
+Wrong `DATABASE_URL`:
+- Local SQLite mode can leave `DATABASE_URL` empty.
+- PostgreSQL mode must use the `postgresql+psycopg://user:password@host:5432/dbname` format.
+- If PostgreSQL is unavailable, `/healthz` returns a database error.
+
+Session secret missing or too short:
+- Set `SESSION_SECRET_KEY` to a random value with at least 16 characters.
+- Do not use the example value in production.
+
+Database not initialized:
+- The app initializes an empty SQLite or PostgreSQL schema at startup.
+- If startup fails, check database connectivity and the `DATABASE_URL` value.
+- On a fresh database, open `/setup-admin` to create the first administrator.

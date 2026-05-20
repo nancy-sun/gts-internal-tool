@@ -1196,13 +1196,22 @@ button:disabled {
 
 .data-status-tag {
   display: inline-flex;
-  margin: 0 4px 4px 0;
+  margin: 0;
   padding: 2px 6px;
   border-radius: 999px;
   background: #fff3cd;
   color: var(--review);
   font-size: 12px;
   font-weight: 700;
+}
+
+.data-status-tags {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .data-status-tag-supplier-info {
@@ -1234,7 +1243,7 @@ button:disabled {
 
 .suppliers-table th:nth-child(1),
 .suppliers-table td:nth-child(1) {
-  width: 18%;
+  width: 19%;
 }
 
 .suppliers-table th:nth-child(2),
@@ -1244,7 +1253,7 @@ button:disabled {
 
 .suppliers-table th:nth-child(3),
 .suppliers-table td:nth-child(3) {
-  width: 16%;
+  width: 17%;
 }
 
 .suppliers-table th:nth-child(4),
@@ -1254,12 +1263,13 @@ button:disabled {
 
 .suppliers-table th:nth-child(5),
 .suppliers-table td:nth-child(5) {
-  width: 14%;
+  width: 20%;
 }
 
 .suppliers-table th:nth-child(6),
 .suppliers-table td:nth-child(6) {
-  width: 20%;
+  width: 12%;
+  white-space: nowrap;
 }
 
 .suppliers-table th:nth-child(7),
@@ -1269,7 +1279,6 @@ button:disabled {
 }
 
 .suppliers-table .data-status-tag {
-  margin: 0 3px 3px 0;
   padding: 2px 5px;
   font-size: 11px;
   line-height: 1.2;
@@ -1332,8 +1341,8 @@ button:disabled {
 .supplier-status-row {
   min-height: auto;
   padding-top: 8px;
-  padding-bottom: 6px;
-  align-items: start;
+  padding-bottom: 8px;
+  align-items: center;
 }
 
 .supplier-detail-row > span,
@@ -1351,6 +1360,11 @@ button:disabled {
   font-weight: 700;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.supplier-status-row strong {
+  display: inline-flex;
+  white-space: nowrap;
 }
 
 .supplier-detail-row input,

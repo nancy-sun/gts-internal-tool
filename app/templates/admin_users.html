@@ -12,6 +12,9 @@
   {% if error %}
     <div class="notice error-notice"><p>{{ error }}</p></div>
   {% endif %}
+  {% if success %}
+    <div class="notice success-notice" role="status"><p>{{ success }}</p></div>
+  {% endif %}
 
   <section class="table-section">
     <div class="section-actions admin-users-actions">

@@ -1,5 +1,6 @@
 .env
 __pycache__/
+.venv/
 *.pyc
 .pytest_cache/
 .DS_Store
@@ -11,3 +12,4 @@ uploads/*
 generated/*
 backups/*
 local_test_files/
+docker-data/
