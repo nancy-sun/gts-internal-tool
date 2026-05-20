@@ -5,10 +5,10 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from app.config import BASE_DIR, get_settings
+from app.config import get_settings
 
 
-AUTO_BACKUP_DIR = BASE_DIR / "backups" / "auto"
+AUTO_BACKUP_DIR = get_settings().backup_dir / "auto"
 
 
 class BackupError(RuntimeError):
@@ -17,6 +17,8 @@ class BackupError(RuntimeError):
 
 def create_auto_backup(reason: str) -> Path:
     settings = get_settings()
+    if settings.database_backend != "sqlite":
+        return Path("rds-postgresql-managed-backup")
     database_file = settings.database_file
     if not database_file.exists():
         raise BackupError(f"数据库文件不存在：{database_file}")

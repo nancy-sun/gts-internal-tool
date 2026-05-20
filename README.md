@@ -5,12 +5,15 @@ Local internal office web tool for storing historical product quotation rows and
 Version 1 is intentionally small:
 
 - FastAPI web app
-- SQLite database
+- SQLite database for local development/testing fallback
+- PostgreSQL production support through `DATABASE_URL`
+- Docker deployment files
 - Employee username/password login
 - Roles: admin, sales, merchandiser
 - Local Excel uploads
 - Local LAN access
 - No CRM, ERP, sales portal, PostgreSQL migration, OSS storage, or public deployment
+- No SQLite development data migration; production PostgreSQL starts empty
 
 ## Current Status
 
@@ -18,6 +21,7 @@ Implemented:
 
 - FastAPI app
 - SQLite database initialization
+- PostgreSQL empty-database schema initialization
 - Local folder creation
 - Username/password login
 - One-time first admin setup
@@ -40,10 +44,11 @@ Implemented:
 - Operation logging for HS Code updates and generated HS Code reports
 - Manual local backup script and backup instructions
 - `robots.txt` and `X-Robots-Tag` noindex protection for internal-only use
+- Dockerfile and Docker Compose for deployable packaging
 
 Phase 1 through Phase 5 MVP work is implemented.
 
-This branch includes cloud-readiness authentication work only. The app has not been deployed, and no PostgreSQL or OSS migration has been performed.
+This branch includes cloud-readiness and Docker deployability work. The app has not been deployed, no OSS storage has been added, and existing SQLite development data is not migrated.
 
 ## Authentication
 
@@ -64,6 +69,24 @@ See [STAFF_USAGE.md](STAFF_USAGE.md).
 ## Backup
 
 See [BACKUP.md](BACKUP.md).
+
+## Deployment
+
+Local development can still use SQLite by leaving `DATABASE_URL` empty. Production should use PostgreSQL, normally Alibaba Cloud RDS PostgreSQL, with:
+
+```text
+DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname
+```
+
+Docker is the primary deployment method. The first deployable version keeps uploads, generated files, and backups on persistent mounted directories:
+
+```text
+/data/uploads
+/data/generated
+/data/backups
+```
+
+Production starts with a fresh empty PostgreSQL database. Visit `/setup-admin` to create the first admin. See [ALIYUN_DEPLOYMENT.md](ALIYUN_DEPLOYMENT.md).
 
 ## Test Cases
 

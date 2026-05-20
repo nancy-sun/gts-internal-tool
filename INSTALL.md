@@ -2,6 +2,8 @@
 
 ## Office Computer Setup
 
+This setup uses local SQLite and does not require Docker.
+
 1. Install Python 3.10 or newer.
 2. Open a terminal in this project folder.
 3. Create the local environment file:
@@ -135,3 +137,24 @@ python3 scripts/cleanup_uploads.py
 ```
 
 Daily scheduled cleanup instructions are in `BACKUP.md`.
+
+## Docker Local PostgreSQL Smoke Test
+
+Docker is the primary production packaging method. For a local PostgreSQL smoke test:
+
+1. Review `docker-compose.yml`. It includes a local test PostgreSQL `DATABASE_URL`.
+2. Start:
+
+```bash
+docker compose up --build
+```
+
+3. Open:
+
+```text
+http://localhost:8080
+```
+
+4. Create the first admin through `/setup-admin`.
+
+The compose setup mounts persistent local directories under `docker-data/` for uploads, generated files, and backups. OSS is not implemented yet.

@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 
 from app.auth import get_session_operator_name, require_auth, set_session_operator_name
-from app.config import BASE_DIR, get_settings
+from app.config import get_settings
 from app.database import get_connection
 from app.navigation import GENERATE_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.download_names import attachment_header, dated_download_name
@@ -27,7 +27,7 @@ from app.templating import templates
 
 
 router = APIRouter()
-UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR = get_settings().upload_dir
 
 
 @router.get("/generate")

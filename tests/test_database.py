@@ -44,9 +44,9 @@ def test_settings_no_longer_require_legacy_access_code_or_edit_passwords(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.delenv("SHARED_ACCESS_CODE", raising=False)
-    monkeypatch.delenv("PRODUCT_EDIT_PASSWORD", raising=False)
-    monkeypatch.delenv("SUPPLIER_EDIT_PASSWORD", raising=False)
+    monkeypatch.setenv("SHARED_ACCESS_CODE", "")
+    monkeypatch.setenv("PRODUCT_EDIT_PASSWORD", "")
+    monkeypatch.setenv("SUPPLIER_EDIT_PASSWORD", "")
     monkeypatch.setenv("ENABLE_LEGACY_ACCESS_CODE", "false")
     monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "settings.sqlite3"))
@@ -56,6 +56,8 @@ def test_settings_no_longer_require_legacy_access_code_or_edit_passwords(
     get_settings.cache_clear()
     settings = get_settings()
 
+    assert settings.database_backend == "sqlite"
+    assert settings.database_file == tmp_path / "settings.sqlite3"
     assert settings.shared_access_code == ""
     assert settings.product_edit_password == ""
     assert settings.supplier_edit_password == ""
@@ -82,6 +84,52 @@ def test_settings_require_access_code_only_when_legacy_enabled(
         raise AssertionError("Expected missing shared access code to fail")
     finally:
         get_settings.cache_clear()
+
+
+def test_settings_accept_postgresql_database_url(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("SHARED_ACCESS_CODE", raising=False)
+    monkeypatch.delenv("SESSION_SECRET_KEY", raising=False)
+    monkeypatch.setenv("ENABLE_LEGACY_ACCESS_CODE", "false")
+    monkeypatch.setenv("SESSION_SECRET", "test-session-secret-key")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql+psycopg://user:password@db.internal:5432/gts",
+    )
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("GENERATED_DIR", str(tmp_path / "generated"))
+    monkeypatch.setenv("BACKUP_DIR", str(tmp_path / "backups"))
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    assert settings.database_backend == "postgresql"
+    assert settings.session_secret_key == "test-session-secret-key"
+    assert settings.database_url.startswith("postgresql+psycopg://")
+    assert settings.upload_dir == tmp_path / "uploads"
+    assert settings.generated_dir == tmp_path / "generated"
+    assert settings.backup_dir == tmp_path / "backups"
+    get_settings.cache_clear()
+
+
+def test_database_url_helpers_support_sqlite_and_psycopg_urls(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-key")
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'url.sqlite3'}")
+
+    from app.config import get_settings
+    from app.database import normalize_psycopg_url
+
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    assert settings.database_backend == "sqlite"
+    assert settings.database_file == tmp_path / "url.sqlite3"
+    assert (
+        normalize_psycopg_url("postgresql+psycopg://user:pass@host:5432/db")
+        == "postgresql://user:pass@host:5432/db"
+    )
+    get_settings.cache_clear()
 
 
 def test_settings_require_long_session_secret(tmp_path: Path, monkeypatch) -> None:

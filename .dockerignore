@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.DS_Store
+.env
+.env.production
+data
+uploads
+generated
+backups
+docker-data
+local_test_files

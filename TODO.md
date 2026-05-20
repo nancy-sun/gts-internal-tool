@@ -13,6 +13,8 @@ This file tracks known follow-up work after the current implementation.
 - PostgreSQL readiness plan.
 - File storage / OSS abstraction plan.
 - Alibaba Cloud deployment plan.
+- Test Docker Compose PostgreSQL smoke flow before real ECS deployment.
+- Add real migration tooling before production schema changes after launch.
 - Role permission refinement.
 - Sales portal later, after deployment/auth/storage decisions are stable.
 - Decide deployment strategy before building a sales portal.

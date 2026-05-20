@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from app.config import BASE_DIR
+from app.config import get_settings
 
 
 PREVIEW_FILE_PATTERNS = (
@@ -12,7 +12,7 @@ PREVIEW_FILE_PATTERNS = (
     "hs_upload_preview_*.json",
     "hs_generate_preview_*.json",
 )
-DEFAULT_PREVIEW_DIR = BASE_DIR / "uploads"
+DEFAULT_PREVIEW_DIR = get_settings().upload_dir
 
 
 def cleanup_stale_preview_files(max_age_hours: int = 24) -> int:

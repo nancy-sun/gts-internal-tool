@@ -4,23 +4,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from app.config import BASE_DIR, get_settings
+from app.config import get_settings
 
 
 def build_system_status() -> dict[str, Any]:
     settings = get_settings()
     database_file = settings.database_file
-    uploads_dir = BASE_DIR / "uploads"
-    generated_dir = BASE_DIR / "generated"
-    auto_backup_dir = BASE_DIR / "backups" / "auto"
+    uploads_dir = settings.upload_dir
+    generated_dir = settings.generated_dir
+    auto_backup_dir = settings.backup_dir / "auto"
     latest_backup = latest_file_mtime(auto_backup_dir)
+    database_path = str(database_file) if settings.database_backend == "sqlite" else "PostgreSQL DATABASE_URL"
 
     return {
-        "app_mode": "local",
+        "app_mode": settings.app_env,
         "database": {
-            "path": str(database_file),
-            "exists": database_file.exists(),
-            "size": format_bytes(file_size(database_file)),
+            "path": database_path,
+            "exists": database_file.exists() if settings.database_backend == "sqlite" else True,
+            "size": format_bytes(file_size(database_file)) if settings.database_backend == "sqlite" else "由 RDS 管理",
         },
         "uploads": folder_status(uploads_dir),
         "generated": folder_status(generated_dir),

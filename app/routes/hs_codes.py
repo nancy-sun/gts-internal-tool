@@ -7,7 +7,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 
 from app.auth import get_session_operator_name, require_auth, set_session_operator_name
-from app.config import BASE_DIR, get_settings
+from app.config import get_settings
 from app.database import get_connection
 from app.navigation import HS_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.backup import BackupError, create_auto_backup
@@ -31,7 +31,7 @@ from app.templating import templates
 
 
 router = APIRouter()
-UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR = get_settings().upload_dir
 EXCEL_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 

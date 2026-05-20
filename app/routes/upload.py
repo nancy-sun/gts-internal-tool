@@ -12,7 +12,7 @@ from app.auth import (
     require_password_confirmation,
     set_session_operator_name,
 )
-from app.config import BASE_DIR, get_settings
+from app.config import get_settings
 from app.database import get_connection
 from app.navigation import UPLOAD_CRUMB, breadcrumbs, child_breadcrumbs
 from app.services.backup import BackupError, create_auto_backup
@@ -57,7 +57,7 @@ from app.templating import templates
 
 
 router = APIRouter()
-UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR = get_settings().upload_dir
 logger = logging.getLogger(__name__)
 UPLOAD_PREVIEW_ERROR = "预览加载失败，请检查 Excel 文件格式后重新上传。"
 

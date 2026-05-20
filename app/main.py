@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -34,12 +35,16 @@ def create_app() -> FastAPI:
         SessionMiddleware,
         secret_key=settings.session_secret_key,
         same_site="lax",
-        https_only=False,
+        https_only=settings.secure_cookies,
         max_age=None,
     )
 
     @app.middleware("http")
     async def security_and_log_user_context(request, call_next):
+        if settings.force_https and request.url.scheme != "https":
+            forwarded_proto = request.headers.get("x-forwarded-proto", "")
+            if forwarded_proto != "https":
+                return RedirectResponse(str(request.url.replace(scheme="https")))
         user_id = request.session.get("user_id") if "session" in request.scope else None
         token = set_current_log_user(int(user_id) if user_id else None)
         try:

@@ -1,6 +1,6 @@
 # DEPLOYMENT_PLAN
 
-This project is currently a local office LAN tool. Do not deploy it publicly until the deployment strategy, access control, and storage plan are decided.
+This project is currently being prepared for Docker deployment. Do not deploy it publicly until access control, PostgreSQL, HTTPS, and backup procedures are verified.
 
 ## Option A: Local office only
 
@@ -19,8 +19,8 @@ Cons:
 - Manual backup discipline is important.
 
 Security risks:
-- Shared access code is acceptable only for LAN use.
-- Anyone on the LAN who knows the code can access the app.
+- Employee username/password login is now primary.
+- Keep the old shared access code disabled unless emergency access is needed.
 
 Backup strategy:
 - Keep daily local backups from `BACKUP.md`.
@@ -93,12 +93,13 @@ Estimated code changes:
 Recommended use case:
 - Small team remote usage where SQLite is still acceptable and persistent disk is guaranteed.
 
-## Option D: True cloud deployment with PostgreSQL + object storage
+## Option D: True cloud deployment with PostgreSQL + future object storage
 
 Architecture:
 - App runs on cloud compute.
 - PostgreSQL stores relational data.
-- Object storage stores uploads/generated/backups.
+- First deployable version stores uploads/generated/backups on ECS persistent mounted directories.
+- Object storage is a future step.
 - Secrets are managed by the cloud platform.
 
 Pros:
@@ -108,7 +109,8 @@ Pros:
 
 Cons:
 - Largest code and migration effort.
-- Requires database migration, object storage integration, and deployment operations.
+- Requires deployment operations and PostgreSQL schema verification.
+- Object storage integration remains future work.
 - More moving parts to monitor.
 
 Security risks:
@@ -117,24 +119,27 @@ Security risks:
 
 Backup strategy:
 - Managed PostgreSQL backups with restore tests.
-- Object storage versioning/lifecycle policy.
+- ECS persistent directory backups for `/data/uploads`, `/data/generated`, and `/data/backups`.
+- Future object storage versioning/lifecycle policy.
 - Separate export/restore procedure for business continuity.
 
 Estimated code changes:
-- High. Introduce database abstraction/migrations, PostgreSQL compatibility, object storage service, and stronger auth model.
+- Medium to high. PostgreSQL compatibility and Docker packaging are now in progress; OSS remains future work.
 
 Recommended use case:
-- Future stage with remote teams, sales quotation data, and role-based access needs.
+- Recommended production direction: Docker app on ECS plus Alibaba Cloud RDS PostgreSQL. Production starts empty and first admin is created through `/setup-admin`.
 
 ## Cloud-readiness checklist
 
 - Decide deployment strategy before building a sales portal.
 - Use HTTPS for any remote/public access.
 - Review session cookie settings for HTTPS, proxy headers, and SameSite behavior.
-- Do not expose the shared access code directly to the public internet.
-- Use Cloudflare Access or future user accounts before remote production use.
+- Keep legacy shared access code disabled by default.
+- Use employee username/password accounts and refine role permissions before storing sales quotation data.
 - Keep SQLite on persistent storage if SQLite remains in use.
-- Keep uploads, generated files, and backups on persistent storage.
+- For Docker deployment, mount `/data/uploads`, `/data/generated`, and `/data/backups` as persistent directories.
+- Use PostgreSQL `DATABASE_URL` for production and leave `DATABASE_URL` empty for local SQLite development.
+- Do not migrate local SQLite development data into production PostgreSQL.
 - Define and test backup/restore before remote access.
 - Store secrets in `.env` locally or managed secret storage in cloud.
 - Never commit `.env`, database files, uploaded Excel files, generated files, or backups to a public repo.

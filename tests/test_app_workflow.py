@@ -62,7 +62,7 @@ def test_healthz_is_public_and_maintenance_requires_login(
 
     health_response = client.get("/healthz")
     assert health_response.status_code == 200
-    assert health_response.json() == {"status": "ok"}
+    assert health_response.json() == {"status": "ok", "database": "ok"}
 
     maintenance_response = client.get("/maintenance", follow_redirects=False)
     assert maintenance_response.status_code == 303
