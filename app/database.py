@@ -24,6 +24,7 @@ POSTGRES_ID_TABLES = {
     "quotation_items",
     "operation_logs",
     "users",
+    "customs_items",
 }
 
 
@@ -337,6 +338,37 @@ def initialize_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_operation_logs_action_time
             ON operation_logs(action_time);
 
+            CREATE TABLE IF NOT EXISTS customs_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customs_name_cn TEXT NOT NULL,
+                customs_name_en TEXT,
+                hs_code TEXT NOT NULL,
+                unit_1 TEXT NOT NULL,
+                unit_1_source TEXT NOT NULL,
+                unit_1_decimal_places INTEGER NOT NULL DEFAULT 0,
+                unit_2 TEXT,
+                unit_2_source TEXT,
+                unit_2_decimal_places INTEGER,
+                declaration_element_template TEXT,
+                notes TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_by INTEGER,
+                updated_by INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(created_by) REFERENCES users(id),
+                FOREIGN KEY(updated_by) REFERENCES users(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_customs_items_hs_code
+            ON customs_items(hs_code);
+
+            CREATE INDEX IF NOT EXISTS idx_customs_items_name_cn
+            ON customs_items(customs_name_cn);
+
+            CREATE INDEX IF NOT EXISTS idx_customs_items_is_active
+            ON customs_items(is_active);
+
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -516,6 +548,35 @@ def initialize_postgres_database() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_operation_logs_action_time
             ON operation_logs(action_time);
+
+            CREATE TABLE IF NOT EXISTS customs_items (
+                id SERIAL PRIMARY KEY,
+                customs_name_cn TEXT NOT NULL,
+                customs_name_en TEXT,
+                hs_code TEXT NOT NULL,
+                unit_1 TEXT NOT NULL,
+                unit_1_source TEXT NOT NULL,
+                unit_1_decimal_places INTEGER NOT NULL DEFAULT 0,
+                unit_2 TEXT,
+                unit_2_source TEXT,
+                unit_2_decimal_places INTEGER,
+                declaration_element_template TEXT,
+                notes TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_by INTEGER REFERENCES users(id),
+                updated_by INTEGER REFERENCES users(id),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_customs_items_hs_code
+            ON customs_items(hs_code);
+
+            CREATE INDEX IF NOT EXISTS idx_customs_items_name_cn
+            ON customs_items(customs_name_cn);
+
+            CREATE INDEX IF NOT EXISTS idx_customs_items_is_active
+            ON customs_items(is_active);
             """
         )
 

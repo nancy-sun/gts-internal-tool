@@ -204,7 +204,10 @@ body {
   margin: 0;
 }
 
+.operator-dropdown a,
 .operator-dropdown button {
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
   width: 100%;
   min-height: 34px;
@@ -214,8 +217,11 @@ body {
   color: var(--muted);
   font-size: 14px;
   text-align: left;
+  text-decoration: none;
 }
 
+.operator-dropdown a:hover,
+.operator-dropdown a:focus,
 .operator-dropdown button:hover,
 .operator-dropdown button:focus {
   background: #eaf3f0;

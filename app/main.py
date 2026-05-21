@@ -1,13 +1,16 @@
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.auth import is_authenticated
 from app.config import BASE_DIR, ensure_local_directories, get_settings
 from app.database import initialize_database
 from app.routes import (
     admin_users,
     auth,
+    customs,
     data_quality,
     generate,
     home,
@@ -22,6 +25,7 @@ from app.routes import (
 )
 from app.services.operation_logging import reset_current_log_user, set_current_log_user
 from app.services.temp_cleanup import cleanup_stale_preview_files
+from app.templating import templates
 
 
 def create_app() -> FastAPI:
@@ -38,6 +42,19 @@ def create_app() -> FastAPI:
         https_only=settings.secure_cookies,
         max_age=None,
     )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        if exc.status_code == 404:
+            if not is_authenticated(request):
+                return RedirectResponse(url="/login", status_code=303)
+            return templates.TemplateResponse(
+                request,
+                "not_found.html",
+                {"request": request, "missing_path": request.url.path},
+                status_code=404,
+            )
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
     @app.middleware("http")
     async def security_and_log_user_context(request, call_next):
@@ -57,6 +74,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
     app.include_router(auth.router)
     app.include_router(admin_users.router)
+    app.include_router(customs.router)
     app.include_router(upload.router)
     app.include_router(generate.router)
     app.include_router(hs_codes.router)

@@ -26,6 +26,14 @@ from app.templating import templates
 router = APIRouter()
 
 
+@router.get("/admin")
+def admin_home(request: Request):
+    redirect = require_admin(request)
+    if redirect:
+        return redirect
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
 @router.get("/admin/users")
 def admin_users_page(request: Request):
     redirect = require_admin(request)

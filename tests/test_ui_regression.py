@@ -109,25 +109,34 @@ def test_dashboard_keeps_primary_navigation_cards(ui_client: TestClient) -> None
     assert 'href="/search"' in response.text
     assert 'href="/data-quality"' in response.text
     assert 'href="/maintenance"' in response.text
-    assert 'href="/hs-codes/upload"' in response.text
-    assert 'href="/hs-codes/generate"' in response.text
+    assert 'href="/customs/items"' in response.text
+    assert 'href="/customs/upload"' in response.text
+    assert 'href="/customs/export"' in response.text
 
 
 def test_nav_highlights_current_section(ui_client: TestClient) -> None:
     upload_response = ui_client.get("/upload")
     search_response = ui_client.get("/search")
-    hs_response = ui_client.get("/hs-codes/upload")
+    customs_response = ui_client.get("/customs/upload")
+    old_hs_response = ui_client.get("/hs-codes/upload", follow_redirects=False)
     maintenance_response = ui_client.get("/maintenance")
 
     assert upload_response.status_code == 200
-    assert 'href="/upload" class="is-active" aria-current="page"' in upload_response.text
+    assert "跟单" in upload_response.text
+    assert 'href="/upload" class="is-active"' in upload_response.text
+    assert 'nav-dropdown-button is-active' in upload_response.text
     assert search_response.status_code == 200
-    assert 'href="/search" class="is-active" aria-current="page"' in search_response.text
-    assert hs_response.status_code == 200
-    assert 'nav-dropdown-button is-active' in hs_response.text
-    assert 'href="/hs-codes/upload" class="is-active"' in hs_response.text
+    assert "数据库" in search_response.text
+    assert 'href="/search" class="is-active"' in search_response.text
+    assert customs_response.status_code == 200
+    assert 'nav-dropdown-button is-active' in customs_response.text
+    assert 'href="/customs/upload" class="is-active"' in customs_response.text
+    assert old_hs_response.status_code == 303
+    assert old_hs_response.headers["location"] == "/customs/upload"
     assert maintenance_response.status_code == 200
-    assert 'href="/maintenance" class="is-active" aria-current="page"' in maintenance_response.text
+    assert 'href="/maintenance">系统状态</a>' in maintenance_response.text
+    assert 'href="/logs">操作记录</a>' in maintenance_response.text
+    assert 'href="/admin/users">用户管理</a>' in maintenance_response.text
 
 
 def test_upload_preview_loading_has_streaming_table_controls(ui_client: TestClient) -> None:

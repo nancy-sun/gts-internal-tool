@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "new" %}新增报关资料{% else %}编辑报关资料{% endif %} - GTS Internal Tool{% endblock %}
+{% block page_name %}{% if mode == "new" %}新增报关资料{% else %}编辑报关资料{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact-heading supplier-detail-heading">
+    <div>
+      <h1>{% if mode == "new" %}新增报关资料{% else %}编辑报关资料{% endif %}</h1>
+      <p>只维护报关主数据；产品映射和报关导出属于后续阶段。</p>
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="supplier-detail-form" method="post" autocomplete="off">
+    <div class="supplier-detail-list">
+      <div class="supplier-detail-row">
+        <label for="customs_name_cn">报关中文品名</label>
+        <input id="customs_name_cn" name="customs_name_cn" required autocomplete="off" value="{{ values.customs_name_cn or '' }}">
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="customs_name_en">报关英文品名</label>
+        <input id="customs_name_en" name="customs_name_en" autocomplete="off" value="{{ values.customs_name_en or '' }}">
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="hs_code">HS Code</label>
+        <input id="hs_code" name="hs_code" required autocomplete="off" value="{{ values.hs_code or '' }}">
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="unit_1">第一单位</label>
+        <input id="unit_1" name="unit_1" required autocomplete="off" value="{{ values.unit_1 or '' }}">
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="unit_1_source">第一单位来源</label>
+        <select id="unit_1_source" name="unit_1_source" required>
+          <option value="">请选择</option>
+          {% for source in unit_sources %}
+            <option value="{{ source }}" {% if values.unit_1_source == source %}selected{% endif %}>{{ unit_source_labels[source] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="unit_1_decimal_places">第一单位小数位</label>
+        <select id="unit_1_decimal_places" name="unit_1_decimal_places" required>
+          {% for place in decimal_places %}
+            <option value="{{ place }}" {% if values.unit_1_decimal_places|string == place|string %}selected{% endif %}>{{ place }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="unit_2">第二单位</label>
+        <input id="unit_2" name="unit_2" autocomplete="off" value="{{ values.unit_2 or '' }}">
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="unit_2_source">第二单位来源</label>
+        <select id="unit_2_source" name="unit_2_source">
+          <option value="">无第二单位</option>
+          {% for source in unit_sources %}
+            <option value="{{ source }}" {% if values.unit_2_source == source %}selected{% endif %}>{{ unit_source_labels[source] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="unit_2_decimal_places">第二单位小数位</label>
+        <select id="unit_2_decimal_places" name="unit_2_decimal_places">
+          <option value="">无第二单位</option>
+          {% for place in decimal_places %}
+            <option value="{{ place }}" {% if values.unit_2_decimal_places|string == place|string %}selected{% endif %}>{{ place }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="declaration_element_template">申报要素模板</label>
+        <div>
+          <textarea id="declaration_element_template" name="declaration_element_template" rows="6">{{ values.declaration_element_template or '' }}</textarea>
+          <p class="help-text">示例：品名：{customs_name_cn}；用途：汽车用；品牌：无品牌。</p>
+        </div>
+      </div>
+
+      <div class="supplier-detail-row">
+        <label for="notes">备注</label>
+        <textarea id="notes" name="notes" rows="4">{{ values.notes or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="supplier-detail-password-row">
+      <label for="confirm_password">密码</label>
+      <input id="confirm_password" name="confirm_password" type="password" required autocomplete="current-password">
+    </div>
+
+    <div class="supplier-detail-actions">
+      <a class="text-link" href="{% if mode == 'new' %}/customs/items{% else %}/customs/items/{{ item.id }}{% endif %}">取消</a>
+      <button type="submit">保存</button>
+    </div>
+  </form>
+{% endblock %}

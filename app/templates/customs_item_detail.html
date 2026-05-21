@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.customs_name_cn }} - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料{% endblock %}
+
+{% block content %}
+  <section class="page-heading compact-heading supplier-detail-heading">
+    <div>
+      <h1>{{ item.customs_name_cn }}</h1>
+      <p>{{ item.hs_code }}</p>
+    </div>
+    {% if can_manage %}
+      <a class="table-action-link" href="/customs/items/{{ item.id }}/edit">编辑</a>
+    {% endif %}
+  </section>
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="table-section supplier-detail-section">
+    <div class="supplier-detail-list">
+      <div class="supplier-detail-row">
+        <span>报关中文品名</span>
+        <strong>{{ item.customs_name_cn }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>报关英文品名</span>
+        <strong>{{ item.customs_name_en or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>HS Code</span>
+        <strong>{{ item.hs_code }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>第一单位</span>
+        <strong>{{ item.unit_1 }} / {{ unit_source_labels.get(item.unit_1_source, item.unit_1_source) }} / {{ item.unit_1_decimal_places }} 位小数</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>第二单位</span>
+        <strong>
+          {% if item.unit_2 %}
+            {{ item.unit_2 }} / {{ unit_source_labels.get(item.unit_2_source, item.unit_2_source) }} / {{ item.unit_2_decimal_places }} 位小数
+          {% else %}
+            -
+          {% endif %}
+        </strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>申报要素模板</span>
+        <strong>{{ item.declaration_element_template or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>备注</span>
+        <strong>{{ item.notes or "-" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>状态</span>
+        <strong>{{ "启用" if item.is_active else "停用" }}</strong>
+      </div>
+      <div class="supplier-detail-row">
+        <span>更新日期</span>
+        <strong>{{ (item.updated_at or "")[:10] }}</strong>
+      </div>
+    </div>
+  </section>
+
+  {% if can_manage %}
+    <section class="table-section supplier-detail-section">
+      <form method="post" action="/customs/items/{{ item.id }}/toggle-active" class="form-stack">
+        <h2>状态管理</h2>
+        <label for="confirm_password">密码</label>
+        <input id="confirm_password" name="confirm_password" type="password" required autocomplete="current-password">
+        <button type="submit">{{ "停用" if item.is_active else "启用" }}</button>
+      </form>
+    </section>
+  {% endif %}
+{% endblock %}

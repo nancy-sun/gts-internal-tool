@@ -1,16 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}生成 HS Code 报表 - GTS Internal Tool{% endblock %}
-{% block page_name %}生成 HS Code 报表{% endblock %}
+{% block title %}报关资料导出报告 - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料导出报告{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>生成 HS Code 报表</h1>
+    <h1>报关资料导出报告</h1>
+    <p>当前导出兼容旧 HS Code 报表；完整报关明细和要素导出属于后续阶段。</p>
   </section>
   {% if error %}
     <p class="error">{{ error }}</p>
   {% endif %}
-  <form class="form-stack" method="post" action="/hs-codes/generate/preview" enctype="multipart/form-data">
+  <form class="form-stack" method="post" action="{{ workflow.preview_action }}" enctype="multipart/form-data">
     <label>
       操作员姓名
       <input name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}" {% if request.session.get("user_id") %}readonly{% endif %}>

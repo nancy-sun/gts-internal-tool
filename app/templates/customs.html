@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}报关资料 - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>报关资料</h1>
+    <p>集中维护 HS Code、报关主数据，以及后续报关导出相关资料。</p>
+  </section>
+
+  <nav class="action-grid" aria-label="报关资料功能">
+    <a class="action-card" href="/customs/items">
+      <span>报关资料库</span>
+    </a>
+    <a class="action-card" href="/customs/upload">
+      <span>批量上传</span>
+    </a>
+    <a class="action-card" href="/customs/export">
+      <span>导出报告</span>
+    </a>
+  </nav>
+{% endblock %}

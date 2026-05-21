@@ -4,8 +4,8 @@ This file tracks known follow-up work after the current implementation.
 
 ## Manual Verification
 
-- Test the HS Code upload flow with a real office workbook.
-- Test the HS Code report flow with a real GTS list workbook.
+- Test the Customs batch upload flow with a real office HS Code workbook.
+- Test the Customs export report flow with a real GTS list workbook.
 - Confirm product search shows HS Code and quotation upload / quotation generation do not show HS Code.
 
 ## Later Improvements
@@ -21,6 +21,11 @@ This file tracks known follow-up work after the current implementation.
 - Sales portal later, after deployment/auth/storage decisions are stable.
 - Sales portal v0.
 - Payment approval later.
+- Customs Phase 2: Product Customs Mapping.
+- Customs Phase 3: Purchase Contract.
+- Customs Phase 4: Declaration Batch.
+- Customs Phase 5: Declaration Detail Preview with blocking issues.
+- Customs Phase 6: Export 报关明细 and 报关要素 sheets.
 - Decide deployment strategy before building a sales portal.
 - Test a Cloudflare Tunnel pilot if leadership wants remote access.
 - Refine role permissions before storing sales quotation data.

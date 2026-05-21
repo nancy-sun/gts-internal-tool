@@ -6,10 +6,15 @@ from uuid import uuid4
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
 
-from app.auth import get_session_operator_name, require_auth, set_session_operator_name
+from app.auth import (
+    get_session_operator_name,
+    require_auth,
+    require_password_confirmation,
+    set_session_operator_name,
+)
 from app.config import get_settings
 from app.database import get_connection
-from app.navigation import HS_CRUMB, breadcrumbs, child_breadcrumbs
+from app.navigation import CUSTOMS_CRUMB, breadcrumbs
 from app.services.backup import BackupError, create_auto_backup
 from app.services.download_names import attachment_header, dated_download_name
 from app.services.hs_codes import (
@@ -42,6 +47,8 @@ class HsWorkflow:
     form_template: str
     preview_template: str
     fallback_file_name: str
+    preview_action: str
+    finish_action: str
 
 
 @dataclass(frozen=True)
@@ -51,19 +58,23 @@ class SavedWorkbook:
     path: Path | None
 
 
-UPLOAD_WORKFLOW = HsWorkflow(
-    label="上传 HS Code",
-    href="/hs-codes/upload",
+CUSTOMS_UPLOAD_WORKFLOW = HsWorkflow(
+    label="批量上传",
+    href="/customs/upload",
     form_template="hs_upload.html",
     preview_template="hs_upload_preview.html",
     fallback_file_name="hs-codes.xlsx",
+    preview_action="/customs/upload/preview",
+    finish_action="/customs/upload/confirm",
 )
-GENERATE_WORKFLOW = HsWorkflow(
-    label="生成 HS Code",
-    href="/hs-codes/generate",
+CUSTOMS_EXPORT_WORKFLOW = HsWorkflow(
+    label="导出报告",
+    href="/customs/export",
     form_template="hs_generate.html",
     preview_template="hs_generate_preview.html",
     fallback_file_name="hs-code-request.xlsx",
+    preview_action="/customs/export/preview",
+    finish_action="/customs/export/download",
 )
 
 
@@ -72,12 +83,21 @@ def hs_home(request: Request):
     redirect = require_auth(request)
     if redirect:
         return redirect
+    return RedirectResponse(url="/customs", status_code=303)
+
+
+@router.get("/customs")
+def customs_home(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
     return templates.TemplateResponse(
         request,
-        "hs_codes.html",
+        "customs.html",
         {
             "request": request,
-            "breadcrumbs": breadcrumbs(HS_CRUMB),
+            "breadcrumbs": breadcrumbs(CUSTOMS_CRUMB),
+            "return_url": "/",
         },
     )
 
@@ -87,10 +107,19 @@ def hs_upload_page(request: Request):
     redirect = require_auth(request)
     if redirect:
         return redirect
-    return hs_form_response(request, UPLOAD_WORKFLOW)
+    return RedirectResponse(url="/customs/upload", status_code=303)
+
+
+@router.get("/customs/upload")
+def customs_upload_page(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    return hs_form_response(request, CUSTOMS_UPLOAD_WORKFLOW)
 
 
 @router.post("/hs-codes/upload/preview")
+@router.post("/customs/upload/preview")
 async def hs_upload_preview(
     request: Request,
     operator_name: str = Form(...),
@@ -105,17 +134,17 @@ async def hs_upload_preview(
     if error:
         return hs_form_response(
             request,
-            UPLOAD_WORKFLOW,
+            CUSTOMS_UPLOAD_WORKFLOW,
             error=error,
             operator_name=operator_name,
             status_code=400,
         )
 
-    workbook_result = await save_uploaded_workbook(excel_file, UPLOAD_WORKFLOW)
+    workbook_result = await save_uploaded_workbook(excel_file, CUSTOMS_UPLOAD_WORKFLOW)
     if workbook_result.error or workbook_result.path is None:
         return hs_form_response(
             request,
-            UPLOAD_WORKFLOW,
+            CUSTOMS_UPLOAD_WORKFLOW,
             error=workbook_result.error or "Excel 上传失败。",
             operator_name=operator_name,
             status_code=400,
@@ -124,6 +153,7 @@ async def hs_upload_preview(
     parsed_rows = parse_hs_code_upload_workbook(workbook_result.path)
     with get_connection() as connection:
         preview_rows = build_hs_upload_preview(connection, parsed_rows)
+    add_customs_master_data_warnings(preview_rows)
 
     token = uuid4().hex
     payload = build_preview_payload(
@@ -139,23 +169,40 @@ async def hs_upload_preview(
         request,
         token,
         payload,
-        workflow=UPLOAD_WORKFLOW,
+        workflow=CUSTOMS_UPLOAD_WORKFLOW,
         current_label="上传预览",
         include_error_flag=True,
     )
 
 
 @router.post("/hs-codes/upload/confirm")
-async def hs_upload_confirm(request: Request, token: str = Form(...)):
+@router.post("/customs/upload/confirm")
+async def hs_upload_confirm(
+    request: Request,
+    token: str = Form(...),
+    confirm_password: str = Form(""),
+):
     redirect = require_auth(request)
     if redirect:
         return redirect
 
     path = hs_upload_preview_path(token)
     if not path.exists():
-        return RedirectResponse(url="/hs-codes/upload", status_code=303)
+        return RedirectResponse(url=CUSTOMS_UPLOAD_WORKFLOW.href, status_code=303)
 
     payload = read_preview_payload(path)
+    password_error = require_password_confirmation(request, confirm_password)
+    if password_error:
+        return render_hs_preview(
+            request,
+            token,
+            payload,
+            workflow=CUSTOMS_UPLOAD_WORKFLOW,
+            current_label="上传预览",
+            include_error_flag=True,
+            error=password_error,
+            status_code=400,
+        )
     try:
         auto_backup_path = create_auto_backup("hs_code_update")
     except BackupError as exc:
@@ -168,14 +215,14 @@ async def hs_upload_confirm(request: Request, token: str = Form(...)):
             "has_errors": preview_has_errors(payload["rows"]),
             "error": str(exc),
             "breadcrumbs": hs_child_page_breadcrumbs(
-                UPLOAD_WORKFLOW,
+                CUSTOMS_UPLOAD_WORKFLOW,
                 "上传预览",
             ),
-            "return_url": "/hs-codes/upload",
+            "return_url": CUSTOMS_UPLOAD_WORKFLOW.href,
         }
         return templates.TemplateResponse(
             request,
-            UPLOAD_WORKFLOW.preview_template,
+            CUSTOMS_UPLOAD_WORKFLOW.preview_template,
             context,
             status_code=500,
         )
@@ -199,10 +246,10 @@ async def hs_upload_confirm(request: Request, token: str = Form(...)):
             "file_name": payload["file_name"],
             "result": result,
             "breadcrumbs": hs_child_page_breadcrumbs(
-                UPLOAD_WORKFLOW,
+                CUSTOMS_UPLOAD_WORKFLOW,
                 "上传结果",
             ),
-            "return_url": "/hs-codes/upload",
+            "return_url": CUSTOMS_UPLOAD_WORKFLOW.href,
         },
     )
 
@@ -212,10 +259,27 @@ def hs_generate_page(request: Request):
     redirect = require_auth(request)
     if redirect:
         return redirect
-    return hs_form_response(request, GENERATE_WORKFLOW)
+    return RedirectResponse(url="/customs/export", status_code=303)
+
+
+@router.get("/hs-codes/report")
+def hs_report_page(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    return RedirectResponse(url="/customs/export", status_code=303)
+
+
+@router.get("/customs/export")
+def customs_export_page(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    return hs_form_response(request, CUSTOMS_EXPORT_WORKFLOW)
 
 
 @router.post("/hs-codes/generate/preview")
+@router.post("/customs/export/preview")
 async def hs_generate_preview(
     request: Request,
     operator_name: str = Form(...),
@@ -230,17 +294,17 @@ async def hs_generate_preview(
     if error:
         return hs_form_response(
             request,
-            GENERATE_WORKFLOW,
+            CUSTOMS_EXPORT_WORKFLOW,
             error=error,
             operator_name=operator_name,
             status_code=400,
         )
 
-    workbook_result = await save_uploaded_workbook(excel_file, GENERATE_WORKFLOW)
+    workbook_result = await save_uploaded_workbook(excel_file, CUSTOMS_EXPORT_WORKFLOW)
     if workbook_result.error or workbook_result.path is None:
         return hs_form_response(
             request,
-            GENERATE_WORKFLOW,
+            CUSTOMS_EXPORT_WORKFLOW,
             error=workbook_result.error or "Excel 上传失败。",
             operator_name=operator_name,
             status_code=400,
@@ -264,12 +328,13 @@ async def hs_generate_preview(
         request,
         token,
         payload,
-        workflow=GENERATE_WORKFLOW,
+        workflow=CUSTOMS_EXPORT_WORKFLOW,
         current_label="生成预览",
     )
 
 
 @router.post("/hs-codes/generate/download")
+@router.post("/customs/export/download")
 async def hs_generate_download(request: Request, token: str = Form(...)):
     redirect = require_auth(request)
     if redirect:
@@ -277,7 +342,7 @@ async def hs_generate_download(request: Request, token: str = Form(...)):
 
     path = hs_generate_preview_path(token)
     if not path.exists():
-        return RedirectResponse(url="/hs-codes/generate", status_code=303)
+        return RedirectResponse(url=CUSTOMS_EXPORT_WORKFLOW.href, status_code=303)
 
     payload = read_preview_payload(path)
     with get_connection() as connection:
@@ -320,8 +385,9 @@ def hs_form_response(
                 if operator_name is None
                 else operator_name
             ),
-            "breadcrumbs": child_breadcrumbs(HS_CRUMB, workflow.label),
-            "return_url": "/hs-codes",
+            "workflow": workflow,
+            "breadcrumbs": hs_child_page_breadcrumbs(workflow, ""),
+            "return_url": "/customs",
         },
         status_code=status_code,
     )
@@ -335,6 +401,8 @@ def render_hs_preview(
     workflow: HsWorkflow,
     current_label: str,
     include_error_flag: bool = False,
+    error: str | None = None,
+    status_code: int = 200,
 ):
     context = {
         "request": request,
@@ -342,15 +410,19 @@ def render_hs_preview(
         "operator_name": payload["operator_name"],
         "file_name": payload["file_name"],
         "rows": payload["rows"],
+        "workflow": workflow,
         "breadcrumbs": hs_child_page_breadcrumbs(workflow, current_label),
         "return_url": workflow.href,
     }
     if include_error_flag:
         context["has_errors"] = preview_has_errors(payload["rows"])
+    if error:
+        context["error"] = error
     return templates.TemplateResponse(
         request,
         workflow.preview_template,
         context,
+        status_code=status_code,
     )
 
 
@@ -403,9 +475,9 @@ def hs_child_page_breadcrumbs(
     current_label: str,
 ) -> list[dict]:
     return [
-        HS_CRUMB,
+        CUSTOMS_CRUMB,
         {"label": workflow.label, "href": workflow.href},
-        {"label": current_label, "href": ""},
+        *([{"label": current_label, "href": ""}] if current_label else []),
     ]
 
 
@@ -419,3 +491,11 @@ def hs_generate_preview_path(token: str) -> Path:
 
 def preview_has_errors(rows: list[dict]) -> bool:
     return any(row.get("errors") for row in rows)
+
+
+def add_customs_master_data_warnings(rows: list[dict]) -> None:
+    warning = "仅更新产品旧 HS Code；缺少报关品名、第一单位、第一单位来源时不会创建报关资料库记录。"
+    for row in rows:
+        warnings = row.setdefault("warnings", [])
+        if warning not in warnings:
+            warnings.append(warning)

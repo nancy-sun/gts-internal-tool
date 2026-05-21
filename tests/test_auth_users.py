@@ -78,6 +78,23 @@ def test_setup_admin_works_once_and_login_logout_flow(auth_client: TestClient) -
     assert login_response.status_code == 303
 
 
+def test_admin_shortcut_and_not_found_pages_are_handled(auth_client: TestClient) -> None:
+    unauthenticated_missing = auth_client.get("/not-a-real-page", follow_redirects=False)
+    assert unauthenticated_missing.status_code == 303
+    assert unauthenticated_missing.headers["location"] == "/login"
+
+    bootstrap_admin(auth_client)
+
+    admin_shortcut = auth_client.get("/admin", follow_redirects=False)
+    assert admin_shortcut.status_code == 303
+    assert admin_shortcut.headers["location"] == "/admin/users"
+
+    missing_page = auth_client.get("/not-a-real-page")
+    assert missing_page.status_code == 404
+    assert "页面不存在" in missing_page.text
+    assert '{"detail":"Not Found"}' not in missing_page.text
+
+
 def test_admin_can_manage_users_and_non_admin_cannot(auth_client: TestClient) -> None:
     bootstrap_admin(auth_client)
     admin_page = auth_client.get("/admin/users")

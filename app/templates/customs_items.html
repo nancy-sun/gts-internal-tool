@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}报关资料 - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>报关资料</h1>
+    <p>维护报关品名、HS Code、法定单位和申报要素模板。</p>
+  </section>
+
+  <form method="get" action="/customs/items" class="search-form supplier-search-form">
+    <label for="q">关键词</label>
+    <input id="q" name="q" value="{{ query }}" autocomplete="off" placeholder="报关品名 / HS Code" class="supplier-search-input">
+    <select name="status" aria-label="状态" class="supplier-status-select">
+      <option value="active" {% if status == "active" %}selected{% endif %}>启用</option>
+      <option value="all" {% if status == "all" %}selected{% endif %}>全部</option>
+      <option value="inactive" {% if status == "inactive" %}selected{% endif %}>停用</option>
+    </select>
+    <button type="submit">查询</button>
+    {% if can_manage %}
+      <a class="table-action-link" href="/customs/items/new">新增报关资料</a>
+    {% endif %}
+  </form>
+
+  <section class="table-section">
+    <div class="table-wrap">
+      <table class="data-table customs-items-table">
+        <thead>
+          <tr>
+            <th>中文品名</th>
+            <th>英文品名</th>
+            <th>HS Code</th>
+            <th>第一单位</th>
+            <th>第一来源</th>
+            <th>第二单位</th>
+            <th>第二来源</th>
+            <th>状态</th>
+            <th>更新日期</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+            <tr>
+              <td>{{ item.customs_name_cn }}</td>
+              <td>{{ item.customs_name_en or "" }}</td>
+              <td>{{ item.hs_code }}</td>
+              <td>{{ item.unit_1 }}</td>
+              <td>{{ unit_source_labels.get(item.unit_1_source, item.unit_1_source) }}</td>
+              <td>{{ item.unit_2 or "" }}</td>
+              <td>{{ unit_source_labels.get(item.unit_2_source, item.unit_2_source or "") }}</td>
+              <td>{{ "启用" if item.is_active else "停用" }}</td>
+              <td>{{ (item.updated_at or "")[:10] }}</td>
+              <td>
+                <a class="table-action-link" href="/customs/items/{{ item.id }}">查看</a>
+                {% if can_manage %}
+                  <a class="table-action-link" href="/customs/items/{{ item.id }}/edit">编辑</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="10">暂无报关资料。</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

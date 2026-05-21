@@ -40,8 +40,9 @@ Implemented:
 - Request-list upload, matching preview, manual candidate selection, and immediate Excel download
 - Generated quotation Excel includes a blank Photo column
 - Operation logging for generated quotations
-- HS Code upload by GTS, product search display, and HS Code report Excel download
-- Operation logging for HS Code updates and generated HS Code reports
+- Customs / 报关资料 section for HS Code upload/report compatibility and customs master data
+- Operation logging for customs uploads, customs reports, and customs master data changes
+- Customs Master Data module for maintaining customs item names, HS Code, generic declaration units, and declaration element templates
 - Manual local backup script and backup instructions
 - `robots.txt` and `X-Robots-Tag` noindex protection for internal-only use
 - Dockerfile and Docker Compose for deployable packaging
@@ -49,6 +50,10 @@ Implemented:
 Phase 1 through Phase 5 MVP work is implemented.
 
 This branch includes cloud-readiness and Docker deployability work. The app has not been deployed, no OSS storage has been added, and existing SQLite development data is not migrated.
+
+HS Code is now part of Customs / 报关资料. Existing `products.hs_code` remains as a legacy fallback for current product HS Code upload/report workflows. The future source-of-truth direction is `product_customs_mapping -> customs_items.hs_code`.
+
+The Customs Master Data module currently manages only customs item master records. Product-to-customs mapping, purchase contracts, declaration batches, declaration detail preview, final declaration workbook export, and customs Excel exports are future phases.
 
 ## Authentication
 

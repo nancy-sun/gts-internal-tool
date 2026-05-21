@@ -1,16 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}上传 HS Code - GTS Internal Tool{% endblock %}
-{% block page_name %}上传 HS Code{% endblock %}
+{% block title %}报关资料批量上传 - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料批量上传{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>上传 HS Code</h1>
+    <h1>报关资料批量上传</h1>
+    <p>兼容旧的 GTS + HS Code 上传；报关主数据批量导入会在后续阶段扩展。</p>
   </section>
   {% if error %}
     <p class="error">{{ error }}</p>
   {% endif %}
-  <form class="form-stack" method="post" action="/hs-codes/upload/preview" enctype="multipart/form-data">
+  <form class="form-stack" method="post" action="{{ workflow.preview_action }}" enctype="multipart/form-data">
     <label>
       操作员姓名
       <input name="operator_name" required autocomplete="name" value="{{ operator_name or '' }}" {% if request.session.get("user_id") %}readonly{% endif %}>

@@ -1050,7 +1050,10 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
     assert hs_upload_response.status_code == 200
     assert "87089910" in hs_upload_response.text
     hs_token = extract_token(hs_upload_response.text)
-    hs_confirm_response = app_client.post("/hs-codes/upload/confirm", data={"token": hs_token})
+    hs_confirm_response = app_client.post(
+        "/hs-codes/upload/confirm",
+        data={"token": hs_token, "confirm_password": "55123511"},
+    )
     assert hs_confirm_response.status_code == 200
     assert "已更新" in hs_confirm_response.text
     assert not (app_client.upload_path / f"hs_upload_preview_{hs_token}.json").exists()
@@ -1072,7 +1075,7 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
     overwrite_token = extract_token(overwrite_response.text)
     overwrite_confirm = app_client.post(
         "/hs-codes/upload/confirm",
-        data={"token": overwrite_token},
+        data={"token": overwrite_token, "confirm_password": "55123511"},
     )
     assert overwrite_confirm.status_code == 200
 
@@ -1133,8 +1136,8 @@ def test_hs_code_upload_overwrites_search_displays_and_export_keeps_order(
 
     logs_response = app_client.get("/logs")
     assert logs_response.status_code == 200
-    assert "update_hs_code" in logs_response.text
-    assert "generate_hs_code" in logs_response.text
+    assert "customs_upload_confirmed" in logs_response.text
+    assert "customs_report_generated" in logs_response.text
 
 
 def test_product_edit_updates_current_fields_used_by_quotation_and_hs_exports(

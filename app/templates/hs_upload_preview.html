@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}HS Code 上传预览 - GTS Internal Tool{% endblock %}
-{% block page_name %}HS Code 上传预览{% endblock %}
+{% block title %}报关资料上传预览 - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料上传预览{% endblock %}
 
 {% block content %}
   <section class="page-heading">
-    <h1>HS Code 上传预览</h1>
+    <h1>报关资料上传预览</h1>
     <p>文件：{{ file_name }}　操作员：{{ operator_name }}</p>
   </section>
   {% if error %}
     <p class="error">{{ error }}</p>
   {% endif %}
 
-  <form class="preview-page-form" method="post" action="/hs-codes/upload/confirm">
+  <form class="preview-page-form" method="post" action="{{ workflow.finish_action }}">
     <input type="hidden" name="token" value="{{ token }}">
     <div class="table-wrap upload-preview-wrap">
       <table class="upload-preview-table">
@@ -55,8 +55,10 @@
         </tbody>
       </table>
     </div>
+    <label for="confirm_password">密码</label>
+    <input id="confirm_password" name="confirm_password" type="password" required autocomplete="current-password">
     <div class="form-actions">
-      <a class="text-link" href="/hs-codes/upload">取消</a>
+      <a class="text-link" href="{{ workflow.href }}">取消</a>
       <button type="submit" {% if has_errors %}disabled{% endif %}>确认更新</button>
     </div>
   </form>

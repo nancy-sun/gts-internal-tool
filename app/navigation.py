@@ -8,6 +8,8 @@ DATA_QUALITY_CRUMB = {"label": "数据检查", "href": "/data-quality"}
 LOGS_CRUMB = {"label": "操作记录", "href": "/logs"}
 HS_CRUMB = {"label": "HS Code", "href": "/hs-codes"}
 SUPPLIERS_CRUMB = {"label": "供应商", "href": "/suppliers"}
+CUSTOMS_CRUMB = {"label": "报关资料", "href": "/customs"}
+CUSTOMS_ITEMS_CRUMB = {"label": "报关资料", "href": "/customs/items"}
 MAINTENANCE_CRUMB = {"label": "系统状态", "href": "/maintenance"}
 ADMIN_USERS_CRUMB = {"label": "用户管理", "href": "/admin/users"}
 

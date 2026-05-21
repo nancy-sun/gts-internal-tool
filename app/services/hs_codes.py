@@ -324,7 +324,7 @@ def save_hs_upload_preview(
     create_operation_log(
         connection,
         operator_name=operator_name,
-        action_type="update_hs_code",
+        action_type="customs_upload_confirmed",
         file_name=file_name,
         row_count=updated,
         note=note,
@@ -374,7 +374,7 @@ def create_hs_code_workbook(
     create_operation_log(
         connection,
         operator_name=operator_name,
-        action_type="generate_hs_code",
+        action_type="customs_report_generated",
         file_name=file_name,
         row_count=output_count,
         note="已生成 HS Code Excel，供立即下载。",
