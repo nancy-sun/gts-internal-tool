@@ -9,7 +9,13 @@ from app.auth import (
     session_user_id,
 )
 from app.database import get_connection
-from app.navigation import CUSTOMS_ITEMS_CRUMB, breadcrumbs, child_breadcrumbs
+from app.navigation import (
+    CUSTOMS_ITEMS_CRUMB,
+    CUSTOMS_MAPPINGS_CRUMB,
+    CUSTOMS_MISSING_CRUMB,
+    breadcrumbs,
+    child_breadcrumbs,
+)
 from app.services.customs_items import (
     DECIMAL_PLACE_OPTIONS,
     UNIT_SOURCE_LABELS,
@@ -40,9 +46,6 @@ from app.templating import templates
 
 
 router = APIRouter()
-
-CUSTOMS_MAPPINGS_CRUMB = {"label": "产品报关映射", "href": "/customs/mappings"}
-CUSTOMS_MISSING_CRUMB = {"label": "报关资料缺失检查", "href": "/customs/missing"}
 
 
 @router.get("/customs/items")

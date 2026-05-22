@@ -8,6 +8,11 @@ from app.services.operation_logging import create_operation_log, utc_now_text
 
 
 MANAGE_CUSTOMS_MAPPING_ROLES = {"admin", "merchandiser"}
+CUSTOMS_MISSING_FIELDS = {
+    "hs_code": "缺少 HS Code",
+    "declaration_element_template": "缺少申报要素模板",
+}
+QUOTATION_SOURCE_FIELDS = {"gross_weight", "packages"}
 
 
 def can_manage_customs_mapping(user: Row | None) -> bool:
@@ -223,18 +228,26 @@ def upsert_product_customs_mapping(
 
 
 def build_missing_customs_report(connection: Connection) -> dict[str, list[dict[str, Any]]]:
+    mapped_rows = mapped_products(connection)
     return {
         "without_mapping": products_without_mapping(connection),
-        "missing_hs_code": mapped_items_missing_field(connection, "hs_code", "缺少 HS Code"),
+        "missing_hs_code": mapped_items_missing_field(mapped_rows, "hs_code"),
         "missing_declaration_template": mapped_items_missing_field(
-            connection,
+            mapped_rows,
             "declaration_element_template",
-            "缺少申报要素模板",
         ),
-        "gross_weight_issues": unit_source_issues(connection, source="gross_weight"),
-        "package_count_issues": unit_source_issues(connection, source="package_count"),
-        "net_weight_issues": net_weight_issues(connection),
-        "manual_source_warnings": manual_source_warnings(connection),
+        "gross_weight_issues": unit_source_issues(
+            connection,
+            mapped_rows,
+            source="gross_weight",
+        ),
+        "package_count_issues": unit_source_issues(
+            connection,
+            mapped_rows,
+            source="package_count",
+        ),
+        "net_weight_issues": net_weight_issues(connection, mapped_rows),
+        "manual_source_warnings": manual_source_warnings(mapped_rows),
     }
 
 
@@ -252,47 +265,67 @@ def products_without_mapping(connection: Connection) -> list[dict[str, Any]]:
 
 
 def mapped_items_missing_field(
-    connection: Connection,
+    mapped_rows: list[Row],
     field_name: str,
-    issue: str,
 ) -> list[dict[str, Any]]:
-    if field_name not in {"hs_code", "declaration_element_template"}:
+    issue = CUSTOMS_MISSING_FIELDS.get(field_name)
+    if not issue:
         raise ValueError("Unsupported customs missing field")
-    rows = mapped_products(connection)
     return [
         _issue_row(row, issue)
-        for row in rows
+        for row in mapped_rows
         if not _clean_text(row[field_name])
     ]
 
 
-def unit_source_issues(connection: Connection, *, source: str) -> list[dict[str, Any]]:
+def unit_source_issues(
+    connection: Connection,
+    mapped_rows: list[Row],
+    *,
+    source: str,
+) -> list[dict[str, Any]]:
     rows = [
-        row for row in mapped_products(connection)
+        row for row in mapped_rows
         if source in _row_unit_sources(row)
     ]
     issues = []
     for row in rows:
         if source == "gross_weight":
-            gross_weight = get_latest_gross_weight_for_product(connection, row["product_id"], row["product_gts_no"])
+            gross_weight = get_latest_gross_weight_for_product(
+                connection,
+                row["product_id"],
+                row["product_gts_no"],
+            )
             if gross_weight is None:
                 issues.append(_issue_row(row, "缺少毛重"))
         elif source == "package_count":
-            packages = get_latest_packages_for_product(connection, row["product_id"], row["product_gts_no"])
+            packages = get_latest_packages_for_product(
+                connection,
+                row["product_id"],
+                row["product_gts_no"],
+            )
             if packages is None:
                 issues.append(_issue_row(row, "缺少件数"))
     return issues
 
 
-def net_weight_issues(connection: Connection) -> list[dict[str, Any]]:
+def net_weight_issues(connection: Connection, mapped_rows: list[Row]) -> list[dict[str, Any]]:
     rows = [
-        row for row in mapped_products(connection)
+        row for row in mapped_rows
         if "net_weight" in _row_unit_sources(row)
     ]
     issues = []
     for row in rows:
-        gross_weight = get_latest_gross_weight_for_product(connection, row["product_id"], row["product_gts_no"])
-        packages = get_latest_packages_for_product(connection, row["product_id"], row["product_gts_no"])
+        gross_weight = get_latest_gross_weight_for_product(
+            connection,
+            row["product_id"],
+            row["product_gts_no"],
+        )
+        packages = get_latest_packages_for_product(
+            connection,
+            row["product_id"],
+            row["product_gts_no"],
+        )
         if gross_weight is None:
             issues.append(_issue_row(row, "净重缺少毛重"))
             continue
@@ -304,10 +337,10 @@ def net_weight_issues(connection: Connection) -> list[dict[str, Any]]:
     return issues
 
 
-def manual_source_warnings(connection: Connection) -> list[dict[str, Any]]:
+def manual_source_warnings(mapped_rows: list[Row]) -> list[dict[str, Any]]:
     return [
         _issue_row(row, "后续报关批次需要手动填写单位数量")
-        for row in mapped_products(connection)
+        for row in mapped_rows
         if "manual" in _row_unit_sources(row)
     ]
 
@@ -359,7 +392,7 @@ def _latest_positive_quotation_value(
     gts_no: str | None,
     column_name: str,
 ) -> float | None:
-    if column_name not in {"gross_weight", "packages"}:
+    if column_name not in QUOTATION_SOURCE_FIELDS:
         raise ValueError("Unsupported quotation source field")
     normalized_gts, _ = normalize_gts_no(_clean_text(gts_no))
     row = connection.execute(
