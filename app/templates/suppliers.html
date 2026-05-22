@@ -46,9 +46,7 @@
               <td>
                 {% if row.missing_tags %}
                   <span class="data-status-tags">
-                    {% for tag in row.missing_tags %}
-                      <span class="data-status-tag data-status-tag-{{ tag.kind }}">{{ tag.label }}</span>
-                    {% endfor %}
+                    <span class="data-status-tag data-status-tag-supplier-info">缺少信息</span>
                   </span>
                 {% else %}
                   <span class="success-text">完整</span>

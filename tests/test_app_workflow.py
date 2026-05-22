@@ -1454,10 +1454,11 @@ def test_supplier_create_edit_search_and_import_linking(
     assert "更多" in search_supplier_response.text
     assert "<th>联系人</th>" not in search_supplier_response.text
     assert "<th>质量评分</th>" not in search_supplier_response.text
-    assert "缺供应商信息" in search_supplier_response.text
-    assert "缺评分" in search_supplier_response.text
+    assert "缺少信息" in search_supplier_response.text
+    assert "缺供应商信息" not in search_supplier_response.text
+    assert "缺评分" not in search_supplier_response.text
     assert "data-status-tag-supplier-info" in search_supplier_response.text
-    assert "data-status-tag-rating" in search_supplier_response.text
+    assert "data-status-tag-rating" not in search_supplier_response.text
 
     edit_response = app_client.post(
         "/suppliers/1/edit",

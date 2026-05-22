@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}报关资料缺失检查 - GTS Internal Tool{% endblock %}
+{% block page_name %}报关资料缺失检查{% endblock %}
+
+{% macro issue_table(rows, empty_text, show_action=True) %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>GTS</th>
+          <th>OEM</th>
+          <th>产品描述</th>
+          <th>报关品名</th>
+          <th>HS Code</th>
+          <th>问题</th>
+          {% if show_action %}<th>操作</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.gts_no or "" }}</td>
+            <td>{{ row.oem or "" }}</td>
+            <td>{{ row.description or "" }}</td>
+            <td>{{ row.customs_name_cn or "" }}</td>
+            <td>{{ row.hs_code or "" }}</td>
+            <td>{{ row.issue }}</td>
+            {% if show_action %}
+              <td>
+                {% if row.mapping_id %}
+                  <a class="table-action-link" href="/customs/mappings/{{ row.mapping_id }}/edit">编辑映射</a>
+                {% elif row.product_id %}
+                  <a class="table-action-link" href="/customs/mappings/new">新增映射</a>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="{{ 7 if show_action else 6 }}">{{ empty_text }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endmacro %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>报关资料缺失检查</h1>
+    <p>检查后续报关资料生成会用到的映射、HS Code、毛重、件数、净重和申报要素模板。</p>
+  </section>
+
+  <section class="table-section">
+    <h2>未建立报关映射的产品</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Product ID</th>
+            <th>GTS</th>
+            <th>OEM</th>
+            <th>产品描述</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in report.without_mapping %}
+            <tr>
+              <td>{{ product.id }}</td>
+              <td>{{ product.gts_no or "" }}</td>
+              <td>{{ product.oem or "" }}</td>
+              <td>{{ product.description or product.chinese_description or "" }}</td>
+              <td><a class="table-action-link" href="/customs/mappings/new">新增映射</a></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5">所有产品都已有报关映射。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="table-section">
+    <h2>缺少 HS Code</h2>
+    {{ issue_table(report.missing_hs_code, "没有缺少 HS Code 的映射。") }}
+  </section>
+
+  <section class="table-section">
+    <h2>需要毛重但缺少毛重</h2>
+    {{ issue_table(report.gross_weight_issues, "没有毛重缺失问题。") }}
+  </section>
+
+  <section class="table-section">
+    <h2>需要件数但缺少件数</h2>
+    {{ issue_table(report.package_count_issues, "没有件数缺失问题。") }}
+  </section>
+
+  <section class="table-section">
+    <h2>净重检查</h2>
+    <p>公司规则：净重 = 毛重 - 件数。毛重或件数缺失，或计算结果小于等于 0，都会阻止后续导出。</p>
+    {{ issue_table(report.net_weight_issues, "没有净重计算问题。") }}
+  </section>
+
+  <section class="table-section">
+    <h2>缺少申报要素模板</h2>
+    {{ issue_table(report.missing_declaration_template, "没有缺少申报要素模板的映射。") }}
+  </section>
+
+  <section class="table-section">
+    <h2>手动填写提醒</h2>
+    {{ issue_table(report.manual_source_warnings, "没有手动单位来源提醒。") }}
+  </section>
+{% endblock %}

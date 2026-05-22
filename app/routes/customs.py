@@ -25,10 +25,24 @@ from app.services.customs_items import (
     update_customs_item,
     validate_customs_item_values,
 )
+from app.services.product_customs import (
+    build_missing_customs_report,
+    can_manage_customs_mapping,
+    get_product_customs_mapping,
+    list_mapping_options,
+    list_product_customs_mappings,
+    mapping_form_values,
+    mapping_values_from_db,
+    upsert_product_customs_mapping,
+    validate_mapping_values,
+)
 from app.templating import templates
 
 
 router = APIRouter()
+
+CUSTOMS_MAPPINGS_CRUMB = {"label": "产品报关映射", "href": "/customs/mappings"}
+CUSTOMS_MISSING_CRUMB = {"label": "报关资料缺失检查", "href": "/customs/missing"}
 
 
 @router.get("/customs/items")
@@ -232,6 +246,170 @@ def customs_item_toggle_active(
     return RedirectResponse(url=f"/customs/items/{item_id}", status_code=303)
 
 
+@router.get("/customs/mappings")
+def customs_mappings_page(request: Request, q: str = ""):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    with get_connection() as connection:
+        mappings = list_product_customs_mappings(connection, query=q)
+    return templates.TemplateResponse(
+        request,
+        "customs_mappings.html",
+        {
+            "request": request,
+            "mappings": mappings,
+            "query": q,
+            "can_manage": can_manage_customs_mapping(get_current_user(request)),
+            "unit_source_labels": UNIT_SOURCE_LABELS,
+            "breadcrumbs": breadcrumbs(CUSTOMS_MAPPINGS_CRUMB),
+            "return_url": "/customs",
+        },
+    )
+
+
+@router.get("/customs/mappings/new")
+def customs_mapping_new_page(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    if not can_manage_customs_mapping(get_current_user(request)):
+        return RedirectResponse(url="/forbidden", status_code=303)
+    with get_connection() as connection:
+        products, customs_items = list_mapping_options(connection)
+    return render_customs_mapping_form(
+        request,
+        mapping=None,
+        values=mapping_form_values(),
+        products=products,
+        customs_items=customs_items,
+        mode="new",
+    )
+
+
+@router.post("/customs/mappings/new")
+def customs_mapping_create_submit(
+    request: Request,
+    product_id: str = Form(""),
+    customs_item_id: str = Form(""),
+    part_no_for_declaration: str = Form(""),
+    model_for_declaration: str = Form(""),
+    material: str = Form(""),
+    brand: str = Form(""),
+    declaration_notes: str = Form(""),
+    confirm_password: str = Form(""),
+):
+    return handle_customs_mapping_submit(
+        request,
+        mapping_id=None,
+        values=mapping_form_values(locals()),
+        confirm_password=confirm_password,
+    )
+
+
+@router.get("/customs/mappings/{mapping_id}/edit")
+def customs_mapping_edit_page(request: Request, mapping_id: int):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    if not can_manage_customs_mapping(get_current_user(request)):
+        return RedirectResponse(url="/forbidden", status_code=303)
+    with get_connection() as connection:
+        mapping = get_product_customs_mapping(connection, mapping_id)
+        products, customs_items = list_mapping_options(connection)
+    if not mapping:
+        return RedirectResponse(url="/customs/mappings", status_code=303)
+    return render_customs_mapping_form(
+        request,
+        mapping=mapping,
+        values=mapping_values_from_db(mapping),
+        products=products,
+        customs_items=customs_items,
+        mode="edit",
+    )
+
+
+@router.post("/customs/mappings/{mapping_id}/edit")
+def customs_mapping_edit_submit(
+    request: Request,
+    mapping_id: int,
+    product_id: str = Form(""),
+    customs_item_id: str = Form(""),
+    part_no_for_declaration: str = Form(""),
+    model_for_declaration: str = Form(""),
+    material: str = Form(""),
+    brand: str = Form(""),
+    declaration_notes: str = Form(""),
+    confirm_password: str = Form(""),
+):
+    return handle_customs_mapping_submit(
+        request,
+        mapping_id=mapping_id,
+        values=mapping_form_values(locals()),
+        confirm_password=confirm_password,
+    )
+
+
+@router.get("/customs/missing")
+def customs_missing_page(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    with get_connection() as connection:
+        report = build_missing_customs_report(connection)
+    return templates.TemplateResponse(
+        request,
+        "customs_missing.html",
+        {
+            "request": request,
+            "report": report,
+            "unit_source_labels": UNIT_SOURCE_LABELS,
+            "breadcrumbs": breadcrumbs(CUSTOMS_MISSING_CRUMB),
+            "return_url": "/customs",
+        },
+    )
+
+
+def handle_customs_mapping_submit(
+    request: Request,
+    *,
+    mapping_id: int | None,
+    values: dict[str, str],
+    confirm_password: str,
+):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    if not can_manage_customs_mapping(get_current_user(request)):
+        return RedirectResponse(url="/forbidden", status_code=303)
+    password_error = require_password_confirmation(request, confirm_password)
+    with get_connection() as connection:
+        mapping = get_product_customs_mapping(connection, mapping_id) if mapping_id else None
+        products, customs_items = list_mapping_options(connection)
+        errors = validate_mapping_values(connection, values)
+        if password_error:
+            errors.append(password_error)
+        if errors:
+            return render_customs_mapping_form(
+                request,
+                mapping=mapping,
+                values=values,
+                products=products,
+                customs_items=customs_items,
+                mode="edit" if mapping_id else "new",
+                errors=errors,
+                status_code=400,
+            )
+        saved_mapping_id, _ = upsert_product_customs_mapping(
+            connection,
+            values=values,
+            user_id=session_user_id(request),
+            operator_name=session_display_name(request),
+        )
+        connection.commit()
+    return RedirectResponse(url=f"/customs/mappings?mapped={saved_mapping_id}", status_code=303)
+
+
 def render_customs_item_detail(
     request: Request,
     *,
@@ -253,6 +431,36 @@ def render_customs_item_detail(
                 item["customs_name_cn"],
             ),
             "return_url": "/customs/items",
+        },
+        status_code=status_code,
+    )
+
+
+def render_customs_mapping_form(
+    request: Request,
+    *,
+    mapping,
+    values: dict,
+    products,
+    customs_items,
+    mode: str,
+    errors: list[str] | None = None,
+    status_code: int = 200,
+):
+    page_label = "新增产品报关映射" if mode == "new" else "编辑产品报关映射"
+    return templates.TemplateResponse(
+        request,
+        "customs_mapping_form.html",
+        {
+            "request": request,
+            "mapping": mapping,
+            "values": values,
+            "products": products,
+            "customs_items": customs_items,
+            "mode": mode,
+            "errors": errors or [],
+            "breadcrumbs": child_breadcrumbs(CUSTOMS_MAPPINGS_CRUMB, page_label),
+            "return_url": "/customs/mappings",
         },
         status_code=status_code,
     )

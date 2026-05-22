@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}产品报关映射 - GTS Internal Tool{% endblock %}
+{% block page_name %}产品报关映射{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>产品报关映射</h1>
+    <p>一个 GTS 产品只能对应一套报关资料；同一套报关资料可以用于多个 GTS 产品。</p>
+  </section>
+
+  <form method="get" action="/customs/mappings" class="search-form supplier-search-form">
+    <label for="q">关键词</label>
+    <input id="q" name="q" value="{{ query }}" autocomplete="off" placeholder="GTS / OEM / 产品描述 / 报关品名 / HS Code" class="supplier-search-input">
+    <button type="submit">查询</button>
+    {% if can_manage %}
+      <a class="table-action-link" href="/customs/mappings/new">新增映射</a>
+    {% endif %}
+  </form>
+
+  <section class="table-section">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>GTS</th>
+            <th>OEM</th>
+            <th>产品描述</th>
+            <th>报关品名</th>
+            <th>HS Code</th>
+            <th>第一单位</th>
+            <th>第二单位</th>
+            <th>更新日期</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mapping in mappings %}
+            <tr>
+              <td>{{ mapping.product_gts_no or "" }}</td>
+              <td>{{ mapping.product_oem or "" }}</td>
+              <td>{{ mapping.product_description or mapping.product_chinese_description or "" }}</td>
+              <td>{{ mapping.customs_name_cn }}</td>
+              <td>{{ mapping.hs_code }}</td>
+              <td>{{ mapping.unit_1 }} / {{ unit_source_labels.get(mapping.unit_1_source, mapping.unit_1_source) }}</td>
+              <td>{% if mapping.unit_2 %}{{ mapping.unit_2 }} / {{ unit_source_labels.get(mapping.unit_2_source, mapping.unit_2_source) }}{% endif %}</td>
+              <td>{{ (mapping.updated_at or "")[:10] }}</td>
+              <td>
+                {% if can_manage %}
+                  <a class="table-action-link" href="/customs/mappings/{{ mapping.id }}/edit">编辑</a>
+                {% else %}
+                  <span>只读</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="9">暂无产品报关映射。</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

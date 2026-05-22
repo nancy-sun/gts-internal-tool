@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "new" %}新增产品报关映射{% else %}编辑产品报关映射{% endif %} - GTS Internal Tool{% endblock %}
+{% block page_name %}{% if mode == "new" %}新增产品报关映射{% else %}编辑产品报关映射{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>{% if mode == "new" %}新增产品报关映射{% else %}编辑产品报关映射{% endif %}</h1>
+    <p>一个产品只保留一条当前报关映射；重复映射同一个产品时会更新原映射。</p>
+  </section>
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="table-section">
+    <form method="post" class="form-stack">
+      <label for="product_id">产品</label>
+      <select id="product_id" name="product_id" required>
+        <option value="">请选择产品</option>
+        {% for product in products %}
+          <option value="{{ product.id }}" {% if values.product_id|string == product.id|string %}selected{% endif %}>
+            {{ product.gts_no or "无 GTS" }} / {{ product.oem or "无 OEM" }} / {{ product.description or product.chinese_description or "" }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="customs_item_id">报关资料</label>
+      <select id="customs_item_id" name="customs_item_id" required>
+        <option value="">请选择报关资料</option>
+        {% for item in customs_items %}
+          <option value="{{ item.id }}" {% if values.customs_item_id|string == item.id|string %}selected{% endif %}>
+            {{ item.customs_name_cn }} / {{ item.hs_code }} / {{ item.unit_1 }}{% if item.unit_2 %} + {{ item.unit_2 }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="part_no_for_declaration">申报零部件编号</label>
+      <input id="part_no_for_declaration" name="part_no_for_declaration" value="{{ values.part_no_for_declaration }}">
+
+      <label for="model_for_declaration">申报适用车型</label>
+      <input id="model_for_declaration" name="model_for_declaration" value="{{ values.model_for_declaration }}">
+
+      <label for="material">材质</label>
+      <input id="material" name="material" value="{{ values.material }}">
+
+      <label for="brand">品牌</label>
+      <input id="brand" name="brand" value="{{ values.brand }}">
+
+      <label for="declaration_notes">备注</label>
+      <textarea id="declaration_notes" name="declaration_notes" rows="4">{{ values.declaration_notes }}</textarea>
+
+      <hr>
+      <label for="confirm_password">密码确认</label>
+      <input id="confirm_password" name="confirm_password" type="password" required autocomplete="current-password">
+
+      <div class="form-actions">
+        <button type="submit">{% if mode == "new" %}保存映射{% else %}保存修改{% endif %}</button>
+        <a class="secondary-link-button" href="/customs/mappings">取消</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

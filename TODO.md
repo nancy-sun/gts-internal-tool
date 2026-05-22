@@ -6,6 +6,8 @@ This file tracks known follow-up work after the current implementation.
 
 - Test the Customs batch upload flow with a real office HS Code workbook.
 - Test the Customs export report flow with a real GTS list workbook.
+- Test Product Customs Mapping with real GTS products and common customs item categories.
+- Review Missing Customs Data results after importing a real quotation workbook with G.W. and Packages.
 - Confirm product search shows HS Code and quotation upload / quotation generation do not show HS Code.
 
 ## Later Improvements
@@ -21,11 +23,13 @@ This file tracks known follow-up work after the current implementation.
 - Sales portal later, after deployment/auth/storage decisions are stable.
 - Sales portal v0.
 - Payment approval later.
-- Customs Phase 2: Product Customs Mapping.
+- Customs Phase 1: Customs Center / Customs Items is implemented.
+- Customs Phase 2: Product Customs Mapping and Missing Customs Data Check is implemented.
 - Customs Phase 3: Purchase Contract.
 - Customs Phase 4: Declaration Batch.
 - Customs Phase 5: Declaration Detail Preview with blocking issues.
 - Customs Phase 6: Export 报关明细 and 报关要素 sheets.
+- Long-term customs TODO: promote stable product-level weight and packaging master data if quotation fallback becomes insufficient.
 - Decide deployment strategy before building a sales portal.
 - Test a Cloudflare Tunnel pilot if leadership wants remote access.
 - Refine role permissions before storing sales quotation data.

@@ -43,6 +43,8 @@
             </button>
             <div class="nav-dropdown-menu" role="menu">
               <a role="menuitem" href="/customs/items" class="{% if current_path.startswith('/customs/items') %}is-active{% endif %}">报关资料库</a>
+              <a role="menuitem" href="/customs/mappings" class="{% if current_path.startswith('/customs/mappings') %}is-active{% endif %}">产品报关映射</a>
+              <a role="menuitem" href="/customs/missing" class="{% if current_path.startswith('/customs/missing') %}is-active{% endif %}">缺失资料检查</a>
               <a role="menuitem" href="/customs/upload" class="{% if current_path.startswith('/customs/upload') or current_path.startswith('/hs-codes/upload') %}is-active{% endif %}">批量上传</a>
               <a role="menuitem" href="/customs/export" class="{% if current_path.startswith('/customs/export') or current_path.startswith('/hs-codes/generate') or current_path.startswith('/hs-codes/report') %}is-active{% endif %}">导出报告</a>
             </div>

@@ -43,6 +43,8 @@ Implemented:
 - Customs / 报关资料 section for HS Code upload/report compatibility and customs master data
 - Operation logging for customs uploads, customs reports, and customs master data changes
 - Customs Master Data module for maintaining customs item names, HS Code, generic declaration units, and declaration element templates
+- Product Customs Mapping module for linking each product / GTS No. to one customs item
+- Missing Customs Data check for unmapped products, missing HS Code/templates, gross weight, packages, net weight, and manual unit-source warnings
 - Manual local backup script and backup instructions
 - `robots.txt` and `X-Robots-Tag` noindex protection for internal-only use
 - Dockerfile and Docker Compose for deployable packaging
@@ -51,9 +53,21 @@ Phase 1 through Phase 5 MVP work is implemented.
 
 This branch includes cloud-readiness and Docker deployability work. The app has not been deployed, no OSS storage has been added, and existing SQLite development data is not migrated.
 
-HS Code is now part of Customs / 报关资料. Existing `products.hs_code` remains as a legacy fallback for current product HS Code upload/report workflows. The future source-of-truth direction is `product_customs_mapping -> customs_items.hs_code`.
+HS Code is now part of Customs / 报关资料. Existing `products.hs_code` remains as a legacy fallback for current product HS Code upload/report workflows. The future source-of-truth direction is `product_customs_mappings -> customs_items.hs_code`.
 
-The Customs Master Data module currently manages only customs item master records. Product-to-customs mapping, purchase contracts, declaration batches, declaration detail preview, final declaration workbook export, and customs Excel exports are future phases.
+Customs Items define HS Code, declaration name, unit rules, and declaration element templates. Product Customs Mapping connects each product / GTS No. to one Customs Item. One product maps to exactly one customs item; one customs item can be reused by many products. Purchase contracts, declaration batches, declaration detail preview, final declaration workbook export, and customs Excel exports are future phases.
+
+Customs unit logic is generic. The system does not assume `unit_1` is `个`, does not assume `unit_2` is `千克`, and does not assume a single-unit item is quantity-based. Supported unit sources are `quantity`, `gross_weight`, `net_weight`, `volume`, `package_count`, and `manual`.
+
+Company net weight rule for future declaration checks:
+
+```text
+net_weight = gross_weight - packages
+```
+
+Gross weight and packages currently come from uploaded quotation-type files. Gross weight uses the quotation `G.W.` / `gross_weight` field. Packages uses the quotation `packages` field, not `item/package`. If a mapped customs item uses net weight and `gross_weight - packages <= 0`, the missing-data check shows a blocking issue: `净重计算错误：毛重 - 件数 必须大于 0。`
+
+See [docs/CUSTOMS_RULES.md](docs/CUSTOMS_RULES.md) for the customs rules later modules must preserve.
 
 ## Authentication
 

@@ -25,6 +25,7 @@ POSTGRES_ID_TABLES = {
     "operation_logs",
     "users",
     "customs_items",
+    "product_customs_mappings",
 }
 
 
@@ -369,6 +370,35 @@ def initialize_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_customs_items_is_active
             ON customs_items(is_active);
 
+            CREATE TABLE IF NOT EXISTS product_customs_mappings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                gts_no TEXT,
+                customs_item_id INTEGER NOT NULL,
+                part_no_for_declaration TEXT,
+                model_for_declaration TEXT,
+                material TEXT,
+                brand TEXT,
+                declaration_notes TEXT,
+                created_by INTEGER,
+                updated_by INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(product_id) REFERENCES products(id),
+                FOREIGN KEY(customs_item_id) REFERENCES customs_items(id),
+                FOREIGN KEY(created_by) REFERENCES users(id),
+                FOREIGN KEY(updated_by) REFERENCES users(id)
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_product_customs_mappings_product_unique
+            ON product_customs_mappings(product_id);
+
+            CREATE INDEX IF NOT EXISTS idx_product_customs_mappings_gts_no
+            ON product_customs_mappings(gts_no);
+
+            CREATE INDEX IF NOT EXISTS idx_product_customs_mappings_customs_item_id
+            ON product_customs_mappings(customs_item_id);
+
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -577,6 +607,31 @@ def initialize_postgres_database() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_customs_items_is_active
             ON customs_items(is_active);
+
+            CREATE TABLE IF NOT EXISTS product_customs_mappings (
+                id SERIAL PRIMARY KEY,
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                gts_no TEXT,
+                customs_item_id INTEGER NOT NULL REFERENCES customs_items(id),
+                part_no_for_declaration TEXT,
+                model_for_declaration TEXT,
+                material TEXT,
+                brand TEXT,
+                declaration_notes TEXT,
+                created_by INTEGER REFERENCES users(id),
+                updated_by INTEGER REFERENCES users(id),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_product_customs_mappings_product_unique
+            ON product_customs_mappings(product_id);
+
+            CREATE INDEX IF NOT EXISTS idx_product_customs_mappings_gts_no
+            ON product_customs_mappings(gts_no);
+
+            CREATE INDEX IF NOT EXISTS idx_product_customs_mappings_customs_item_id
+            ON product_customs_mappings(customs_item_id);
             """
         )
 

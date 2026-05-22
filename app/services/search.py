@@ -27,6 +27,15 @@ def search_catalogue(
 
     warnings: list[str] = []
     selected_field = SEARCH_FIELDS.get(field, "p.gts_no_normalized")
+    customs_mapping_enabled = customs_mapping_available(connection)
+    hs_code_select = "p.hs_code AS product_hs_code"
+    customs_join = ""
+    if customs_mapping_enabled:
+        hs_code_select = "COALESCE(NULLIF(TRIM(ci.hs_code), ''), p.hs_code) AS product_hs_code"
+        customs_join = """
+        LEFT JOIN product_customs_mappings pcm ON pcm.product_id = p.id
+        LEFT JOIN customs_items ci ON ci.id = pcm.customs_item_id
+        """
     supplier_link_enabled = supplier_link_available(connection)
     supplier_join = ""
     supplier_display_select = "q.factory AS supplier_display_name"
@@ -66,7 +75,7 @@ def search_catalogue(
             p.oem AS product_oem,
             p.description AS product_description,
             p.chinese_description AS product_chinese_description,
-            p.hs_code AS product_hs_code,
+            {hs_code_select},
             q.id AS quotation_item_id,
             q.factory,
             {supplier_display_select},
@@ -91,6 +100,7 @@ def search_catalogue(
             END AS search_rank,
             ABS(LENGTH({selected_field}) - LENGTH(?)) AS length_gap
         FROM products p
+        {customs_join}
         LEFT JOIN quotation_items q ON q.product_id = p.id
         {supplier_join}
         WHERE {selected_field} LIKE ?
@@ -102,6 +112,12 @@ def search_catalogue(
     if rows and rows[0]["search_rank"] == 0:
         return [row for row in rows if row["search_rank"] == 0], warnings
     return rows, warnings
+
+
+def customs_mapping_available(connection: Connection) -> bool:
+    return bool(connection.execute("PRAGMA table_info(product_customs_mappings)").fetchall()) and bool(
+        connection.execute("PRAGMA table_info(customs_items)").fetchall()
+    )
 
 
 def group_search_results(rows: list[Row]) -> list[dict[str, Any]]:

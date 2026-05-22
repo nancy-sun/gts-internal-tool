@@ -235,12 +235,40 @@ def fetch_products_by_gts(
     if not gts_numbers:
         return {}
     placeholders = ", ".join("?" for _ in gts_numbers)
+    if not customs_mapping_available(connection):
+        rows = connection.execute(
+            f"""
+            SELECT *
+            FROM products
+            WHERE gts_no_normalized IN ({placeholders})
+            ORDER BY updated_at DESC, id DESC
+            """,
+            gts_numbers,
+        ).fetchall()
+        products = {}
+        for row in rows:
+            products.setdefault(row["gts_no_normalized"], row)
+        return products
     rows = connection.execute(
         f"""
-        SELECT *
-        FROM products
-        WHERE gts_no_normalized IN ({placeholders})
-        ORDER BY updated_at DESC, id DESC
+        SELECT
+            p.id,
+            p.gts_no,
+            p.gts_no_normalized,
+            p.oem,
+            p.oem_normalized,
+            p.description,
+            p.chinese_description,
+            COALESCE(NULLIF(TRIM(ci.hs_code), ''), p.hs_code) AS hs_code,
+            p.created_by,
+            p.created_at,
+            p.updated_by,
+            p.updated_at
+        FROM products p
+        LEFT JOIN product_customs_mappings pcm ON pcm.product_id = p.id
+        LEFT JOIN customs_items ci ON ci.id = pcm.customs_item_id
+        WHERE p.gts_no_normalized IN ({placeholders})
+        ORDER BY p.updated_at DESC, p.id DESC
         """,
         gts_numbers,
     ).fetchall()
@@ -264,13 +292,45 @@ def fetch_products_by_historical_gts(
     if not gts_numbers:
         return {}
     placeholders = ", ".join("?" for _ in gts_numbers)
+    if not customs_mapping_available(connection):
+        rows = connection.execute(
+            f"""
+            SELECT
+                q.gts_no_normalized AS lookup_value,
+                p.*
+            FROM quotation_items q
+            JOIN products p ON p.id = q.product_id
+            WHERE q.gts_no_normalized IN ({placeholders})
+            ORDER BY q.updated_at DESC, q.id DESC
+            """,
+            gts_numbers,
+        ).fetchall()
+        products = {}
+        for row in rows:
+            lookup_value = _text(row["lookup_value"])
+            if lookup_value and lookup_value not in products:
+                products[lookup_value] = row
+        return products
     rows = connection.execute(
         f"""
         SELECT
             q.gts_no_normalized AS lookup_value,
-            p.*
+            p.id,
+            p.gts_no,
+            p.gts_no_normalized,
+            p.oem,
+            p.oem_normalized,
+            p.description,
+            p.chinese_description,
+            COALESCE(NULLIF(TRIM(ci.hs_code), ''), p.hs_code) AS hs_code,
+            p.created_by,
+            p.created_at,
+            p.updated_by,
+            p.updated_at
         FROM quotation_items q
         JOIN products p ON p.id = q.product_id
+        LEFT JOIN product_customs_mappings pcm ON pcm.product_id = p.id
+        LEFT JOIN customs_items ci ON ci.id = pcm.customs_item_id
         WHERE q.gts_no_normalized IN ({placeholders})
         ORDER BY q.updated_at DESC, q.id DESC
         """,
@@ -292,6 +352,12 @@ def build_hs_change_notices(
     if request_gts and request_values.get("gts_no_normalized") != product["gts_no_normalized"]:
         return [f"GTS 已从 {request_gts} 改为 {_text(product['gts_no']) or '(空)'}"]
     return []
+
+
+def customs_mapping_available(connection: Connection) -> bool:
+    return bool(connection.execute("PRAGMA table_info(product_customs_mappings)").fetchall()) and bool(
+        connection.execute("PRAGMA table_info(customs_items)").fetchall()
+    )
 
 
 def save_hs_upload_preview(
