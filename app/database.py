@@ -26,6 +26,8 @@ POSTGRES_ID_TABLES = {
     "users",
     "customs_items",
     "product_customs_mappings",
+    "purchase_contracts",
+    "purchase_contract_items",
 }
 
 
@@ -399,6 +401,67 @@ def initialize_database() -> None:
             CREATE INDEX IF NOT EXISTS idx_product_customs_mappings_customs_item_id
             ON product_customs_mappings(customs_item_id);
 
+            CREATE TABLE IF NOT EXISTS purchase_contracts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                contract_no TEXT NOT NULL UNIQUE,
+                supplier_id INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'draft',
+                currency TEXT NOT NULL DEFAULT 'RMB',
+                total_rmb REAL,
+                notes TEXT,
+                created_by INTEGER,
+                updated_by INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(supplier_id) REFERENCES suppliers(id),
+                FOREIGN KEY(created_by) REFERENCES users(id),
+                FOREIGN KEY(updated_by) REFERENCES users(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contracts_contract_no
+            ON purchase_contracts(contract_no);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contracts_supplier_id
+            ON purchase_contracts(supplier_id);
+
+            CREATE TABLE IF NOT EXISTS purchase_contract_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                purchase_contract_id INTEGER NOT NULL,
+                product_id INTEGER,
+                quotation_item_id INTEGER,
+                supplier_id INTEGER,
+                gts_no TEXT,
+                oem TEXT,
+                description_cn TEXT,
+                description_en TEXT,
+                quantity INTEGER,
+                unit TEXT,
+                unit_price_rmb REAL,
+                amount_rmb REAL,
+                gross_weight REAL,
+                packages INTEGER,
+                volume REAL,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(purchase_contract_id) REFERENCES purchase_contracts(id),
+                FOREIGN KEY(product_id) REFERENCES products(id),
+                FOREIGN KEY(quotation_item_id) REFERENCES quotation_items(id),
+                FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_contract_id
+            ON purchase_contract_items(purchase_contract_id);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_product_id
+            ON purchase_contract_items(product_id);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_quotation_item_id
+            ON purchase_contract_items(quotation_item_id);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_gts_no
+            ON purchase_contract_items(gts_no);
+
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -632,6 +695,61 @@ def initialize_postgres_database() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_product_customs_mappings_customs_item_id
             ON product_customs_mappings(customs_item_id);
+
+            CREATE TABLE IF NOT EXISTS purchase_contracts (
+                id SERIAL PRIMARY KEY,
+                contract_no TEXT NOT NULL UNIQUE,
+                supplier_id INTEGER NOT NULL REFERENCES suppliers(id),
+                status TEXT NOT NULL DEFAULT 'draft'
+                    CHECK(status IN ('draft', 'confirmed', 'sent', 'completed', 'cancelled')),
+                currency TEXT NOT NULL DEFAULT 'RMB',
+                total_rmb NUMERIC(14,2),
+                notes TEXT,
+                created_by INTEGER REFERENCES users(id),
+                updated_by INTEGER REFERENCES users(id),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contracts_contract_no
+            ON purchase_contracts(contract_no);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contracts_supplier_id
+            ON purchase_contracts(supplier_id);
+
+            CREATE TABLE IF NOT EXISTS purchase_contract_items (
+                id SERIAL PRIMARY KEY,
+                purchase_contract_id INTEGER NOT NULL REFERENCES purchase_contracts(id),
+                product_id INTEGER REFERENCES products(id),
+                quotation_item_id INTEGER REFERENCES quotation_items(id),
+                supplier_id INTEGER REFERENCES suppliers(id),
+                gts_no TEXT,
+                oem TEXT,
+                description_cn TEXT,
+                description_en TEXT,
+                quantity INTEGER,
+                unit TEXT,
+                unit_price_rmb NUMERIC(12,2),
+                amount_rmb NUMERIC(14,2),
+                gross_weight NUMERIC(10,2),
+                packages INTEGER,
+                volume NUMERIC(10,3),
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_contract_id
+            ON purchase_contract_items(purchase_contract_id);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_product_id
+            ON purchase_contract_items(product_id);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_quotation_item_id
+            ON purchase_contract_items(quotation_item_id);
+
+            CREATE INDEX IF NOT EXISTS idx_purchase_contract_items_gts_no
+            ON purchase_contract_items(gts_no);
             """
         )
 

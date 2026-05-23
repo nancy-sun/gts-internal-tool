@@ -7,6 +7,7 @@ This file tracks follow-up work after the current implementation.
 - Test Customs batch upload with a real office HS Code workbook.
 - Test Customs export report with a real GTS list workbook.
 - Test Product Customs Mapping with real products and common customs item categories.
+- Test Purchase Contract module with a real supplier purchase contract.
 - Review Missing Customs Data after importing a real quotation workbook with `G.W.` and `Packages`.
 - Confirm product search shows mapped Customs HS Code first and legacy `products.hs_code` only as fallback.
 - Confirm quotation upload and quotation generation do not show Customs/HS fields.
@@ -15,8 +16,8 @@ This file tracks follow-up work after the current implementation.
 
 - Done: Phase 1 Customs Center / Customs Items.
 - Done: Phase 2 Product Customs Mapping / Missing Customs Data Check.
-- Next: Phase 3 Purchase Contract module.
-- Then: Phase 4 Declaration Batch.
+- Done: Phase 3 Purchase Contract module.
+- Next: Phase 4 Declaration Batch.
 - Then: Phase 5 Declaration Detail Preview + Blocking Issues.
 - Then: Phase 6 Export 报关明细 + 要素.
 - Later: full customs workbook generation.

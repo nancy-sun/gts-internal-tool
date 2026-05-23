@@ -47,6 +47,7 @@ Implemented:
 - Customs Items module for maintaining customs item names, HS Code, generic declaration units, and declaration element templates
 - Product Customs Mapping module for linking each product / GTS No. to one customs item
 - Missing Customs Data check for unmapped products, missing HS Code/templates, gross weight, packages, net weight, and manual unit-source warnings
+- Purchase Contract module for storing purchase contract headers and RMB purchase item rows
 - Manual local backup script and backup instructions
 - `robots.txt` and `X-Robots-Tag` noindex protection for internal-only use
 - Dockerfile and Docker Compose for PostgreSQL deployable packaging
@@ -55,7 +56,16 @@ The app has not been deployed from this workspace, no OSS storage has been added
 
 HS Code is now part of Customs / 报关资料. Existing `products.hs_code` remains as a legacy fallback for current product HS Code upload/report workflows. The future source-of-truth direction is `product_customs_mappings -> customs_items.hs_code`.
 
-Customs Items define HS Code, declaration name, unit rules, and declaration element templates. Product Customs Mapping connects each product / GTS No. to one Customs Item. Purchase contracts, declaration batches, declaration detail preview, final declaration workbook export, and customs Excel exports are future phases.
+Customs Items define HS Code, declaration name, unit rules, and declaration element templates. Product Customs Mapping connects each product / GTS No. to one Customs Item. Purchase Contract stores supplier-specific contract headers and product rows for later customs declaration work. Declaration batches, declaration detail preview, final declaration workbook export, customs Excel exports, and purchase contract Excel templates are future phases.
+
+Purchase contract rules:
+
+- One purchase contract belongs to exactly one supplier.
+- `contract_no` is unique.
+- Contract item `amount_rmb` is calculated from `quantity * unit_price_rmb`.
+- Contract `total_rmb` is calculated from item totals.
+- Contract item gross weight, packages, and volume are stored for later customs declaration checks.
+- This phase stores purchase contract data only; it does not generate formal contract Excel templates.
 
 Current customs rules:
 

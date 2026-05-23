@@ -12,6 +12,7 @@ CUSTOMS_CRUMB = {"label": "报关资料", "href": "/customs"}
 CUSTOMS_ITEMS_CRUMB = {"label": "报关资料", "href": "/customs/items"}
 CUSTOMS_MAPPINGS_CRUMB = {"label": "产品报关映射", "href": "/customs/mappings"}
 CUSTOMS_MISSING_CRUMB = {"label": "报关资料缺失检查", "href": "/customs/missing"}
+CONTRACTS_CRUMB = {"label": "采购合同", "href": "/contracts"}
 MAINTENANCE_CRUMB = {"label": "系统状态", "href": "/maintenance"}
 ADMIN_USERS_CRUMB = {"label": "用户管理", "href": "/admin/users"}
 

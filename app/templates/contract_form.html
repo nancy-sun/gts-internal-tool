@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "new" %}新增采购合同{% else %}编辑采购合同{% endif %} - GTS Internal Tool{% endblock %}
+{% block page_name %}{% if mode == "new" %}新增采购合同{% else %}编辑采购合同{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>{% if mode == "new" %}新增采购合同{% else %}编辑采购合同{% endif %}</h1>
+    <p>一个采购合同只能对应一个供应商；合同号必须唯一。自动合同号生成会在后续阶段补充。</p>
+  </section>
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="table-section">
+    <form method="post" class="form-stack">
+      <label for="contract_no">合同号</label>
+      <input id="contract_no" name="contract_no" value="{{ values.contract_no }}" required autocomplete="off">
+
+      <label for="supplier_id">供应商</label>
+      <select id="supplier_id" name="supplier_id" required>
+        <option value="">请选择供应商</option>
+        {% for supplier in suppliers %}
+          <option value="{{ supplier.id }}" {% if values.supplier_id|string == supplier.id|string %}selected{% endif %}>
+            {{ supplier.supplier_short_name or supplier.supplier_full_name }}{% if supplier.supplier_full_name and supplier.supplier_short_name and supplier.supplier_full_name != supplier.supplier_short_name %} / {{ supplier.supplier_full_name }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="status">状态</label>
+      <select id="status" name="status" required>
+        {% for option in statuses %}
+          <option value="{{ option }}" {% if values.status == option %}selected{% endif %}>{{ status_labels.get(option, option) }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="notes">备注</label>
+      <textarea id="notes" name="notes" rows="4">{{ values.notes }}</textarea>
+
+      <hr>
+      <label for="confirm_password">密码确认</label>
+      <input id="confirm_password" name="confirm_password" type="password" required autocomplete="current-password">
+
+      <div class="form-actions">
+        <button type="submit">{% if mode == "new" %}创建合同{% else %}保存修改{% endif %}</button>
+        <a class="secondary-link-button" href="{% if contract %}/contracts/{{ contract.id }}{% else %}/contracts{% endif %}">取消</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

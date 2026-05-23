@@ -10,6 +10,7 @@ from app.database import initialize_database
 from app.routes import (
     admin_users,
     auth,
+    contracts,
     customs,
     data_quality,
     generate,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
     app.include_router(auth.router)
     app.include_router(admin_users.router)
+    app.include_router(contracts.router)
     app.include_router(customs.router)
     app.include_router(upload.router)
     app.include_router(generate.router)

@@ -16,13 +16,14 @@
         {% endif %}
         <nav class="topnav" aria-label="主要功能">
           <div class="nav-dropdown">
-            <button class="nav-dropdown-button {% if current_path.startswith('/upload') or current_path.startswith('/generate') %}is-active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false" {% if current_path.startswith('/upload') or current_path.startswith('/generate') %}aria-current="page"{% endif %}>
+            <button class="nav-dropdown-button {% if current_path.startswith('/upload') or current_path.startswith('/generate') or current_path.startswith('/contracts') %}is-active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false" {% if current_path.startswith('/upload') or current_path.startswith('/generate') or current_path.startswith('/contracts') %}aria-current="page"{% endif %}>
               跟单
               <span aria-hidden="true">▾</span>
             </button>
             <div class="nav-dropdown-menu" role="menu">
               <a role="menuitem" href="/upload" class="{% if current_path.startswith('/upload') %}is-active{% endif %}">上传报价</a>
               <a role="menuitem" href="/generate" class="{% if current_path.startswith('/generate') %}is-active{% endif %}">生成报价</a>
+              <a role="menuitem" href="/contracts" class="{% if current_path.startswith('/contracts') %}is-active{% endif %}">采购合同</a>
             </div>
           </div>
           <div class="nav-dropdown">

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}采购合同 {{ contract.contract_no }} - GTS Internal Tool{% endblock %}
+{% block page_name %}采购合同 {{ contract.contract_no }}{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <h1>{{ contract.contract_no }}</h1>
+    <p>{{ contract.supplier_display_name }} · {{ contract.status_label }} · 总金额 RMB {{ "%.2f"|format(contract.total_rmb or 0) }}</p>
+  </section>
+
+  {% if errors %}
+    <div class="notice error-notice">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="table-section">
+    <div class="supplier-detail-list">
+      <div><strong>供应商</strong><span>{{ contract.supplier_display_name }}</span></div>
+      <div><strong>状态</strong><span>{{ contract.status_label }}</span></div>
+      <div><strong>币种</strong><span>{{ contract.currency }}</span></div>
+      <div><strong>总金额</strong><span>RMB {{ "%.2f"|format(contract.total_rmb or 0) }}</span></div>
+      <div><strong>备注</strong><span>{{ contract.notes or "" }}</span></div>
+    </div>
+    {% if can_manage %}
+      <div class="form-actions">
+        <a class="table-action-link" href="/contracts/{{ contract.id }}/edit">编辑合同</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="table-section">
+    <h2>合同明细</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>GTS</th>
+            <th>OEM</th>
+            <th>品名</th>
+            <th>数量</th>
+            <th>单位</th>
+            <th>单价 RMB</th>
+            <th>金额 RMB</th>
+            <th>毛重</th>
+            <th>件数</th>
+            <th>体积</th>
+            <th>备注</th>
+            {% if can_manage %}<th>操作</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+            <tr>
+              <td>{{ item.gts_no or "" }}</td>
+              <td>{{ item.oem or "" }}</td>
+              <td>{{ item.description_cn or item.description_en or "" }}</td>
+              <td>{{ item.quantity or "" }}</td>
+              <td>{{ item.unit or "" }}</td>
+              <td>{% if item.unit_price_rmb is not none %}{{ "%.2f"|format(item.unit_price_rmb) }}{% endif %}</td>
+              <td>{% if item.amount_rmb is not none %}{{ "%.2f"|format(item.amount_rmb) }}{% endif %}</td>
+              <td>{% if item.gross_weight is not none %}{{ "%.2f"|format(item.gross_weight) }}{% endif %}</td>
+              <td>{{ item.packages if item.packages is not none else "" }}</td>
+              <td>{% if item.volume is not none %}{{ "%.3f"|format(item.volume) }}{% endif %}</td>
+              <td>{{ item.notes or "" }}</td>
+              {% if can_manage %}
+                <td>
+                  <form method="post" action="/contracts/{{ contract.id }}/items/{{ item.id }}/delete" class="inline-form">
+                    <input name="confirm_password" type="password" required placeholder="密码">
+                    <button type="submit" class="danger-button">删除</button>
+                  </form>
+                </td>
+              {% endif %}
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="{% if can_manage %}12{% else %}11{% endif %}">暂无合同明细。</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if can_manage %}
+    <section class="table-section">
+      <h2>添加明细</h2>
+      <form method="post" action="/contracts/{{ contract.id }}/items/add" class="form-stack">
+        <label for="product_id">产品</label>
+        <select id="product_id" name="product_id">
+          <option value="">手动输入</option>
+          {% for product in products %}
+            <option value="{{ product.id }}" {% if item_values.product_id|string == product.id|string %}selected{% endif %}>
+              {{ product.gts_no or "无 GTS" }} / {{ product.oem or "无 OEM" }} / {{ product.description or product.chinese_description or "" }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <label for="gts_no">GTS No.</label>
+        <input id="gts_no" name="gts_no" value="{{ item_values.gts_no }}">
+
+        <label for="oem">OEM</label>
+        <input id="oem" name="oem" value="{{ item_values.oem }}">
+
+        <label for="description_cn">中文品名</label>
+        <input id="description_cn" name="description_cn" value="{{ item_values.description_cn }}">
+
+        <label for="description_en">英文描述</label>
+        <input id="description_en" name="description_en" value="{{ item_values.description_en }}">
+
+        <label for="quantity">数量</label>
+        <input id="quantity" name="quantity" type="number" min="1" step="1" value="{{ item_values.quantity }}">
+
+        <label for="unit">单位</label>
+        <input id="unit" name="unit" value="{{ item_values.unit }}">
+
+        <label for="unit_price_rmb">人民币单价</label>
+        <input id="unit_price_rmb" name="unit_price_rmb" type="number" min="0" step="0.01" value="{{ item_values.unit_price_rmb }}">
+
+        <label for="gross_weight">毛重</label>
+        <input id="gross_weight" name="gross_weight" type="number" min="0" step="0.01" value="{{ item_values.gross_weight }}">
+
+        <label for="packages">件数</label>
+        <input id="packages" name="packages" type="number" min="0" step="1" value="{{ item_values.packages }}">
+
+        <label for="volume">体积</label>
+        <input id="volume" name="volume" type="number" min="0" step="0.001" value="{{ item_values.volume }}">
+
+        <label for="notes">备注</label>
+        <textarea id="notes" name="notes" rows="3">{{ item_values.notes }}</textarea>
+
+        <hr>
+        <label for="confirm_password">密码确认</label>
+        <input id="confirm_password" name="confirm_password" type="password" required autocomplete="current-password">
+
+        <div class="form-actions">
+          <button type="submit">添加明细</button>
+        </div>
+      </form>
+    </section>
+  {% endif %}
+{% endblock %}
