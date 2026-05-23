@@ -1,8 +1,8 @@
 # GTS Internal Tool
 
-Local internal office web tool for storing historical product quotation rows and generating internal quotation Excel sheets.
+Internal office web tool for product quotation history, supplier data, quotation generation, and customs master data.
 
-Version 1 is intentionally small:
+The app is intentionally scoped as an internal business tool:
 
 - FastAPI web app
 - SQLite database for local development/testing fallback
@@ -11,8 +11,8 @@ Version 1 is intentionally small:
 - Employee username/password login
 - Roles: admin, sales, merchandiser
 - Local Excel uploads
-- Local LAN access
-- No CRM, ERP, sales portal, OSS storage, or public deployment
+- Internal-only access; no SEO/public marketing surface
+- No CRM, ERP, sales portal, OSS storage, or public deployment in the current scope
 - No SQLite development data migration; production PostgreSQL starts empty
 
 ## Current Status
@@ -40,22 +40,38 @@ Implemented:
 - Request-list upload, matching preview, manual candidate selection, and immediate Excel download
 - Generated quotation Excel includes a blank Photo column
 - Operation logging for generated quotations
+- Supplier management
+- Supplier matching during quotation upload preview
 - Customs / 报关资料 section for HS Code upload/report compatibility and customs master data
 - Operation logging for customs uploads, customs reports, and customs master data changes
-- Customs Master Data module for maintaining customs item names, HS Code, generic declaration units, and declaration element templates
+- Customs Items module for maintaining customs item names, HS Code, generic declaration units, and declaration element templates
 - Product Customs Mapping module for linking each product / GTS No. to one customs item
 - Missing Customs Data check for unmapped products, missing HS Code/templates, gross weight, packages, net weight, and manual unit-source warnings
 - Manual local backup script and backup instructions
 - `robots.txt` and `X-Robots-Tag` noindex protection for internal-only use
-- Dockerfile and Docker Compose for deployable packaging
+- Dockerfile and Docker Compose for PostgreSQL deployable packaging
 
-This branch includes cloud-readiness and Docker deployability work. The app has not been deployed, no OSS storage has been added, and existing SQLite development data is not migrated.
+The app has not been deployed from this workspace, no OSS storage has been added, and existing SQLite development data is not migrated to production.
 
 HS Code is now part of Customs / 报关资料. Existing `products.hs_code` remains as a legacy fallback for current product HS Code upload/report workflows. The future source-of-truth direction is `product_customs_mappings -> customs_items.hs_code`.
 
 Customs Items define HS Code, declaration name, unit rules, and declaration element templates. Product Customs Mapping connects each product / GTS No. to one Customs Item. Purchase contracts, declaration batches, declaration detail preview, final declaration workbook export, and customs Excel exports are future phases.
 
-See [docs/CUSTOMS_RULES.md](docs/CUSTOMS_RULES.md) for customs mapping cardinality, generic unit sources, HS Code source-of-truth direction, and the company net weight rule later modules must preserve.
+Current customs rules:
+
+- One GTS/product maps to exactly one customs item.
+- One customs item can map to many GTS/products.
+- `unit_1` and `unit_2` are generic and configurable.
+- Do not assume `unit_1` is `个`.
+- Do not assume `unit_2` is `千克`.
+- Supported unit sources are `quantity`, `gross_weight`, `net_weight`, `volume`, `package_count`, and `manual`.
+- Gross weight comes from quotation uploads, usually the `G.W.` / `gross_weight` field.
+- Packages comes from quotation uploads, specifically the `packages` field.
+- Do not use `item/package` as package count.
+- Company net weight rule: `net_weight = gross_weight - packages`.
+- If `net_weight <= 0`, later declaration export must treat it as blocking. Current error text: `净重计算错误：毛重 - 件数 必须大于 0。`
+
+See [docs/CUSTOMS_RULES.md](docs/CUSTOMS_RULES.md) for the customs rules later modules must preserve.
 
 ## Authentication
 
